@@ -21,320 +21,188 @@ Current status:
 * Auth/server-list boundary exists.
 * Account loading boundary exists.
 * Player::sendLogin pre-world boundary exists.
-* Player props serialization exists for source-confirmed login behavior.
-* Runtime ownership exists:
-
-  * RuntimeServer
-  * RuntimeLevel
-  * RuntimePlayer
-  * RuntimeMap
+* Runtime ownership exists.
 * sendLevel static/dynamic/tail boundaries exist.
 * Player visibility sync exists.
-* Pure initial `.nw` parser exists for:
-
-  * BOARD
-  * LINK
-  * SIGN
-  * NPC payload passthrough
-  * BADDY
-* Board/layer packet builders exist.
-* CHEST is blocked until LevelItem behavior is confirmed.
-* `.graal` and `.zelda` parser are not implemented.
-* Movement/player live runtime is not implemented.
+* Pure `.nw` parser exists.
+* `.nw` board/layer packet builders exist.
+* `.nw` links/signs/chests packets exist.
+* LevelItem catalog exists.
+* Parsed `.nw` snapshot integrates into sendLevel up to board/layers/links/signs/chests.
 * Tests are green.
 
 Goal of this run:
 
-Push the project as far as safely possible toward the first minimal playable milestone:
+Push the project toward a manually testable local server with a simple `.nw` level, while still keeping production behavior source-confirmed and clearly separating dev-only fakes from real compatibility code.
 
-```txt
-client connects -> logs in -> loads account -> enters simple .nw level -> receives board/links/signs/chests where confirmed -> appears in level -> can begin basic source-confirmed player sync/movement boundary
-```
-
-Do not stop after one small task if another safe task can be done.
+Continue through these milestones as far as safely possible.
 
 ---
 
-# Milestone 1: Complete `.nw` static packets: links and signs
+# Milestone 1: Filesystem-backed level/resource loading boundary
 
-Trace and implement source-confirmed packet builders for `.nw` links and signs.
+Trace and implement source-confirmed level/resource lookup behavior needed to load real `.nw` files from disk.
 
 Focus on:
 
-* `Level::getLinksPacket`
-* `Level::getSignsPacket`
-* `LevelLink.cpp/.h`
-* `LevelSign.cpp/.h`
-* exact packet IDs
-* exact field order
-* exact field encoding
-* empty-list behavior
-* ordering
-* newline/rawdata/filequeue behavior if relevant
-* how parsed LINK/SIGN records feed sendLevel
+* FileSystem usage for levels/resources
+* case-insensitive lookup behavior
+* level path normalization
+* extension behavior
+* nofoldersconfig behavior if source-confirmed
+* modTime behavior
+* missing level behavior
+* malformed level behavior
+* level cache behavior if source-confirmed
+* resource/file lookup used during sendLevel
 
 Allowed:
 
-* Add DTOs/snapshots for links/signs if needed.
-* Add builders for exact packet bytes.
-* Integrate parsed `.nw` links/signs into `SendLevelBoundary`.
-* Add tests for empty and small non-empty fixtures.
-* Add golden fixtures.
+* Add filesystem abstractions.
+* Add production-safe read-only level loading service if behavior is confirmed.
+* Add tests using temporary files or in-memory fake filesystem.
+* Add docs for unresolved filesystem quirks.
 
 Not allowed:
 
-* Do not invent missing fields.
-* Do not approximate formatting.
-* Do not implement link traversal/movement yet unless directly required and source-confirmed.
+* Do not invent search paths.
+* Do not implement writes unless source-confirmed.
+* Do not approximate cache/modTime behavior.
 
 ---
 
-# Milestone 2: Recover LevelItem and CHEST behavior
+# Milestone 2: Integrate filesystem-loaded `.nw` into sendLevel
 
-Trace `LevelItem` and any item catalog/constants required for `.nw` CHEST parsing and `Level::getChestPacket`.
-
-Focus on:
-
-* `LevelItem`
-* `LevelChest`
-* item ID/name mapping
-* chest line parsing in `.nw`
-* `getItemId`
-* chest packet structure
-* empty chest behavior
-* malformed/unknown item behavior
-* item amount/count behavior if present
-* exact C++ fallback behavior
-
-Allowed:
-
-* Implement a minimal source-confirmed LevelItem catalog/mapping only if directly recoverable from C++.
-* Implement `.nw` CHEST parsing only if behavior is clear.
-* Implement chest packet builder if exact bytes are confirmed.
-* Add tests/golden fixtures.
-
-Not allowed:
-
-* Do not invent item mappings.
-* Do not create a fake item catalog.
-* Do not implement inventory gameplay.
-* Do not implement chest opening behavior.
-* Do not implement item pickup/use behavior.
-
-If CHEST remains blocked, document exactly what is missing and continue.
-
----
-
-# Milestone 3: Integrate parsed `.nw` snapshot into sendLevel end-to-end
-
-Create an end-to-end source-confirmed path:
+Create a source-confirmed path:
 
 ```txt
-.nw text fixture -> parsed level snapshot -> sendLevel packet sequence
+level filename -> filesystem lookup -> .nw parse -> level snapshot -> sendLevel packet sequence
 ```
 
 Focus on:
 
-* board
-* layers if present
-* links
-* signs
-* chests if unblocked
-* baddies
-* horses if source-confirmed
-* NPC payload passthrough
 * level name
 * modTime
+* board/layers
+* links
+* signs
+* chests
+* baddies if already supported
+* NPC payload passthrough if already supported
 * packet order
+* missing/malformed level failure behavior
 
 Allowed:
 
-* Add adapter from parsed `.nw` snapshot to existing sendLevel snapshots.
-* Add integration tests with a small deterministic `.nw` fixture.
-* Add golden fixtures for full packet sequence.
+* Add integration tests with a small temporary `.nw` fixture.
+* Add golden fixtures for complete packet sequence.
+* Add adapters between level loading and existing SendLevelBoundary.
 * Keep runtime simulation out of scope.
 
-Not allowed:
-
-* Do not execute NPC scripts.
-* Do not implement baddy AI.
-* Do not implement chest gameplay.
-* Do not invent defaults.
-
 ---
 
-# Milestone 4: `.graal` and `.zelda` research, optional implementation
+# Milestone 3: Dev-only local server shell
 
-Trace `loadGraal` and `loadZelda`.
+If enough source-confirmed pieces exist, create or improve a local development server shell that can be manually tested with a simple client connection.
 
 Focus on:
 
-* format headers/signatures
-* board encoding
-* object sections
-* links/signs/chests/NPCs/baddies if present
-* differences from `.nw`
-* malformed behavior
-* whether these formats are required for current game/client flow
+* TCP listener skeleton
+* session pipeline using existing protocol/session code
+* dev-only account provider
+* dev-only level provider using real `.nw` file loading
+* clear configuration for local test world
+* clear warning that fake/dev auth is not production-compatible
+* ability to reach login -> account -> level entry path using a simple `.nw` fixture if safe
 
 Allowed:
 
-* Document deeply.
-* Implement pure parser only if the exact behavior is clear and safe.
-* Add tests for format detection and minimal valid fixtures if confirmed.
+* Add dev-only bootstrap/configuration.
+* Add in-memory/dev fake auth clearly marked.
+* Add docs explaining how to run locally.
+* Add integration tests where possible.
 
 Not allowed:
 
-* Do not guess old binary/text layouts.
-* Do not approximate.
-
-If too risky, keep blocked and move on.
-
----
-
-# Milestone 5: File/resource transfer and CFileQueue expansion
-
-Trace file/resource transfer paths used during login/level entry.
-
-Focus on:
-
-* `CFileQueue`
-* `sendFile`
-* `PLO_FILE`
-* `PLO_RAWDATA`
-* board/file/resource queueing
-* image/script/class/resource requests if present
-* modTime/cache behavior
-* compression thresholds
-* compression flags
-* encryption during flush
-* partial write behavior
-* websocket branches if relevant
-
-Allowed:
-
-* Implement byte-exact uncompressed resource/file transfer first.
-* Add compression/encryption only if exact byte fixtures can be proven from C++/gs2lib.
-* Add tests/golden fixtures.
-* Add interfaces for file/resource provider.
-
-Not allowed:
-
-* Do not approximate compression.
-* Do not invent resource lookup paths.
-* Do not implement full CDN/cache behavior unless source-confirmed.
+* Do not pretend dev fake auth is real production auth.
+* Do not bypass source-confirmed packet behavior.
+* Do not implement unknown behavior just to make the client connect.
+* Do not hide blockers.
 
 ---
 
-# Milestone 6: Movement/player props receive boundary
+# Milestone 4: Movement/player props receive boundary
 
-Start tracing incoming player movement/props packets, but only implement source-confirmed boundary behavior.
+If the local level-loading path is stable, begin tracing incoming movement/player props packets.
 
 Focus on:
 
-* `Player::parsePacket`
-* handlers for player props/movement
-* relevant `PLI_*` packets
-* `Player::setProps`
-* `Player::setProp`
-* position fields
+* Player::parsePacket
+* PLI player prop/movement handlers
+* Player::setProps
+* Player::setProp
 * x/y/z if present
 * direction
-* gani/animation
 * current level
+* animation/gani
 * prop forwarding to other players
-* validation/clipping behavior
-* level link traversal trigger, if present
-* disconnect/rejection behavior for invalid props, if any
+* clipping/validation
+* link traversal trigger
+* disconnect/rejection behavior for invalid updates, if any
 
 Allowed:
 
-* Add parsers for confirmed incoming movement/player-prop packets.
-* Add DTOs for incoming prop updates.
-* Add source-confirmed player state mutation only for safe fields.
-* Add forwarding packet builders only if exact behavior is confirmed.
+* Add parsers for confirmed incoming player prop packets.
+* Add DTOs for source-confirmed movement/property updates.
+* Add state mutation only for confirmed safe fields.
+* Add forwarding builders only if exact bytes are confirmed.
 * Add tests/golden fixtures.
 
 Not allowed:
 
 * Do not implement combat.
-* Do not implement inventory.
-* Do not implement full movement validation unless source-confirmed.
-* Do not invent anti-cheat behavior.
-* Do not implement link traversal unless traced.
-* Do not implement live network loop beyond existing skeleton unless safe.
+* Do not implement weapons/items.
+* Do not implement NPC AI.
+* Do not execute scripts.
+* Do not invent anti-cheat or validation behavior.
+* Do not implement link traversal unless fully traced.
 
 ---
 
-# Milestone 7: Minimal live player sync runtime
+# Milestone 5: Minimal live player sync runtime
 
-If movement/player prop behavior is confirmed enough, integrate it with minimal runtime ownership.
+If movement/player prop behavior is confirmed enough, integrate it with runtime ownership.
 
 Focus on:
 
-* player entering level
-* nearby player sync
-* player prop forwarding
+* player joining level
 * player leaving level
+* nearby player visibility
+* forwarding property updates
+* same-level and GMAP filtering
+* deterministic ordering
 * duplicate/disconnect cleanup
-* same-level and GMAP visibility filters
-* deterministic packet order
 
 Allowed:
 
-* Implement minimal runtime sync without gameplay.
 * Add tests with two or three players.
-* Add session state transitions only where source-confirmed.
-
-Not allowed:
-
-* Do not implement combat, item use, weapons, NPC AI, or scripts.
-* Do not invent movement behavior.
+* Keep this strictly to sync/visibility.
+* No gameplay systems.
 
 ---
 
-# Milestone 8: First runnable local server skeleton
-
-If enough login -> level entry -> sendLevel -> visibility sync pieces exist, create or improve a local runnable server shell.
-
-Focus on:
-
-* accepting TCP connection if skeleton already supports it
-* using existing protocol/session pieces
-* using test/in-memory account and level providers only when clearly marked development-only
-* making it possible to manually test a client connection to a simple `.nw` fixture
-* keeping production behavior blocked where not source-confirmed
-
-Allowed:
-
-* Add a dev-only/in-memory bootstrap configuration.
-* Add clear warnings that fake providers are not production-authentic.
-* Add docs for how to run the dev server.
-* Add integration tests if possible.
-
-Not allowed:
-
-* Do not pretend fake auth/account/level data is production behavior.
-* Do not bypass compatibility rules.
-* Do not implement unknown behavior just to make the client connect.
-
----
-
-# Milestone 9: Documentation and blockers
+# Milestone 6: Docs and tests
 
 Create/update docs:
 
 ```txt
-docs/spec/LEVEL_NW_FORMAT_SPEC.md
-docs/spec/LEVEL_LINKS_SIGNS_SPEC.md
-docs/spec/LEVEL_ITEM_CHEST_SPEC.md
-docs/spec/LEVEL_FILE_FORMAT_SPEC.md
-docs/spec/LEVEL_LOADING_SPEC.md
+docs/spec/LEVEL_FILESYSTEM_LOADING_SPEC.md
+docs/spec/LEVEL_RESOURCE_SPEC.md
 docs/spec/SENDLEVEL_SPEC.md
-docs/spec/CFILEQUEUE_FLUSH_SPEC.md
+docs/spec/RUN_LOCAL_DEV_SERVER.md
 docs/spec/MOVEMENT_PLAYER_PROPS_SPEC.md
 docs/spec/PLAYER_VISIBILITY_SYNC_SPEC.md
-docs/spec/RUN_LOCAL_DEV_SERVER.md
+docs/spec/CFILEQUEUE_FLUSH_SPEC.md
 docs/spec/GOLDEN_FIXTURES.md
 docs/spec/KNOWN_BLOCKERS.md
 KNOWN_BLOCKERS.md
@@ -368,7 +236,8 @@ At the end, report:
 * Which behavior remains blocked
 * Whether `ai_resources/` stayed untouched
 * Build/test results
-* Whether the project is closer to a manual client connection test
+* Whether a manual client connection test is now possible
+* If not possible, list the exact 3 smallest blockers
 * Safest next step
 
 Continue as far as safely possible. Do not stop after one small task if another safe task can be done safely.

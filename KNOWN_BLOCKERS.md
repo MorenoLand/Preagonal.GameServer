@@ -25,14 +25,20 @@
   side effects, scripting hooks, player-id generation, and live multi-session
   forwarding remain blocked.
 - Level file format detection is implemented for confirmed extension and
-  signature selection. Full NW/Graal/Zelda parsing remains blocked on exact
-  fixtures and filesystem/malformed-input behavior.
+  signature selection. A source-confirmed read-only indexed filesystem boundary
+  and filesystem-backed `.nw` loading path now feed static
+  board/layer/link/sign/chest payloads into `sendLevel`. Production
+  `foldersconfig.txt` parsing, full `Level::findLevel` cache/map ownership,
+  `.graal`/`.zelda` parsing, and file/resource transfer remain blocked.
 - Pure `.nw` parsing is implemented for confirmed board tiles, links with an
   explicit target resolver, signs, chests with source-confirmed item names, NPC
   payload preservation, and baddy verse payload preservation. Board/layer/link/
-  sign/chest packet builders exist. Production filesystem loading, player sign
-  translation, NPC runtime props, baddy runtime props/AI, chest opening gameplay,
-  and `.graal`/`.zelda` parsing remain blocked.
+  sign/chest packet builders exist. Player sign translation, NPC runtime props,
+  baddy runtime props/AI, and chest opening gameplay remain blocked.
+- Incoming `PLI_PLAYERPROPS` movement/property flow is traced for the first
+  X/Y/Z/sprite/current-level/gani cases, but implementation remains blocked on
+  `setProps` forwarding, touch/link traversal, NPC/chest/combat side effects,
+  and invalid-update behavior.
 - WebSocket handling is gated by `WOLFSSL_ENABLED` code paths and needs a dedicated pass.
 - `Server::doMain()` timing branches need a dedicated timing recovery pass.
 - Gameplay systems, account persistence, RC/NC file browser, server-list protocol, and scripting bindings are not implemented.

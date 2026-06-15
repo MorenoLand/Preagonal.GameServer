@@ -150,6 +150,56 @@ public sealed class SendLevelBoundaryTests
     }
 
     [Fact]
+    public void BeginModernCanUseFilesystemLoadedNwStaticPayload()
+    {
+        using var temp = new TemporaryDirectory();
+        var world = Directory.CreateDirectory(Path.Combine(temp.Path, "world"));
+        File.WriteAllText(
+            Path.Combine(world.FullName, "start.nw"),
+            """
+            GLEVNW01
+            BOARD 0 0 1 0 AB
+            LINK next.nw 1 2 3 4 5 6
+            SIGN 4 5
+            A
+            SIGNEND
+            CHEST 10 11 redrupee 3
+            """);
+
+        var fileSystem = new IndexedServerFileSystem(temp.Path);
+        fileSystem.AddDirectory("world", "*.nw");
+        var loaded = new NwLevelFileLoader(fileSystem)
+            .TryLoad("start.nw", linkTargetExists: levelName => levelName == "next.nw");
+        var level = ModernLevelPayload.FromNwStatic(loaded.ToModernStaticPayload(playerHasChest: _ => false));
+        var session = ReadyForLevelRuntimeSession();
+
+        SendLevelBoundary.BeginModern(
+            session,
+            level,
+            new SendLevelRequest(RequestedModTime: loaded.ModTime, CachedLevelModTime: 0, FromAdjacent: false));
+
+        var modTime = new GraalBinaryWriter();
+        modTime.WriteGChar((byte)ServerToPlayerPacketId.LevelModTime);
+        modTime.WriteGInt5(unchecked((uint)loaded.ModTime));
+
+        Assert.Equal(
+            new byte[] {
+                38, (byte)'s', (byte)'t', (byte)'a', (byte)'r', (byte)'t', (byte)'.', (byte)'n', (byte)'w', 10,
+            }
+            .Concat(modTime.ToArray())
+            .Concat(new byte[] {
+                10,
+                33, (byte)'n', (byte)'e', (byte)'x', (byte)'t', (byte)'.', (byte)'n', (byte)'w',
+                (byte)' ', (byte)'1', (byte)' ', (byte)'2', (byte)' ', (byte)'3', (byte)' ', (byte)'4',
+                (byte)' ', (byte)'5', (byte)' ', (byte)'6', 10,
+                37, 36, 37, 32, 128, 10,
+                32, 10,
+                36, 32, 42, 43, 34, 35, 10
+            }).ToArray(),
+            session.TakeOutboundBytes());
+    }
+
+    [Fact]
     public void BeginModernUsesLevelModTimeWhenRequestedModTimeIsMinusOne()
     {
         var session = ReadyForLevelRuntimeSession();
@@ -652,5 +702,18 @@ public sealed class SendLevelBoundaryTests
 
         public void Add(LevelEntrySnapshot level) =>
             _levels[level.LevelName] = level;
+    }
+
+    private sealed class TemporaryDirectory : IDisposable
+    {
+        public TemporaryDirectory()
+        {
+            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path);
+        }
+
+        public string Path { get; }
+
+        public void Dispose() => Directory.Delete(Path, recursive: true);
     }
 }

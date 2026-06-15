@@ -34,12 +34,19 @@
   list-server side effects, scripting hooks, player-id generation, production
   server player-list iteration compatibility, movement, or live forwarding.
 - Level format detection is implemented for the exact C++ extension checks and
-  eight-byte signatures. Full NW/Graal/Zelda parsing remains blocked on
-  dedicated fixtures for board/layer/link/sign/chest/horse/baddy/NPC payloads,
-  malformed file behavior, and filesystem lookup behavior.
+  eight-byte signatures. A read-only indexed filesystem boundary and
+  filesystem-backed `.nw` loading path now exist for static
+  board/layer/link/sign/chest payloads. Full production `Level::findLevel`
+  cache/map ownership, `foldersconfig.txt` parsing, `.graal`/`.zelda` parsing,
+  horse/baddy/NPC runtime construction, and file-transfer behavior remain
+  blocked.
 - Pure `.nw` parsing is implemented for confirmed `BOARD`, `LINK`, `SIGN`,
   `CHEST`, `NPC`, and `BADDY` source-line behavior, plus board/layer/link/sign
-  and chest packet builders. Production filesystem-backed loading, player sign
-  translation, NPC runtime creation, baddy ids/props/AI, chest opening gameplay,
-  and `.graal`/`.zelda` parsers remain blocked.
+  and chest packet builders. Player sign translation, NPC runtime creation,
+  baddy ids/props/AI, chest opening gameplay, and `.graal`/`.zelda` parsers
+  remain blocked.
+- Incoming `PLI_PLAYERPROPS` movement/property flow is traced through the first
+  confirmed X/Y/Z/sprite/current-level/gani cases, but implementation remains
+  blocked on `setProps` forwarding, touch/link traversal, NPC/chest/combat side
+  effects, and invalid-update behavior.
 - Server-list connection lifecycle, reconnect backoff, registration, and text/listserver side channels need a dedicated milestone.

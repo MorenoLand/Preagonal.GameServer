@@ -64,10 +64,11 @@ immediately sends `PLO_LEVELNAME`, then may send:
 These packets depend on full `Level` loading, cached mod times, board/layer
 data, maps, NPCs, and player lists.
 
-The current C# boundary implements only the static beginning of the modern
-`sendLevel` payload using pre-serialized level packet bytes. It still does not
-parse level files or construct board/layer/link/sign packets from real runtime
-state.
+The C# boundary now has a read-only filesystem-backed `.nw` loader that can
+construct static board/layer/link/sign/chest packets from an indexed file. This
+is still not a full production `Level::findLevel` implementation: it does not
+own the server level cache, map attachment, singleplayer/group-map clones,
+runtime NPCs, horses, baddies, or file transfer.
 
 The next safe slice now also wraps source-confirmed dynamic and post-dynamic
 packets from snapshots/pre-serialized runtime payloads. It does not construct
@@ -88,15 +89,18 @@ Implemented:
 - `SendLevelBoundary.BeginModern` dynamic wrappers for board changes, chests,
   horses, baddies, GMAP correction, ghost icon, leader, new world time, active
   level, and opaque NPC packet bytes
+- `IndexedServerFileSystem` and `NwLevelFileLoader` for source-confirmed
+  read-only `.nw` lookup, parse, modTime, and static packet construction
+- `ModernLevelPayload.FromNwStatic(...)` to pass filesystem-loaded `.nw` data
+  into `SendLevelBoundary`
 
 Not implemented:
 
-- production `Level::findLevel` disk loading
-- filesystem extension/directory behavior for levels/resources
+- production `Level::findLevel` level-list cache/map attachment
+- production `foldersconfig.txt` parsing/default server path setup
 - `loadAbsolute` filesystem mutation
-- `Level::loadLevel`
+- `.graal`/`.zelda` parsers
 - map file parsing
-- board/layer/resource packet construction from parsed level state
 - `sendFile`/large-file resource transfer during level entry
 - old-client `sendLevel141`
 - production level-entry runtime data construction after links/signs

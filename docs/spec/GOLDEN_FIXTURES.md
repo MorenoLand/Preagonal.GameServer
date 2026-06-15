@@ -822,6 +822,27 @@ PLO_LEVELBOARD empty
 PLO_LEVELCHEST unopened redrupee at 10,11 sign 3
 ```
 
+Filesystem-loaded `.nw` static payload:
+
+```txt
+world/start.nw indexed via FileSystem addDir("world", "*.nw")
+requested level: start.nw
+cache time: 0
+requested modTime: loaded stat mtime
+board already current
+
+sequence:
+PLO_LEVELNAME "start.nw"
+PLO_LEVELMODTIME GINT5(loaded stat mtime)
+PLO_LEVELLINK "next.nw 1 2 3 4 5 6"
+PLO_LEVELSIGN x=4 y=5 text="A\n"
+PLO_LEVELBOARD empty
+PLO_LEVELCHEST unopened redrupee at 10,11 sign 3
+```
+
+The exact five bytes after `PLO_LEVELMODTIME` vary with the file mtime and are
+encoded through the existing source-confirmed `GINT5` writer.
+
 ## Server-List Auth
 
 ### SVO_VERIACC2

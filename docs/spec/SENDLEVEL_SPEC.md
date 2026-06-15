@@ -132,6 +132,9 @@ The C# boundary queues:
   payload slots
 - parsed `.nw` links/signs/chests can feed the existing links/signs/chest
   payload slots
+- indexed filesystem `.nw` files can now flow through
+  `NwLevelFileLoader.TryLoad(...)`, `LoadedNwLevel.ToModernStaticPayload(...)`,
+  and `ModernLevelPayload.FromNwStatic(...)` into this boundary
 
 The boundary stops after nearby player prop synchronization and before live
 movement/gameplay simulation. Runtime data that C# cannot yet compute safely is
@@ -141,8 +144,8 @@ Not implemented:
 
 - old `sendLevel141`
 - `getCachedLevelModTime`
-- filesystem-backed production level snapshot loading
+- production `Level::findLevel` cache/map ownership
+- production `foldersconfig.txt` setup
 - production horse and baddy runtime state
 - production NPC packet construction
 - production multi-session socket forwarding
-- production parsed level snapshot service/provider

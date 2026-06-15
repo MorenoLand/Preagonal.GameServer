@@ -1,3 +1,4 @@
+using GServ.Game;
 using GServ.Protocol;
 
 namespace GServ.Network;
@@ -47,7 +48,27 @@ public sealed record ModernLevelPayload(
     IReadOnlyList<LevelHorsePayload>? Horses = null,
     IReadOnlyList<LevelBaddyPayload>? Baddies = null,
     LevelRuntimeContinuationPayload? RuntimeContinuation = null,
-    LevelEntryPlayerSyncPayload? PlayerSync = null);
+    LevelEntryPlayerSyncPayload? PlayerSync = null)
+{
+    public static ModernLevelPayload FromNwStatic(NwLevelStaticPayload payload) =>
+        new(
+            payload.LevelName,
+            payload.LevelModTime,
+            payload.BoardPacket,
+            payload.Layers
+                .Select(layer => new LevelLayerPayload(layer.LayerIndex, layer.Packet))
+                .ToArray(),
+            payload.LinksPacket,
+            payload.SignsPacket,
+            Chests: payload.Chests
+                .Select(chest => new LevelChestPayload(
+                    chest.HasChest,
+                    chest.X,
+                    chest.Y,
+                    chest.ItemIndex,
+                    chest.SignIndex))
+                .ToArray());
+}
 
 public sealed record SendLevelRequest(
     long RequestedModTime,
