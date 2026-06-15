@@ -771,6 +771,57 @@ PLO_RAWDATA GINT(8194) "\n" parsed board packet prefix
 => [132, 32, 96, 34, 10, 133, 1, 0, 191, 15]
 ```
 
+Parsed `.nw` link packet:
+
+```txt
+LINK target level.nw 1 2 3 4 5.5 6.5
+=> [33] + ASCII("target level.nw 1 2 3 4 5.5 6.5") + [10]
+```
+
+Parsed `.nw` sign packet:
+
+```txt
+SIGN 4 5
+A
+SIGNEND
+
+=> [37, 36, 37, 32, 128, 10]
+```
+
+`37` is `GCHAR PLO_LEVELSIGN`, `36`/`37` are `GCHAR x/y`, `32` is encoded
+`A`, and `128` is encoded newline.
+
+Level item catalog examples:
+
+```txt
+greenrupee => 0
+bombs => 3
+spinattack => 24
+GREENRUPEE => INVALID
+```
+
+Parsed `.nw` chest packet with one unopened and one opened chest:
+
+```txt
+CHEST 10 11 redrupee 3
+CHEST 12 13 bluerupee 4
+player has chest key "12:13:start.nw"
+
+=> [36, 32, 42, 43, 34, 35, 10,
+    36, 33, 44, 45, 10]
+```
+
+Parsed `.nw` static `sendLevel` sequence through chests when board is current:
+
+```txt
+PLO_LEVELNAME "start.nw"
+PLO_LEVELMODTIME GINT5(1)
+PLO_LEVELLINK "next.nw 1 2 3 4 5 6"
+PLO_LEVELSIGN x=4 y=5 text="A\n"
+PLO_LEVELBOARD empty
+PLO_LEVELCHEST unopened redrupee at 10,11 sign 3
+```
+
 ## Server-List Auth
 
 ### SVO_VERIACC2

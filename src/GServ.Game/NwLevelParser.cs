@@ -72,7 +72,7 @@ public sealed record NwLevelNpc(string Image, float X, float Y, string Code);
 
 public sealed record NwLevelBaddy(int X, int Y, int Type, IReadOnlyList<string> Verses);
 
-public sealed record NwLevelChest(int X, int Y, string ItemName, int SignIndex);
+public sealed record NwLevelChest(int X, int Y, LevelItemType ItemType, int SignIndex);
 
 public static class NwLevelParser
 {
@@ -120,6 +120,9 @@ public static class NwLevelParser
                     break;
                 case "BADDY":
                     ParseBaddy(tokens, lines, ref i, baddies);
+                    break;
+                case "CHEST":
+                    ParseChest(tokens, chests);
                     break;
             }
         }
@@ -304,6 +307,22 @@ public static class NwLevelParser
         }
 
         baddies.Add(new NwLevelBaddy(Atoi(tokens[1]), Atoi(tokens[2]), Atoi(tokens[3]), verses));
+    }
+
+    private static void ParseChest(IReadOnlyList<string> tokens, ICollection<NwLevelChest> chests)
+    {
+        if (tokens.Count != 5)
+        {
+            return;
+        }
+
+        var itemType = LevelItemCatalog.GetItemId(tokens[3]);
+        if (itemType == LevelItemType.Invalid)
+        {
+            return;
+        }
+
+        chests.Add(new NwLevelChest(Atoi(tokens[1]), Atoi(tokens[2]), itemType, Atoi(tokens[4])));
     }
 
     private static IReadOnlyList<string> SplitLinesKeepingEmpty(string content)

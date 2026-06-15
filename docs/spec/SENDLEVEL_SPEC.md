@@ -130,6 +130,8 @@ The C# boundary queues:
 - nearby player visibility sync using pre-serialized `PLO_OTHERPLPROPS` packets
 - parsed `.nw` board/layer snapshots can feed the existing raw board/layer
   payload slots
+- parsed `.nw` links/signs/chests can feed the existing links/signs/chest
+  payload slots
 
 The boundary stops after nearby player prop synchronization and before live
 movement/gameplay simulation. Runtime data that C# cannot yet compute safely is
@@ -140,8 +142,7 @@ Not implemented:
 - old `sendLevel141`
 - `getCachedLevelModTime`
 - filesystem-backed production level snapshot loading
-- links/signs builders from parsed level state
 - production horse and baddy runtime state
 - production NPC packet construction
 - production multi-session socket forwarding
-- production parsed level snapshots feeding board/layer/link/sign packets
+- production parsed level snapshot service/provider

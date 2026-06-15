@@ -98,6 +98,58 @@ public sealed class SendLevelBoundaryTests
     }
 
     [Fact]
+    public void BeginModernCanUseParsedNwStaticPacketsThroughChests()
+    {
+        var session = ReadyForLevelRuntimeSession();
+        var parsed = NwLevelParser.Parse(
+            """
+            GLEVNW01
+            BOARD 0 0 1 0 AB
+            LINK next.nw 1 2 3 4 5 6
+            SIGN 4 5
+            A
+            SIGNEND
+            CHEST 10 11 redrupee 3
+            """,
+            linkTargetExists: levelName => levelName == "next.nw");
+        var level = new ModernLevelPayload(
+            LevelName: "start.nw",
+            LevelModTime: 1,
+            BoardPacket: NwLevelPacketBuilder.BuildBoardPacket(parsed.Level),
+            Layers: [],
+            LinksPacket: NwLevelPacketBuilder.BuildLinksPacket(parsed.Level),
+            SignsPacket: NwLevelPacketBuilder.BuildSignsPacket(parsed.Level),
+            Chests:
+            [
+                ..parsed.Level.Chests.Select(chest => new LevelChestPayload(
+                    HasChest: false,
+                    X: (byte)chest.X,
+                    Y: (byte)chest.Y,
+                    ItemIndex: (byte)chest.ItemType,
+                    SignIndex: (byte)chest.SignIndex))
+            ]);
+
+        SendLevelBoundary.BeginModern(
+            session,
+            level,
+            new SendLevelRequest(RequestedModTime: 1, CachedLevelModTime: 0, FromAdjacent: false));
+
+        Assert.Equal(
+            new byte[]
+            {
+                38, (byte)'s', (byte)'t', (byte)'a', (byte)'r', (byte)'t', (byte)'.', (byte)'n', (byte)'w', 10,
+                71, 32, 32, 32, 32, 33, 10,
+                33, (byte)'n', (byte)'e', (byte)'x', (byte)'t', (byte)'.', (byte)'n', (byte)'w',
+                (byte)' ', (byte)'1', (byte)' ', (byte)'2', (byte)' ', (byte)'3', (byte)' ', (byte)'4',
+                (byte)' ', (byte)'5', (byte)' ', (byte)'6', 10,
+                37, 36, 37, 32, 128, 10,
+                32, 10,
+                36, 32, 42, 43, 34, 35, 10
+            },
+            session.TakeOutboundBytes());
+    }
+
+    [Fact]
     public void BeginModernUsesLevelModTimeWhenRequestedModTimeIsMinusOne()
     {
         var session = ReadyForLevelRuntimeSession();

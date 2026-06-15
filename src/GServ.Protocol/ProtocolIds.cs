@@ -15,8 +15,10 @@ public enum PlayerToServerPacketId : byte
 public enum ServerToPlayerPacketId : byte
 {
     LevelBoard = 0,
+    LevelLink = 1,
     BaddyProps = 2,
     LevelChest = 4,
+    LevelSign = 5,
     LevelName = 6,
     BoardModify = 7,
     OtherPlayerProps = 8,

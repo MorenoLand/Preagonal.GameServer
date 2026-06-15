@@ -12,8 +12,10 @@ public sealed class ProtocolConstantTests
         Assert.Equal(252, (int)PlayerToServerPacketId.SetEncryptionKey);
         Assert.Equal(253, (int)PlayerToServerPacketId.Bundle);
         Assert.Equal(0, (int)ServerToPlayerPacketId.LevelBoard);
+        Assert.Equal(1, (int)ServerToPlayerPacketId.LevelLink);
         Assert.Equal(2, (int)ServerToPlayerPacketId.BaddyProps);
         Assert.Equal(4, (int)ServerToPlayerPacketId.LevelChest);
+        Assert.Equal(5, (int)ServerToPlayerPacketId.LevelSign);
         Assert.Equal(6, (int)ServerToPlayerPacketId.LevelName);
         Assert.Equal(7, (int)ServerToPlayerPacketId.BoardModify);
         Assert.Equal(8, (int)ServerToPlayerPacketId.OtherPlayerProps);

@@ -28,10 +28,11 @@
   signature selection. Full NW/Graal/Zelda parsing remains blocked on exact
   fixtures and filesystem/malformed-input behavior.
 - Pure `.nw` parsing is implemented for confirmed board tiles, links with an
-  explicit target resolver, signs, NPC payload preservation, and baddy verse
-  payload preservation. Production filesystem loading, chests, sign/link packet
-  builders, NPC runtime props, baddy runtime props/AI, and `.graal`/`.zelda`
-  parsing remain blocked.
+  explicit target resolver, signs, chests with source-confirmed item names, NPC
+  payload preservation, and baddy verse payload preservation. Board/layer/link/
+  sign/chest packet builders exist. Production filesystem loading, player sign
+  translation, NPC runtime props, baddy runtime props/AI, chest opening gameplay,
+  and `.graal`/`.zelda` parsing remain blocked.
 - WebSocket handling is gated by `WOLFSSL_ENABLED` code paths and needs a dedicated pass.
 - `Server::doMain()` timing branches need a dedicated timing recovery pass.
 - Gameplay systems, account persistence, RC/NC file browser, server-list protocol, and scripting bindings are not implemented.

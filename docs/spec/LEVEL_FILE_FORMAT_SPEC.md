@@ -99,7 +99,7 @@ eight-byte magic values. It intentionally does not accept uppercase extensions
 because C++ only proves literal `.nw`, `.graal`, and `.zelda` comparisons.
 
 The first pure `.nw` parser is implemented for confirmed `BOARD`, `LINK`,
-`SIGN`, `NPC`, and `BADDY` source-line behavior. See
+`SIGN`, `CHEST`, `NPC`, and `BADDY` source-line behavior. See
 `docs/spec/LEVEL_NW_FORMAT_SPEC.md`.
 
 No production level-file parser is wired to filesystem/runtime loading yet.

@@ -38,8 +38,8 @@
   dedicated fixtures for board/layer/link/sign/chest/horse/baddy/NPC payloads,
   malformed file behavior, and filesystem lookup behavior.
 - Pure `.nw` parsing is implemented for confirmed `BOARD`, `LINK`, `SIGN`,
-  `NPC`, and `BADDY` source-line behavior, plus board/layer packet builders.
-  Production filesystem-backed loading, `CHEST` item validation, sign/link
-  packet builders, NPC runtime creation, baddy ids/props/AI, and
-  `.graal`/`.zelda` parsers remain blocked.
+  `CHEST`, `NPC`, and `BADDY` source-line behavior, plus board/layer/link/sign
+  and chest packet builders. Production filesystem-backed loading, player sign
+  translation, NPC runtime creation, baddy ids/props/AI, chest opening gameplay,
+  and `.graal`/`.zelda` parsers remain blocked.
 - Server-list connection lifecycle, reconnect backoff, registration, and text/listserver side channels need a dedicated milestone.

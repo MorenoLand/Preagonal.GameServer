@@ -137,4 +137,21 @@ public sealed class NwLevelParserTests
         Assert.Equal("5.5", link.NewX);
         Assert.Equal("6.5", link.NewY);
     }
+
+    [Fact]
+    public void ParseChestOnlyAddsKnownLevelItemNames()
+    {
+        var result = NwLevelParser.Parse("""
+            GLEVNW01
+            CHEST 10 11 redrupee 3
+            CHEST 12 13 missing 4
+            """);
+
+        Assert.True(result.Success);
+        var chest = Assert.Single(result.Level.Chests);
+        Assert.Equal(10, chest.X);
+        Assert.Equal(11, chest.Y);
+        Assert.Equal(LevelItemType.RedRupee, chest.ItemType);
+        Assert.Equal(3, chest.SignIndex);
+    }
 }

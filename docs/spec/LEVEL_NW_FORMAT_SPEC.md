@@ -134,9 +134,8 @@ CHEST x y itemName signIndex
 ```
 
 Accepted by C++ only when token count is exactly 5 and
-`LevelItem::getItemId(itemName)` is not `INVALID`. The C# parser does not accept
-chests yet because the item catalog and invalid-item behavior must be recovered
-first.
+`LevelItem::getItemId(itemName)` is not `INVALID`. The C# parser now accepts
+only source-confirmed item names from `LevelItem.cpp`.
 
 ## C# Status
 
@@ -148,14 +147,17 @@ Implemented:
 - `NwLevelSign`
 - `NwLevelNpc`
 - `NwLevelBaddy`
+- `NwLevelChest`
+- `LevelItemType`
+- `LevelItemCatalog`
 - `NwLevelPacketBuilder.BuildBoardPacket`
 - `NwLevelPacketBuilder.BuildLayerPacket`
+- `NwLevelPacketBuilder.BuildLinksPacket`
+- `NwLevelPacketBuilder.BuildSignsPacket`
+- `NwLevelPacketBuilder.BuildChestPacket`
 
 Not implemented:
 
-- chest acceptance through `LevelItem::getItemId`
-- sign-code packet encoding
-- link/sign packet builders
 - NPC runtime creation or packet props
 - baddy runtime ids/props/AI
 - filesystem `find`, `findi`, `nofoldersconfig`, and mod-time integration

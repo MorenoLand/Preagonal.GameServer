@@ -60,18 +60,17 @@ line behavior:
 - `BOARD` writes decoded tiles into immutable snapshots
 - `LINK` is accepted only through an explicit target-exists callback
 - `SIGN` preserves multiline text through `SIGNEND`
+- `CHEST` accepts only source-confirmed `LevelItem` names
 - `NPC` preserves image, position, and raw script payload through `NPCEND`
 - `BADDY` preserves x/y/type and verse lines through `BADDYEND`
 
 The parser does not execute scripts, create runtime NPCs, run baddy AI, or
-accept chests until the item catalog is recovered.
+perform chest-opening gameplay.
 
 ## Blocked Parser Areas
 
 - exact `CString::loadToken` behavior for every malformed/trailing newline edge
-- serialized `LINK` packet payloads
-- `SIGN` packet encoding
-- `CHEST` item/sign fields
+- production filesystem-backed snapshot loading
 - baddy runtime ids and property packet construction
 - NPC runtime creation and property packet construction
 - legacy Graal and Zelda RLE/tile parsing
