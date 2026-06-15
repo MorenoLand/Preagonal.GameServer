@@ -4,6 +4,8 @@ These questions block a faithful production protocol implementation.
 
 ## Missing Authoritative Dependencies
 
+Recovery pass result: all five protocol-critical headers are still missing from this checkout. Build metadata shows they are expected from the external `gs2lib` dependency fetched by CMake from Bitbucket and added via `gs2lib_SOURCE_DIR/include`.
+
 1. Recover `IEnums.h` or equivalent generated enum output.
    - Blocks numeric packet IDs for all `PLI_*`, `PLO_*`, `SVI_*`, `SVO_*`.
    - Blocks numeric `PLTYPE_*`, `CLVER_*`, `RCVER_*`, `NCVER_*`, status, flag, permission, compression, and file-type constants.
@@ -46,7 +48,8 @@ The login field order is documented, but a working login requires:
 
 ## Recommended Recovery Tactics
 
-- Search project history, package artifacts, old build machines, or upstream repositories for the missing shared Graal server headers.
+- Recover `gs2lib` commit `63b1ae96491c188905b50c6b61c8532c601a2122` from Bitbucket or another trusted project cache.
+- Search project history, package artifacts, old build machines, CI caches, or dependency archives for the missing shared Graal server headers.
 - If source recovery fails, build/run the C++ server with packet logging and capture byte fixtures for:
   - unencrypted generation 1/2 login attempts,
   - simple `PLO_DISCMESSAGE`,
@@ -54,3 +57,9 @@ The login field order is documented, but a working login requires:
   - `PLI_PACKETCOUNT`,
   - `PLO_RAWDATA` plus `PLO_FILE`.
 - Compare captured bytes against the current C# codec tests before adding numeric enums.
+
+See also:
+
+- `docs/cpp-missing-dependencies.md`
+- `docs/protocol-dependency-call-sites.md`
+- `docs/protocol-blockers.md`

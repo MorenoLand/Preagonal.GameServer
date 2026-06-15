@@ -19,4 +19,16 @@ public sealed class ProtocolSourceStatusTests
         Assert.Equal(10, ProtocolWireConstants.PacketTerminator);
         Assert.Equal(256, ProtocolWireConstants.HandlerTableSize);
     }
+
+    [Fact]
+    public void ProtocolCriticalCppDependencyHeadersRemainUnrecovered()
+    {
+        Assert.Equal("gs2lib", ProtocolDependencySourceStatus.ExpectedSourceDependency);
+        Assert.Equal("gs2lib_SOURCE_DIR/include", ProtocolDependencySourceStatus.ExpectedSourceIncludePath);
+        Assert.False(ProtocolDependencySourceStatus.IEnumsHeaderRecovered);
+        Assert.False(ProtocolDependencySourceStatus.CStringHeaderRecovered);
+        Assert.False(ProtocolDependencySourceStatus.CEncryptionHeaderRecovered);
+        Assert.False(ProtocolDependencySourceStatus.CFileQueueHeaderRecovered);
+        Assert.False(ProtocolDependencySourceStatus.CSocketHeaderRecovered);
+    }
 }

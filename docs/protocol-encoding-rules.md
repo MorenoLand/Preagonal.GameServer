@@ -10,6 +10,8 @@ Inbound client data is read from a socket into a receive buffer. `IPacketHandler
 
 The byte order of `CString::readShort()` is not confirmed because `CString.h` is absent. The C# port must not finalize bundle prefix byte order until `CString.h`, `CFileQueue.h`, or byte captures confirm it.
 
+The missing `CString.h` and `CFileQueue.h` are expected from the external `gs2lib` dependency configured by the original C++ CMake files.
+
 ## Packet Delimiting
 
 Source: `IPacketHandler::parsePacketsFromBundle` and `Player::sendPacket`.
@@ -80,6 +82,8 @@ Missing definitions:
 - `COMPRESS_ZLIB`, `COMPRESS_BZ2`, `COMPRESS_UNCOMPRESSED` numeric values.
 - Encryption algorithm and key schedule.
 - `CFileQueue` compression and output bundle behavior.
+
+Directly confirmed server-list file type values are not packet opcodes, but are protocol-adjacent constants: `SVF_HEAD = 0`, `SVF_BODY = 1`, `SVF_SWORD = 2`, `SVF_SHIELD = 3`, and `SVF_FILE = 4`.
 
 ## C# Tests Added So Far
 
