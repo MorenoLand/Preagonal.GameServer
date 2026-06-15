@@ -27,13 +27,19 @@ Expected limitations:
 
 - accepts one client/login frame at a time
 - uses dev-only local auth, not the production list server
-- writes uncompressed queued bytes only
+- writes uncompressed queued diagnostic bytes for the full login/level response
 - stops before movement, NPCs, scripts, file transfer, and live world runtime
 - closes after the diagnostic login/level boundary
+
+The protocol project now has source-confirmed socket flush primitives for
+gen1/gen6 passthrough and gen5 uncompressed payloads up to 55 bytes. The dev
+server does not yet route its full response through production socket framing
+because the real login/level response is larger than 55 bytes and therefore
+requires byte-exact zlib/bzip2 confirmation.
 
 ## Manual Closed-Client Status
 
 A synthetic/manual TCP diagnostic is possible. A meaningful closed-source game
-client session is still not expected to work because outbound gen2+ compression
-and encryption framing, continuous session streaming, and runtime movement are
-not implemented.
+client session is still not expected to work because outbound compressed gen2+
+and gen5-over-55 socket framing, continuous session streaming, and runtime
+movement are not implemented.

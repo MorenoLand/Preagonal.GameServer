@@ -291,6 +291,39 @@ first send max 3 => ASCII("abc")
 next send => ASCII("def\n")
 ```
 
+## CFileQueue Gen5 Socket Flush
+
+For `ENCRYPT_GEN_5`, `CFileQueue::sendCompress` uses compression type
+`COMPRESS_UNCOMPRESSED = 0x02` when the pending payload length is `<= 55`.
+The socket frame is:
+
+```txt
+GSHORT(encryptedLength + 1), raw compression type byte, encrypted payload
+```
+
+Fixture with key `0` and queued payload `ASCII("abc\n")`:
+
+```txt
+queued payload:
+[97, 98, 99, 10]
+
+encrypted payload:
+[121, 122, 178, 220]
+
+socket bytes:
+[0, 5, 2, 121, 122, 178, 220]
+```
+
+Partial socket send fixture:
+
+```txt
+first send max 3 => [0, 5, 2]
+next send => [121, 122, 178, 220]
+```
+
+Gen5 payloads longer than 55 bytes intentionally remain blocked in C# until
+the zlib/bzip2 output bytes are confirmed against `gs2lib`.
+
 ## Account Loading Fixtures
 
 These fixtures assert state transitions and persistence side-effect requests,

@@ -64,6 +64,24 @@ Confirmed thresholds:
   big-endian short `(encryptedLength + 1)`, then raw compression type byte, then
   encrypted payload.
 
+Confirmed compression type constants from `CFileQueue.cpp` / `CEncryption.cpp`:
+
+- `COMPRESS_UNCOMPRESSED = 0x02`
+- `COMPRESS_ZLIB = 0x04`
+- `COMPRESS_BZ2 = 0x06`
+
+Confirmed gen5 threshold behavior:
+
+- payload length `<= 55`: compression type `0x02`, no zlib/bzip2 compression
+- payload length `> 55`: zlib path
+- payload length `> 0x2000`: bzip2 path
+
+Confirmed gen5 encryption limit behavior:
+
+- compression type `0x02`: limit `0x0C`
+- compression type `0x04`: limit `0x04`
+- compression type `0x06`: limit `0x04`
+
 ## Socket Semantics
 
 `CSocket::sendData` calls nonblocking `send`. On `EAGAIN`, it returns 0 without
@@ -73,8 +91,8 @@ from `*dsize`; `CFileQueue` removes exactly the returned sent byte count from
 
 ## C# Boundary
 
-The C# `GraalFileQueue` currently implements the source-confirmed passthrough
-flush path for `ENCRYPT_GEN_1`/`ENCRYPT_GEN_6`:
+The C# `GraalFileQueue` currently implements these source-confirmed flush
+paths:
 
 - normal newline packet splitting
 - `PLO_RAWDATA` length transition
@@ -82,22 +100,41 @@ flush path for `ENCRYPT_GEN_1`/`ENCRYPT_GEN_6`:
 - file-buffer routing for non-board raw data and large-file packets
 - queue selection thresholds used before compression
 - output buffering across partial sends
+- socket-level passthrough for `ENCRYPT_GEN_1`/`ENCRYPT_GEN_6`
+- socket-level gen5 uncompressed payload framing for payloads `<= 55`
+- gen5 uncompressed compression type byte `0x02`
+- gen5 big-endian socket length prefix equal to `encryptedLength + 1`
+- gen5 iterator-XOR encryption using the recovered `CEncryption` behavior
+- explicit unsupported exceptions for gen2/gen3/gen4 and gen5 compressed
+  payloads until zlib/bzip2 bytes are independently proven
 
-Production compressed/encrypted flush behavior remains blocked until
-zlib/bzip2/encryption/websocket fixtures are byte-exact.
+Production compressed flush behavior remains blocked until zlib/bzip2 fixtures
+are byte-exact. The implemented gen5 path is intentionally limited to the
+source-confirmed uncompressed branch.
 
 ## Current Pass Status
 
-No new `CFileQueue` production behavior was implemented in the current
-`sendLevel` passes. The C# boundary queues normal newline packets,
-`PLO_RAWDATA` headers, pre-serialized board/layer payload bytes, dynamic level
-packets, and first post-dynamic runtime packets in the same order C++ calls
-`Player::sendPacket`. Existing `GraalFileQueue` tests already cover the
-confirmed raw-data transition for board payloads.
+This pass implemented the first socket-level flush boundary that does not
+require unproven compression output:
+
+- gen1/gen6 socket flush emits the queued bytes directly.
+- gen5 payloads up to 55 bytes are framed as:
+  `GSHORT(encryptedLength + 1) + compressionType + encryptedPayload`.
+- partial socket writes leave remaining framed bytes buffered for the next
+  flush, matching the `oBuffer` / `sendData` retry model in `CFileQueue`.
+- unsupported compressed branches throw before consuming the pending diagnostic
+  queue bytes, so future compression implementation can resume from the same
+  payload.
+
+The C# boundary still queues normal newline packets, `PLO_RAWDATA` headers,
+pre-serialized board/layer payload bytes, dynamic level packets, and first
+post-dynamic runtime packets in the same order C++ calls `Player::sendPacket`.
 
 Still blocked:
 
-- compressed/encrypted socket-level flush bytes
+- gen2/gen3 zlib socket-level flush bytes
+- gen4 bzip2 + encryption socket-level flush bytes
+- gen5 zlib/bzip2 socket-level flush bytes for payloads over 55 bytes
 - websocket wrapping
 - production file transfer through `PLO_FILE`
 - level resource transfer beyond pre-serialized board/layer and runtime payloads

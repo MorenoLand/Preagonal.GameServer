@@ -6,7 +6,10 @@
 - The login packet parse boundary, server-list auth boundary, source-confirmed beginning of `Player::sendLogin`, `Server::playerLoggedIn` list-server add side effect, minimal pre-warp `sendLoginClient` packet order, the confirmed `__sendLogin` property ID table, and login property serialization are implemented. The current stop point is `ReadyForLevelWarp`, immediately before `warp(m_levelName, getX(), getY())`.
 - Old-version map-file workaround, `flaghack_ip`, weapons, protected weapons, classes, and zlib-fix NPC weapon branches in `sendLoginClient` are traced but not implemented.
 - The login-server-name branch in `Player::sendLogin` is blocked because C++ references `PLO_FULLSTOP`, but recovered `IEnums.h` only defines `PLO_FULLSTOP2 = 177`.
-- `CFileQueue` uncompressed passthrough queue/flush is implemented; compression, encryption, and websocket wrapping remain blocked.
+- `CFileQueue` queue selection, gen1/gen6 socket passthrough, and gen5
+  uncompressed socket framing for payloads up to 55 bytes are implemented.
+  Gen2/gen3 zlib framing, gen4 bzip2/encryption framing, gen5 compressed
+  payload framing, and websocket wrapping remain blocked.
 - A dev-only TCP/session shell exists for a one-frame diagnostic login ->
   filesystem `.nw` -> `sendLevel` boundary. It is not production-compatible and
   must remain opt-in because it uses fake local auth, uncompressed outbound

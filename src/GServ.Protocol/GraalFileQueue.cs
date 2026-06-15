@@ -5,11 +5,14 @@ public sealed class GraalFileQueue
     private readonly Queue<byte[]> _normalBuffer = new();
     private readonly Queue<byte[]> _fileBuffer = new();
     private readonly List<byte> _outputBuffer = [];
+    private readonly List<byte> _socketOutputBuffer = [];
     private bool _previousRawData;
     private int _rawDataSize;
     private byte[] _rawDataHeader = [];
     private int _bytesSentWithoutFile;
     private int _sendCallsWithoutData;
+    private EncryptionGeneration _outboundGeneration = EncryptionGeneration.Gen1;
+    private GraalEncryption _outboundCodec = new(EncryptionGeneration.Gen1);
 
     public void AddPacket(ReadOnlySpan<byte> packetBytes)
     {
@@ -71,6 +74,13 @@ public sealed class GraalFileQueue
         }
     }
 
+    public void SetCodec(EncryptionGeneration generation, byte key)
+    {
+        _outboundGeneration = generation;
+        _outboundCodec = new GraalEncryption(generation);
+        _outboundCodec.Reset(key);
+    }
+
     public byte[] FlushUncompressed(bool forceSendFiles = false, int? maxBytes = null)
     {
         FillOutputBuffer(forceSendFiles);
@@ -80,6 +90,18 @@ public sealed class GraalFileQueue
         var count = Math.Min(maxBytes ?? _outputBuffer.Count, _outputBuffer.Count);
         var sent = _outputBuffer.GetRange(0, count).ToArray();
         _outputBuffer.RemoveRange(0, count);
+        return sent;
+    }
+
+    public byte[] FlushSocket(bool forceSendFiles = false, int? maxBytes = null)
+    {
+        FillSocketOutputBuffer(forceSendFiles);
+        if (_socketOutputBuffer.Count == 0)
+            return [];
+
+        var count = Math.Min(maxBytes ?? _socketOutputBuffer.Count, _socketOutputBuffer.Count);
+        var sent = _socketOutputBuffer.GetRange(0, count).ToArray();
+        _socketOutputBuffer.RemoveRange(0, count);
         return sent;
     }
 
@@ -129,6 +151,57 @@ public sealed class GraalFileQueue
 
         _sendCallsWithoutData = 0;
         _outputBuffer.AddRange(pending);
+    }
+
+    private void FillSocketOutputBuffer(bool forceSendFiles)
+    {
+        if (_socketOutputBuffer.Count != 0)
+            return;
+
+        FillOutputBuffer(forceSendFiles);
+        if (_outputBuffer.Count == 0)
+            return;
+
+        switch (_outboundGeneration)
+        {
+            case EncryptionGeneration.Gen1:
+            case EncryptionGeneration.Gen6:
+                _socketOutputBuffer.AddRange(_outputBuffer);
+                _outputBuffer.Clear();
+                return;
+
+            case EncryptionGeneration.Gen5:
+                if (_outputBuffer.Count > 55)
+                    throw new NotSupportedException("Gen5 compressed socket flush is blocked until zlib/bzip2 bytes are confirmed against gs2lib.");
+
+                var payload = _outputBuffer.ToArray();
+                AddGen5SocketPayload(payload);
+                _outputBuffer.Clear();
+                return;
+
+            case EncryptionGeneration.Gen2:
+            case EncryptionGeneration.Gen3:
+            case EncryptionGeneration.Gen4:
+                throw new NotSupportedException(
+                    $"Socket flush for {_outboundGeneration} is blocked until zlib/bzip2 bytes are confirmed against gs2lib.");
+
+            default:
+                throw new NotSupportedException($"Socket flush for {_outboundGeneration} is not confirmed.");
+        }
+    }
+
+    private void AddGen5SocketPayload(byte[] payload)
+    {
+        _outboundCodec.LimitFromCompressionType(CompressionType.Uncompressed);
+        var encrypted = _outboundCodec.Encrypt(payload);
+        if (encrypted.Length > 0xFFFC)
+            return;
+
+        var framedLength = encrypted.Length + 1;
+        _socketOutputBuffer.Add((byte)(framedLength >> 8));
+        _socketOutputBuffer.Add((byte)framedLength);
+        _socketOutputBuffer.Add((byte)CompressionType.Uncompressed);
+        _socketOutputBuffer.AddRange(encrypted);
     }
 
     private static byte[] Combine(ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)

@@ -39,15 +39,30 @@ Implemented:
   - accepts one TCP client at a time
   - reads exactly one length-prefixed frame without waiting for EOF
   - writes the uncompressed queued outbound bytes from `GraalFileQueue`
+  - does not yet use production gen5 socket flush for the full login/level
+    response because that response exceeds the confirmed uncompressed gen5
+    threshold and would require blocked zlib/bzip2 output
 
 This is a diagnostic shell, not a production session loop.
+
+## Socket Flush Boundary
+
+`GraalFileQueue.FlushSocket` now covers the source-confirmed socket-level paths
+that do not depend on unverified compression output:
+
+- `ENCRYPT_GEN_1` and `ENCRYPT_GEN_6`: queued bytes are emitted directly.
+- `ENCRYPT_GEN_5` with payload length `<= 55`: emits big-endian length,
+  compression type `0x02`, and iterator-XOR encrypted payload bytes.
+- Partial socket writes preserve remaining framed bytes for the next flush.
+
+The dev-only TCP shell intentionally remains on uncompressed diagnostic queue
+bytes until full login/level response compression is proven byte-exact.
 
 ## Known Gaps
 
 - The TCP shell processes one login frame and then closes the connection.
-- Outbound compressed/encrypted socket framing for gen2+ clients is still
-  blocked on `CFileQueue::sendCompress` fixtures.
+- Outbound compressed socket framing for gen2/gen3/gen4 and gen5 payloads over
+  55 bytes is still blocked on `CFileQueue::sendCompress` fixtures.
 - Websocket wrapping is not implemented.
 - Continuous packet streaming, movement, reconnect cleanup, and multi-session
   forwarding are not implemented.
-
