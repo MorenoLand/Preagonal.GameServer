@@ -1,0 +1,10 @@
+# Compatibility Rules
+
+- C++ source wins over design preference.
+- Recovered exact dependency source may define canonical behavior for shared library classes such as `CString`, `CEncryption`, `CFileQueue`, and `CSocket`.
+- Do not modify `ai_resources/`.
+- Do not invent packet IDs, field sizes, magic values, encryption behavior, timing, account defaults, or gameplay rules.
+- If behavior is unclear, document it and leave implementation guarded or absent.
+- Preserve byte order, integer clamping, signed/unsigned quirks, packet delimiters, raw length transitions, compression thresholds, and bug-compatible behavior.
+- Internal C# names may be professional, but docs and tests must trace back to original C++ names.
+- Every implemented client-facing behavior needs a test or documented reason why it cannot yet be tested.

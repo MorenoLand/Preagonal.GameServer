@@ -1,0 +1,29 @@
+# Server Specification
+
+The future server must be a 100% client-compatible C# replacement for `ai_resources/GServer-CPP-ORIGINAL/`.
+
+Authoritative behavior comes from:
+
+- C++ server source under `ai_resources/GServer-CPP-ORIGINAL/`.
+- Recovered `gs2lib` under `external/gs2lib/` at commit `63b1ae96491c188905b50c6b61c8532c601a2122`.
+
+The original server is `GS2Emu 3.0.9`, a Graal Online `v1.411` to `v6.037` compatible server. It starts from `server/src/main.cpp`, creates a `Server`, initializes settings/logs/sockets/world state, then runs `Server::operator()` until shutdown.
+
+Externally visible compatibility areas:
+
+- Exact packet IDs, field order, Graal integer encodings, raw big-endian encodings, newline/raw framing, encryption/compression, file queue ordering, login/session behavior, disconnect messages, RC/NC/server-list packets, level/map/file loading, account persistence, timing, gameplay, and scripting.
+- Strange or bug-like C++ behavior must be preserved unless proven safe to diverge.
+
+Implemented in this phase:
+
+- C# solution/project foundation.
+- Confirmed packet constants for the first protocol layer.
+- Graal binary read/write primitives.
+- Confirmed encryption generation primitives.
+- Packet framing helpers for newline, raw-data transition, and bundles.
+- Login prelude parsing skeleton.
+- Outbound signature/disconnect packet construction.
+
+Not implemented:
+
+- Gameplay, full login success, database validation, account persistence, world spawning, RC/NC/admin behavior, server-list behavior, file queue compression flush, and scripting runtime.
