@@ -38,9 +38,7 @@ If no known eight-byte signature is detected, the load fails.
 - stores the first line as `m_fileVersion`
 
 Recognized source line families include `BOARD`, `CHEST`, `LINK`, `NPC`,
-`SIGN`, and `BADDY`. Full payload extraction is not implemented yet because it
-needs dedicated fixtures for malformed input, base64 tile decoding, and
-multi-line NPC/sign/baddy sections.
+`SIGN`, and `BADDY`.
 
 ## C# Status
 
@@ -52,16 +50,29 @@ Implemented:
 - `LevelFileFormatDetector.Choose`
 
 The C# implementation mirrors the confirmed extension-first selection and the
-confirmed eight-byte signatures. It does not parse level contents yet.
+confirmed eight-byte signatures.
+
+The C# implementation now includes a pure `.nw` parser for source-confirmed
+line behavior:
+
+- empty content returns `Success=false`
+- unknown line families are ignored
+- `BOARD` writes decoded tiles into immutable snapshots
+- `LINK` is accepted only through an explicit target-exists callback
+- `SIGN` preserves multiline text through `SIGNEND`
+- `NPC` preserves image, position, and raw script payload through `NPCEND`
+- `BADDY` preserves x/y/type and verse lines through `BADDYEND`
+
+The parser does not execute scripts, create runtime NPCs, run baddy AI, or
+accept chests until the item catalog is recovered.
 
 ## Blocked Parser Areas
 
-- exact `CString::loadToken` newline behavior for malformed or trailing lines
-- `BOARD` base64 tile decoding fixtures
-- `LINK` tokenization and serialized packet payloads
-- `SIGN` multiline termination and encoding
+- exact `CString::loadToken` behavior for every malformed/trailing newline edge
+- serialized `LINK` packet payloads
+- `SIGN` packet encoding
 - `CHEST` item/sign fields
-- `BADDY` verse payload extraction
-- `NPC` image/script payload extraction and packet preservation
+- baddy runtime ids and property packet construction
+- NPC runtime creation and property packet construction
 - legacy Graal and Zelda RLE/tile parsing
 - level filesystem lookup and `nofoldersconfig` behavior

@@ -694,6 +694,83 @@ Z3-V1.03 => Zelda
 UNKNOWN! => unknown
 ```
 
+## NW Level Parser
+
+`BOARD` tile decoding:
+
+```txt
+input: BOARD 1 2 3 0 AB+/@?
+tile at (1,2): "AB" => 1
+tile at (2,2): "+/" => 4031
+tile at (3,2): "@?" => 0
+```
+
+`SIGN` body preservation:
+
+```txt
+SIGN 4 5
+first line
+second line
+SIGNEND
+
+parsed text: "first line\nsecond line\n"
+```
+
+`NPC` image-with-spaces preservation:
+
+```txt
+NPC image with spaces.png 12.5 13.25
+if (created) {
+}
+NPCEND
+
+image: "image with spaces.png"
+x: 12.5
+y: 13.25
+code: "if (created) {\n}\n"
+```
+
+`BADDY` verse preservation:
+
+```txt
+BADDY 10 11 2
+see
+hurt
+attack
+BADDYEND
+
+x=10, y=11, type=2, verses=["see","hurt","attack"]
+```
+
+`getBoardPacket` from parsed `.nw` board:
+
+```txt
+input: BOARD 0 0 2 0 AB+/
+packet prefix:
+[133, 1, 0, 191, 15]
+```
+
+`133` is `GCHAR PLO_BOARDPACKET`. Tile `1` is raw little-endian `[1,0]`.
+Tile `4031` is raw little-endian `[191,15]`.
+
+`getLayerPacket(1)` from parsed `.nw` layer:
+
+```txt
+input: BOARD 0 0 1 1 +/
+packet prefix:
+[139, 1, 0, 0, 64, 64, 191, 15]
+```
+
+`139` is `GCHAR PLO_BOARDLAYER`, followed by raw layer header
+`[1,0,0,64,64]` and raw little-endian tile bytes.
+
+`sendLevel` integration prefix from parsed board:
+
+```txt
+PLO_RAWDATA GINT(8194) "\n" parsed board packet prefix
+=> [132, 32, 96, 34, 10, 133, 1, 0, 191, 15]
+```
+
 ## Server-List Auth
 
 ### SVO_VERIACC2

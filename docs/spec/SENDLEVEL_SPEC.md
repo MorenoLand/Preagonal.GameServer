@@ -59,7 +59,7 @@ only already-confirmed bytes.
 
 ```txt
 PLO_BOARDPACKET as GCHAR
-4096 raw short tiles
+4096 raw short tiles as direct `short[4096]` memory
 "\n"
 ```
 
@@ -83,6 +83,11 @@ raw 64
 ```
 
 The raw-data header for layers uses `layer.length()`.
+
+The C# `NwLevelPacketBuilder` now builds board/layer packets from parsed `.nw`
+snapshots. Because C++ writes tile memory directly instead of using a portable
+integer writer, C# emits raw little-endian tile bytes for the original x86/x64
+server target.
 
 ## C# Boundary
 
@@ -123,6 +128,8 @@ The C# boundary queues:
 - conditional `PLO_SETACTIVELEVEL`
 - optional pre-serialized NPC packet bytes
 - nearby player visibility sync using pre-serialized `PLO_OTHERPLPROPS` packets
+- parsed `.nw` board/layer snapshots can feed the existing raw board/layer
+  payload slots
 
 The boundary stops after nearby player prop synchronization and before live
 movement/gameplay simulation. Runtime data that C# cannot yet compute safely is
@@ -132,8 +139,7 @@ Not implemented:
 
 - old `sendLevel141`
 - `getCachedLevelModTime`
-- production `Level::getBoardPacket` from tile state
-- production `Level::getLayerPacket`
+- filesystem-backed production level snapshot loading
 - links/signs builders from parsed level state
 - production horse and baddy runtime state
 - production NPC packet construction

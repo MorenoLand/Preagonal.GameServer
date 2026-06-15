@@ -1,3 +1,4 @@
+using GServ.Game;
 using GServ.Network;
 using GServ.Protocol;
 using Xunit;
@@ -67,6 +68,33 @@ public sealed class SendLevelBoundaryTests
         Assert.Equal(new byte[] { 132, 32, 32, 39, 10 }, bytes[layerHeaderStart..(layerHeaderStart + 5)]);
         Assert.Equal(layer, bytes[(layerHeaderStart + 5)..(layerHeaderStart + 5 + layer.Length)]);
         Assert.Equal(new byte[] { 71, 32, 32, 32, 32, 33, 10, 32, 10 }, bytes[^9..]);
+    }
+
+    [Fact]
+    public void BeginModernCanUseParsedNwBoardPacketForRawLevelPayload()
+    {
+        var session = ReadyForLevelRuntimeSession();
+        var parsed = NwLevelParser.Parse("""
+            GLEVNW01
+            BOARD 0 0 2 0 AB+/
+            """);
+        var board = NwLevelPacketBuilder.BuildBoardPacket(parsed.Level);
+        var level = new ModernLevelPayload(
+            LevelName: "start.nw",
+            LevelModTime: 1,
+            BoardPacket: board,
+            Layers: [],
+            LinksPacket: [],
+            SignsPacket: []);
+
+        SendLevelBoundary.BeginModern(
+            session,
+            level,
+            new SendLevelRequest(RequestedModTime: 0, CachedLevelModTime: 0, FromAdjacent: false));
+
+        var bytes = session.TakeOutboundBytes();
+        Assert.Equal(new byte[] { 132, 32, 96, 34, 10 }, bytes[10..15]);
+        Assert.Equal([133, 1, 0, 191, 15], bytes[15..20]);
     }
 
     [Fact]
