@@ -8,7 +8,12 @@
 - The login-server-name branch in `Player::sendLogin` is blocked because C++ references `PLO_FULLSTOP`, but recovered `IEnums.h` only defines `PLO_FULLSTOP2 = 177`.
 - `CFileQueue` uncompressed passthrough queue/flush is implemented; compression, encryption, and websocket wrapping remain blocked.
 - Production account loading has a pure `GRACC001` parser, but full service behavior is blocked on exact filesystem/default-account save behavior and guest RNG.
-- Isolated warp packet builders are implemented. World-entry/warp runtime is traced, but not implemented because it immediately enters level/map/NPC/resource runtime.
+- Isolated warp packet builders are implemented. A source-confirmed
+  `setLevel` pre-runtime boundary now handles missing levels, `PLO_PLAYERWARP`,
+  `PLO_PLAYERWARP2`, and the modern non-zero-modtime no-warp-packet branch.
+  Full `warp(...)`, fallback to previous/unstick levels, singleplayer/group-map
+  cloning, and `sendLevel`/`sendLevel141` remain blocked because they enter
+  level/map/NPC/resource runtime.
 - WebSocket handling is gated by `WOLFSSL_ENABLED` code paths and needs a dedicated pass.
 - `Server::doMain()` timing branches need a dedicated timing recovery pass.
 - Gameplay systems, account persistence, RC/NC file browser, server-list protocol, and scripting bindings are not implemented.

@@ -79,10 +79,24 @@ warp packet bodies:
 - `PLO_PLAYERWARP2 + GCHAR(x*2) + GCHAR(y*2) + GCHAR(z*2+50) + GCHAR(mapX) + GCHAR(mapY) + mapName`
 - `PLO_LEVELNAME + levelName`
 
-No C# `warp`, `setLevel`, or `sendLevel` runtime implementation is added. The
-safe next state after the current login boundary remains `ReadyForLevelWarp`.
-The next implementation task should recover level packet builders and level
-file/resource providers before advancing into `setLevel`/`sendLevel`.
+The C# network project now includes `WarpWorldEntryBoundary.BeginSetLevel`,
+which models only the source-confirmed beginning of `Player::setLevel`:
+
+- require the session to be in `ReadyForLevelWarp`
+- resolve the target level through `ILevelLookup.FindLevel(levelName)`
+- if missing, queue `PLO_WARPFAILED + pLevelName + "\n"` and return
+  `MissingLevel`
+- if found and `modTime == 0 || version < CLVER_2_1`, queue one warp packet:
+  - GMAP and modern client: `PLO_PLAYERWARP2`
+  - otherwise: `PLO_PLAYERWARP`
+- if found and modern client with non-zero `modTime`, queue no warp packet
+  before the runtime boundary
+- transition to `ReadyForLevelRuntime`, which maps to the point immediately
+  before the C++ call to `sendLevel(...)` or `sendLevel141(...)`
+
+No C# full `warp`, fallback-to-current-level, fallback-to-unstickme,
+singleplayer clone, group-map clone, `sendLevel`, or `sendLevel141` runtime
+implementation is added.
 
 ## Confirmed First Packet Candidates
 
@@ -94,12 +108,21 @@ builders:
 - GMAP warp notification: `PLO_PLAYERWARP2 + GCHAR(x*2) + GCHAR(y*2) + GCHAR(z*2+50) + GCHAR(mapX) + GCHAR(mapY) + mapName`
 - Level send begins with `PLO_LEVELNAME + levelName`
 
-Golden bytes for the isolated packet bodies are documented in
-`docs/spec/GOLDEN_FIXTURES.md`. Runtime ordering and level data bytes remain
-deferred until level packet fixtures are introduced.
+Golden bytes for the isolated packet bodies and first `BeginSetLevel` sequences
+are documented in `docs/spec/GOLDEN_FIXTURES.md`. Runtime ordering and level
+data bytes remain deferred until level packet fixtures are introduced.
 
 ## Current Pass Status
 
-No new warp/setLevel runtime behavior was implemented in the account-loading
-pass. The C# server still stops at `ReadyForLevelWarp` before entering
-`warp(m_levelName, getX(), getY())`.
+The C# server can now cross `ReadyForLevelWarp` only through the
+source-confirmed `setLevel` pre-runtime boundary and then stops at
+`ReadyForLevelRuntime`.
+
+Still not implemented:
+
+- same-level warp `setProps(PLPROP_X, PLPROP_Y)` branch
+- `warp` fallback to previous level
+- `warp` fallback to `unstickmelevel`
+- singleplayer and group-map clone behavior
+- `sendLevel`/`sendLevel141`
+- level board/layer/raw-data/resource/NPC/player-list runtime packets

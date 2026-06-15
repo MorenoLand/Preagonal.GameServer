@@ -88,6 +88,7 @@ zlib/bzip2/encryption/websocket fixtures are byte-exact.
 
 ## Current Pass Status
 
-No new `CFileQueue` production behavior was implemented in the account-loading
-pass. Queue thresholds, compression/encryption generations, websocket wrapping,
-and partial socket semantics remain as documented above.
+No new `CFileQueue` production behavior was implemented in the
+warp-pre-runtime pass. `BeginSetLevel` only queues normal newline-delimited
+packets through the existing session buffer in tests. Resource transfer remains
+blocked until `sendLevel` board/layer/raw-data/file fixtures are recovered.

@@ -92,4 +92,9 @@ public sealed class ClientSessionSkeleton
     {
         Lifecycle = SessionLifecycle.ReadyForLevelWarp;
     }
+
+    internal void MarkReadyForLevelRuntime()
+    {
+        Lifecycle = SessionLifecycle.ReadyForLevelRuntime;
+    }
 }

@@ -369,6 +369,45 @@ These are packet bodies before `Player::sendPacket` newline append and before
 [38, 115, 116, 97, 114, 116, 46, 110, 119]
 ```
 
+## BeginSetLevel Pre-Runtime Packet Sequences
+
+These fixtures include the `Player::sendPacket` newline append.
+
+Missing level:
+
+```txt
+PLO_WARPFAILED + "missing.nw" + "\n"
+=> [47, 109, 105, 115, 115, 105, 110, 103, 46, 110, 119, 10]
+```
+
+Modern client, single level, `modTime == 0`:
+
+```txt
+PLO_PLAYERWARP, x=30.5, y=31.25, level="start.nw", "\n"
+=> [46, 93, 94, 115, 116, 97, 114, 116, 46, 110, 119, 10]
+```
+
+Modern client, GMAP, `modTime == 0`:
+
+```txt
+PLO_PLAYERWARP2, x=30.5, y=31.25, z=1.5, mapX=4, mapY=5, map="world.gmap", "\n"
+=> [81, 93, 94, 85, 36, 37, 119, 111, 114, 108, 100, 46, 103, 109, 97, 112, 10]
+```
+
+Modern client, non-zero mod time:
+
+```txt
+no PLO_PLAYERWARP/PLO_PLAYERWARP2 before sendLevel runtime boundary
+=> []
+```
+
+Old client (`CLVER_1_411 < CLVER_2_1`), non-zero mod time:
+
+```txt
+PLO_PLAYERWARP, x=30.5, y=31.25, level="start.nw", "\n"
+=> [46, 93, 94, 115, 116, 97, 114, 116, 46, 110, 119, 10]
+```
+
 ## Server-List Auth
 
 ### SVO_VERIACC2

@@ -16,5 +16,10 @@
   full filesystem resync behavior, and guest random `pc:` identity generation
   remain blocked.
 - `CFileQueue` queue selection and uncompressed passthrough flush are implemented. Production compressed/encrypted/websocket flush behavior remains blocked on byte-level fixtures.
-- First isolated warp packet builders are implemented. `warp(m_levelName, getX(), getY())` itself remains blocked because it immediately enters level/map/NPC/resource runtime.
+- First isolated warp packet builders are implemented. The C# port now has a
+  source-confirmed `setLevel` pre-runtime boundary for missing levels,
+  `PLO_PLAYERWARP`, `PLO_PLAYERWARP2`, and modern non-zero-modtime no-warp
+  packet behavior. Full `warp(...)`, fallback to previous/unstick levels,
+  singleplayer/group-map cloning, and `sendLevel`/`sendLevel141` remain blocked
+  because they enter level/map/NPC/resource runtime.
 - Server-list connection lifecycle, reconnect backoff, registration, and text/listserver side channels need a dedicated milestone.
