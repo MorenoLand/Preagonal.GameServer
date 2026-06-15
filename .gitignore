@@ -1,3 +1,7 @@
 ai_resources/
 AGENTS.md
 docs/superpowers/
+bin/
+obj/
+**/bin/
+**/obj/
