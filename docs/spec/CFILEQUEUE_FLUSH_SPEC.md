@@ -88,7 +88,15 @@ zlib/bzip2/encryption/websocket fixtures are byte-exact.
 
 ## Current Pass Status
 
-No new `CFileQueue` production behavior was implemented in the
-warp-pre-runtime pass. `BeginSetLevel` only queues normal newline-delimited
-packets through the existing session buffer in tests. Resource transfer remains
-blocked until `sendLevel` board/layer/raw-data/file fixtures are recovered.
+No new `CFileQueue` production behavior was implemented in the `sendLevel`
+static-payload pass. The new C# boundary queues `PLO_RAWDATA` headers and
+pre-serialized board/layer payload bytes in the same order C++ calls
+`Player::sendPacket`, and the existing `GraalFileQueue` tests already cover the
+confirmed raw-data transition for board payloads.
+
+Still blocked:
+
+- compressed/encrypted socket-level flush bytes
+- websocket wrapping
+- production file transfer through `PLO_FILE`
+- level resource transfer beyond pre-serialized board/layer payloads

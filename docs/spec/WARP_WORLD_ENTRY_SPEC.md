@@ -61,13 +61,15 @@ Then C++ calls either:
 
 ## sendLevel Runtime Boundary
 
-`sendLevel` immediately sends `PLO_LEVELNAME`, level raw-data/board packets,
-layer raw data, `PLO_LEVELMODTIME`, links, signs, board changes, chests, horses,
-baddies, GMAP level-name corrections, ghost icon, leadership, world time, active
-level, NPC packets, and nearby player props.
+`sendLevel` immediately sends `PLO_LEVELNAME`, optional level raw-data/board
+packets, optional layer raw data, `PLO_LEVELMODTIME`, links, signs, board
+changes, chests, horses, baddies, GMAP level-name corrections, ghost icon,
+leadership, world time, active level, NPC packets, and nearby player props.
 
-This is already runtime world-entry behavior and depends on real `Level`
-loading, cached mod times, maps, NPCs, and player lists.
+The static beginning through links/signs is now implemented for modern clients
+with pre-serialized level payload DTOs. The rest is still runtime world-entry
+behavior and depends on real `Level` loading, cached mod times, maps, NPCs, and
+player lists.
 
 ## C# Boundary
 
@@ -124,5 +126,6 @@ Still not implemented:
 - `warp` fallback to previous level
 - `warp` fallback to `unstickmelevel`
 - singleplayer and group-map clone behavior
-- `sendLevel`/`sendLevel141`
-- level board/layer/raw-data/resource/NPC/player-list runtime packets
+- old-client `sendLevel141`
+- level file parsing and board/layer/link/sign construction from real state
+- dynamic level board changes/chests/horses/baddies/NPC/player-list runtime packets

@@ -15,6 +15,7 @@ public enum PlayerToServerPacketId : byte
 public enum ServerToPlayerPacketId : byte
 {
     LevelName = 6,
+    IsLeader = 10,
     PlayerProps = 9,
     PlayerWarp = 14,
     WarpFailed = 15,
@@ -22,6 +23,8 @@ public enum ServerToPlayerPacketId : byte
     Signature = 25,
     FlagSet = 28,
     NpcWeaponDelete = 34,
+    LevelModTime = 39,
+    NewWorldTime = 42,
     StaffGuilds = 47,
     PlayerWarp2 = 49,
     LargeFileStart = 68,
@@ -30,7 +33,9 @@ public enum ServerToPlayerPacketId : byte
     RawData = 100,
     BoardPacket = 101,
     File = 102,
+    SetActiveLevel = 156,
     Unknown168 = 168,
+    GhostIcon = 174,
     ServerListConnected = 190,
     ClearWeapons = 194,
     SetEncryptionKey = 252,

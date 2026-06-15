@@ -9,6 +9,7 @@ public enum SessionLifecycle
     ReadyForWorldEntry,
     ReadyForLevelWarp,
     ReadyForLevelRuntime,
+    LevelPayloadSent,
     Authenticated,
     Rejected,
     Disconnecting,

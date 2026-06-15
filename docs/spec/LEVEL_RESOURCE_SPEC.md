@@ -62,8 +62,12 @@ immediately sends `PLO_LEVELNAME`, then may send:
 - nearby player props
 
 These packets depend on full `Level` loading, cached mod times, board/layer
-data, maps, NPCs, and player lists. They remain runtime behavior and are not
-implemented in the current C# boundary.
+data, maps, NPCs, and player lists.
+
+The current C# boundary implements only the static beginning of the modern
+`sendLevel` payload using pre-serialized level packet bytes. It still does not
+parse level files or construct board/layer/link/sign packets from real runtime
+state.
 
 ## C# Boundary
 
@@ -74,6 +78,8 @@ Implemented:
 - `LevelMapSnapshot`
 - `LevelMapType.BigMap = 0`, `LevelMapType.Gmap = 1`, matching C++ `MapType`
 - `WarpWorldEntryBoundary.BeginSetLevel` pre-runtime packet selection
+- `SendLevelBoundary.BeginModern` for `CLVER_2_1+` static level payload:
+  `PLO_LEVELNAME`, optional raw board/layers, `PLO_LEVELMODTIME`, links, signs
 
 Not implemented:
 
@@ -82,5 +88,7 @@ Not implemented:
 - `loadAbsolute` filesystem mutation
 - `Level::loadLevel`
 - map file parsing
-- board/layer/resource packet construction
+- board/layer/resource packet construction from parsed level state
 - `sendFile`/large-file resource transfer during level entry
+- old-client `sendLevel141`
+- dynamic level-entry runtime packets after links/signs

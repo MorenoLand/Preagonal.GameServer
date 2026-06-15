@@ -408,6 +408,66 @@ PLO_PLAYERWARP, x=30.5, y=31.25, level="start.nw", "\n"
 => [46, 93, 94, 115, 116, 97, 114, 116, 46, 110, 119, 10]
 ```
 
+## Modern sendLevel Static Payload Boundary
+
+These fixtures include `Player::sendPacket` newline behavior.
+
+`PLO_LEVELMODTIME`, `modTime=1`:
+
+```txt
+PLO_LEVELMODTIME + GINT5(1) + "\n"
+=> [71, 32, 32, 32, 32, 33, 10]
+```
+
+Raw board header for `Level::getBoardPacket()`:
+
+```txt
+PLO_RAWDATA + GINT(8194) + "\n"
+=> [132, 32, 96, 34, 10]
+```
+
+The following board payload length is exactly `8194` bytes:
+
+```txt
+PLO_BOARDPACKET + 4096 raw short tiles + "\n"
+```
+
+Modern level payload when cache is empty and requested mod time matches level
+mod time:
+
+```txt
+PLO_LEVELNAME "start.nw"
+PLO_LEVELMODTIME GINT5(1)
+opaque links packet "links\n"
+opaque signs packet "signs\n"
+
+=> [38, 115, 116, 97, 114, 116, 46, 110, 119, 10,
+    71, 32, 32, 32, 32, 33, 10,
+    108, 105, 110, 107, 115, 10,
+    115, 105, 103, 110, 115, 10]
+```
+
+Modern level payload when cache is empty and requested mod time differs:
+
+```txt
+PLO_LEVELNAME "start.nw"
+PLO_RAWDATA GINT(8194)
+PLO_BOARDPACKET + 8192 tile bytes + "\n"
+for each non-zero layer: PLO_RAWDATA GINT(layer.length), layer packet
+PLO_LEVELMODTIME GINT5(1)
+links packet if non-empty
+signs packet if non-empty
+```
+
+If `getCachedLevelModTime(level) != 0`, the C# boundary currently emits only:
+
+```txt
+PLO_LEVELNAME "start.nw"
+=> [38, 115, 116, 97, 114, 116, 46, 110, 119, 10]
+```
+
+It then stops before board changes/chests/horses/baddies.
+
 ## Server-List Auth
 
 ### SVO_VERIACC2

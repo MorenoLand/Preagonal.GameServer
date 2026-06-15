@@ -97,4 +97,9 @@ public sealed class ClientSessionSkeleton
     {
         Lifecycle = SessionLifecycle.ReadyForLevelRuntime;
     }
+
+    internal void MarkLevelPayloadSent()
+    {
+        Lifecycle = SessionLifecycle.LevelPayloadSent;
+    }
 }

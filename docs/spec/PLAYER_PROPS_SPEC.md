@@ -89,8 +89,7 @@ The serializer takes explicit property IDs and sorts them ascending to match `se
 
 ## Current Pass Status
 
-No new player property IDs or encodings were added in the warp-pre-runtime pass.
-The same-level `warp` branch sends `PLPROP_X` and `PLPROP_Y` via `setProps`,
-but that branch is not implemented yet because it forwards/mutates runtime
-player state. Future same-level warp work should add exact fixtures for those
-two properties before crossing that branch.
+No new player property IDs or encodings were added in the `sendLevel`
+static-payload pass. Player property forwarding occurs later in `sendLevel`
+after active-level/NPC packets, when nearby player props are sent. That remains
+blocked on level runtime/player-list behavior.

@@ -11,9 +11,12 @@
 - Isolated warp packet builders are implemented. A source-confirmed
   `setLevel` pre-runtime boundary now handles missing levels, `PLO_PLAYERWARP`,
   `PLO_PLAYERWARP2`, and the modern non-zero-modtime no-warp-packet branch.
-  Full `warp(...)`, fallback to previous/unstick levels, singleplayer/group-map
-  cloning, and `sendLevel`/`sendLevel141` remain blocked because they enter
-  level/map/NPC/resource runtime.
+  Modern `sendLevel` is implemented only through the static payload boundary:
+  `PLO_LEVELNAME`, optional raw board/layers, `PLO_LEVELMODTIME`, links, and
+  signs. Full `warp(...)`, fallback to previous/unstick levels,
+  singleplayer/group-map cloning, old `sendLevel141`, dynamic board changes,
+  chests, horses, baddies, NPCs, and nearby player props remain blocked because
+  they enter level/map/NPC/resource runtime.
 - WebSocket handling is gated by `WOLFSSL_ENABLED` code paths and needs a dedicated pass.
 - `Server::doMain()` timing branches need a dedicated timing recovery pass.
 - Gameplay systems, account persistence, RC/NC file browser, server-list protocol, and scripting bindings are not implemented.
