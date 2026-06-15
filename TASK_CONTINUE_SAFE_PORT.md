@@ -17,175 +17,178 @@ If something is unclear, document it as unknown and continue with the next safe 
 
 Current status:
 
-* Dev-only local TCP shell exists behind explicit `--dev-only-local`.
-* DevOnlyLocalSessionPipeline exists.
-* Pipeline currently supports login -> dev-only pre-world auth -> sendLogin boundary -> pre-warp -> filesystem-loaded `.nw` -> SendLevelBoundary.
-* Account loading boundary exists.
-* Filesystem-backed `.nw` loading boundary exists.
-* sendLevel static/dynamic/tail exists.
-* Current manual client test is blocked by:
+* Dev-only local TCP shell exists.
+* GraalFileQueue.FlushSocket exists.
+* Confirmed passthrough socket behavior exists for gen1/gen6.
+* Confirmed gen5 short payload behavior exists for payload <= 55.
+* gen5 fixture exists:
 
-  1. outbound gen2+ compression/encryption/framing exact behavior,
-  2. continuous session loop,
-  3. movement/player props runtime after level entry.
+  * input: `abc\n`, key 0
+  * output: `[00 05 02 79 7A B2 DC]`
+* Compression/encryption/socket flush branches are still blocked for:
+
+  * gen2
+  * gen3
+  * gen4
+  * gen5 payload > 55
+  * zlib/bzip2 exact output
+  * integration into full login/level flow
 * Tests are green.
 
 Goal of this run:
 
-Implement the next safest compatibility-critical layer: socket-level CFileQueue flush/compression/encryption behavior, then improve the dev-only session loop if safe.
+Recover byte-exact CFileQueue compression/encryption fixtures using a small isolated C++ harness compiled against `external/gs2lib`, then implement only the confirmed matching C# behavior.
 
 ---
 
-# Milestone 1: Trace CFileQueue send/flush/compression exactly
+# Milestone 1: Build a C++ gs2lib fixture harness
 
-Deeply trace:
-
-* `external/gs2lib/src/CFileQueue.cpp`
-* `external/gs2lib/include/CFileQueue.h`
-* `external/gs2lib/src/CEncryption.cpp`
-* `external/gs2lib/include/CEncryption.h`
-* `external/gs2lib/src/CSocket.cpp`
-* `external/gs2lib/include/CSocket.h`
-* all C++ server call sites that enqueue/send packets during login/level entry
-
-Focus on:
-
-* `sendCompress`
-* queue structure
-* packet bundling
-* compression threshold
-* compression constants/flags
-* encryption generation behavior during send
-* PLO_RAWDATA behavior
-* PLO_FILE behavior
-* PLO_BUNDLE behavior
-* newline packet handling
-* partial socket writes
-* websocket branch behavior if present
-* exact bytes emitted to the socket for gen1/gen2/gen3/gen4/gen5/gen6 if source-confirmed
-
-Document everything before implementing.
-
----
-
-# Milestone 2: Implement byte-exact GraalFileQueue flush where confirmed
-
-Expand `GraalFileQueue` only where byte-exact behavior is source-confirmed.
-
-Priority order:
-
-1. uncompressed passthrough already supported: verify against C++ again
-2. gen2 normal queue flush if confirmed
-3. gen3 insert/remove behavior if confirmed
-4. gen5 iterator XOR behavior if confirmed
-5. compression path if exact zlib/format/flags are confirmed
-6. file/rawdata transfer if confirmed
-7. websocket path only if confirmed
-
-Allowed:
-
-* Add explicit unsupported exceptions/blocked states for unconfirmed branches.
-* Add deterministic tests for every confirmed generation.
-* Add golden fixtures for exact output bytes.
-* Add small helper code only where source-confirmed.
-* Use .NET compression only if it can be proven byte-compatible with C++ output/format; otherwise keep compression blocked.
-
-Not allowed:
-
-* Do not approximate compression output.
-* Do not silently use .NET Deflate/ZLib if bytes differ from C++.
-* Do not invent encryption iterator state.
-* Do not guess websocket behavior.
-* Do not hide unsupported branches.
-
----
-
-# Milestone 3: Integrate GraalFileQueue flush into dev-only TCP shell
-
-If Milestone 2 confirms enough behavior, update the dev-only TCP shell to use the new socket-level outbound flush.
-
-Focus on:
-
-* writing exactly framed/flushed bytes
-* preserving packet order
-* preserving encryption/compression generation state
-* logging generation/queue mode for debugging
-* keeping dev-only fake auth separated from production
-
-Allowed:
-
-* Add tests using fake socket/transport.
-* Add integration test for one login-level-entry outbound sequence through the queue.
-* Keep unsupported branches explicit.
-
----
-
-# Milestone 4: Continuous session loop
-
-If the flush layer is safe, improve the dev-only TCP shell from one-frame diagnostic to a continuous loop.
-
-Focus on:
-
-* read frames continuously
-* pass frames into session pipeline
-* flush outbound bytes after each frame
-* detect disconnect
-* keep state between packets
-* handle rawdata mode if source-confirmed
-* avoid inventing protocol behavior
-
-Allowed:
-
-* Add cancellation token support.
-* Add clear logs.
-* Add tests with fake transport.
-
-Not allowed:
-
-* Do not implement unknown player movement just for loop completeness.
-* Do not swallow unsupported packets silently unless C++ behavior confirms it.
-* Do not add production claims.
-
----
-
-# Milestone 5: Movement/player props boundary research if time remains
-
-If the CFileQueue and loop work are safe/completed, continue into incoming movement/player props boundary.
-
-Focus on:
-
-* `Player::parsePacket`
-* `PLI_PLAYERPROPS` or equivalent
-* `Player::setProps`
-* `Player::setProp`
-* x/y
-* direction
-* level name
-* gani/animation
-* forwarding to other players
-* validation/clipping
-* unsupported packet behavior
-
-Allowed:
-
-* Add parsers/DTOs/tests only for confirmed behavior.
-* Do not integrate into live dev server unless source-confirmed enough.
-
----
-
-# Milestone 6: Docs/tests/report
-
-Create/update docs:
+Create a small local harness outside `ai_resources/`, preferably under:
 
 ```txt
+tools/gs2lib-fixtures/
+```
+
+The harness should compile against `external/gs2lib` and exercise source-confirmed CFileQueue/CEncryption behavior.
+
+Focus on generating exact socket bytes for:
+
+* gen2 short payload
+* gen2 long/compressed payload
+* gen3 short payload
+* gen3 long/compressed payload
+* gen4 if source-confirmed
+* gen5 payload <= 55 to verify existing fixture
+* gen5 payload > 55
+* payloads around compression thresholds
+* newline packet payloads
+* rawdata payloads if safe
+
+The harness must not modify `ai_resources/`.
+
+Allowed:
+
+* Add a small CMake/project file or simple build script under `tools/gs2lib-fixtures/`.
+* Add deterministic fixture inputs.
+* Add fixture output files under tests/fixtures or docs/spec fixtures if useful.
+* Add docs explaining how to run the harness.
+
+Not allowed:
+
+* Do not patch gs2lib.
+* Do not change source behavior to make compilation easier unless done in harness wrapper only.
+* Do not invent expected bytes.
+
+If the harness cannot compile because of external dependencies, document the exact compile blockers and continue with source-confirmed C# work that is not blocked.
+
+---
+
+# Milestone 2: Capture and document byte-exact fixtures
+
+Generate and document exact byte outputs for each confirmed case.
+
+Create/update:
+
+```txt
+docs/spec/CFILEQUEUE_FIXTURE_HARNESS.md
 docs/spec/CFILEQUEUE_FLUSH_SPEC.md
-docs/spec/TCP_SESSION_PIPELINE_SPEC.md
-docs/spec/RUN_LOCAL_DEV_SERVER.md
-docs/spec/MOVEMENT_PLAYER_PROPS_SPEC.md
 docs/spec/GOLDEN_FIXTURES.md
 docs/spec/KNOWN_BLOCKERS.md
 KNOWN_BLOCKERS.md
 ```
+
+For every fixture, document:
+
+* input payload bytes
+* encryption generation
+* key/iterator state
+* compression mode/threshold
+* exact output bytes
+* C++/gs2lib function path used
+* whether the C# implementation matches
+
+---
+
+# Milestone 3: Implement matching C# flush branches only where fixtures prove behavior
+
+Expand `GraalFileQueue` only for branches proven by the harness.
+
+Priority order:
+
+1. gen5 payload > 55 if proven
+2. gen2 uncompressed/compressed if proven
+3. gen3 uncompressed/compressed if proven
+4. gen4 if proven
+5. rawdata/file transfer if proven
+
+Allowed:
+
+* Add deterministic golden tests comparing C# output to harness output.
+* Add branch support only when bytes match exactly.
+* Keep unsupported branches throwing explicit blocked exceptions without consuming pending queue data.
+* Use .NET compression only if byte output matches gs2lib fixtures exactly.
+* If output differs, keep the branch blocked and document why.
+
+Not allowed:
+
+* Do not approximate compression output.
+* Do not accept “semantically equivalent” bytes.
+* Do not consume queue on unsupported branches.
+* Do not hide unsupported behavior.
+
+---
+
+# Milestone 4: Integrate confirmed flush into dev-only TCP shell
+
+If enough branches are confirmed, integrate the flush path into dev-only local TCP shell.
+
+Focus on:
+
+* using the correct generation/key state
+* preserving packet order
+* preserving queue flush behavior
+* making manual client test more realistic
+* keeping fake auth/dev-only path clearly separated
+
+Allowed:
+
+* Add config/debug option for generation if source-confirmed.
+* Add tests with fake transport.
+* Add docs on manual testing limitations.
+
+Not allowed:
+
+* Do not fake production auth.
+* Do not invent client encryption negotiation.
+
+---
+
+# Milestone 5: Continuous session loop if safe
+
+If flush integration is stable, improve dev-only TCP shell from one-frame diagnostic to a continuous session loop.
+
+Focus on:
+
+* read frames repeatedly
+* maintain session state
+* flush outbound after each frame
+* handle disconnect
+* preserve rawdata mode if confirmed
+* log unsupported packets clearly
+
+Allowed:
+
+* Add cancellation token support.
+* Add fake transport tests.
+
+Not allowed:
+
+* Do not implement unsupported movement just to keep loop alive.
+* Do not silently swallow unsupported packets unless C++ behavior confirms it.
+
+---
+
+# Milestone 6: Docs/tests/report
 
 Run:
 
@@ -194,21 +197,22 @@ dotnet build GServharp.sln
 dotnet test GServharp.sln
 ```
 
+If a C++ harness exists, also run its build/test or document why it cannot run.
+
 At the end, report:
 
 * What was completed
-* Which milestones were completed
-* Which milestones were blocked and why
+* Whether the gs2lib fixture harness was created and ran
+* Which fixtures were captured
+* Which C# branches now match byte-exact fixtures
+* Which branches remain blocked
 * Which C++/gs2lib files were used
 * Which C# files/tests were added or modified
 * Which docs were updated
-* Which golden fixtures were added
-* Which behavior is now source-confirmed
-* Which behavior remains blocked
 * Whether `ai_resources/` stayed untouched
 * Build/test results
-* Whether a manual client connection test is now more realistic
-* If manual client connection is still not recommended, list the exact smallest blockers
+* Whether manual client connection is now more realistic
+* If not recommended yet, list the exact smallest blockers
 * Safest next step
 
 Continue as far as safely possible. Do not stop after one small task if another safe task can be done safely.

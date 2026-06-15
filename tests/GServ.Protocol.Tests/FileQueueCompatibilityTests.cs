@@ -78,28 +78,86 @@ public sealed class FileQueueCompatibilityTests
     }
 
     [Fact]
-    public void Gen5PayloadOverUncompressedThresholdRemainsBlockedUntilCompressionBytesAreConfirmed()
+    public void Gen5ZlibPayloadFlushMatchesGs2libFixture()
     {
         var queue = new GraalFileQueue();
         queue.SetCodec(EncryptionGeneration.Gen5, key: 0);
-        var payload = Encoding.ASCII.GetBytes(new string('a', 56) + "\n");
+        queue.AddPacket(Encoding.ASCII.GetBytes(new string('a', 55) + "\n"));
+
+        Assert.Equal(
+            new byte[] { 0x00, 0x0E, 0x04, 0x60, 0x84, 0x9A, 0x9A, 0x5C, 0xD3, 0x31, 0x82, 0x58, 0x46, 0x1C, 0x13, 0x5A },
+            queue.FlushSocket());
+    }
+
+    [Fact]
+    public void Gen5PayloadAtUncompressedThresholdMatchesGs2libFixture()
+    {
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen5, key: 0);
+        queue.AddPacket(Encoding.ASCII.GetBytes(new string('a', 54) + "\n"));
+
+        Assert.Equal(
+            new byte[]
+            {
+                0x00, 0x38, 0x02, 0x79, 0x79, 0xB0, 0xB7, 0x19,
+                0xB9, 0x20, 0xE2, 0x39, 0x7B, 0xC6, 0x66, 0xD9,
+                0x82, 0xF9, 0x83, 0xF9, 0x33, 0x46, 0x41, 0x99,
+                0x9D, 0x7B, 0x5D, 0xB9, 0xB1, 0xD7, 0xDF, 0x59,
+                0x15, 0x60, 0x25, 0x79, 0x44, 0xD5, 0x14, 0x19,
+                0x78, 0x04, 0x79, 0x39, 0x3E, 0xBA, 0x47, 0xD9,
+                0x5D, 0x53, 0xFB, 0x61, 0x61, 0x61, 0x61, 0x61,
+                0x61, 0x0A,
+            },
+            queue.FlushSocket());
+    }
+
+    [Fact]
+    public void Gen5Bzip2PayloadRemainsBlockedWithoutConsumingPendingBytes()
+    {
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen5, key: 0);
+        var payload = Encoding.ASCII.GetBytes(new string('a', 8192) + "\n");
         queue.AddPacket(payload);
 
         var ex = Assert.Throws<NotSupportedException>(() => queue.FlushSocket());
 
-        Assert.Equal("Gen5 compressed socket flush is blocked until zlib/bzip2 bytes are confirmed against gs2lib.", ex.Message);
+        Assert.Equal("Gen5 bzip2 socket flush is blocked until bzip2 bytes are implemented from gs2lib fixtures.", ex.Message);
         Assert.Equal(payload, queue.FlushUncompressed());
     }
 
     [Fact]
-    public void Gen2FlushRemainsBlockedUntilZlibBytesAreConfirmed()
+    public void Gen2ShortPayloadFlushMatchesGs2libZlibFixture()
     {
         var queue = new GraalFileQueue();
         queue.SetCodec(EncryptionGeneration.Gen2, key: 0);
         queue.AddPacket(Encoding.ASCII.GetBytes("abc\n"));
 
-        var ex = Assert.Throws<NotSupportedException>(() => queue.FlushSocket());
+        Assert.Equal(
+            new byte[] { 0x00, 0x0C, 0x78, 0x9C, 0x4B, 0x4C, 0x4A, 0xE6, 0x02, 0x00, 0x03, 0x7E, 0x01, 0x31 },
+            queue.FlushSocket());
+    }
 
-        Assert.Equal("Socket flush for Gen2 is blocked until zlib/bzip2 bytes are confirmed against gs2lib.", ex.Message);
+    [Fact]
+    public void Gen3ShortPayloadFlushMatchesGs2libZlibFixtureWithoutGen3Insertion()
+    {
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen3, key: 0);
+        queue.AddPacket(Encoding.ASCII.GetBytes("abc\n"));
+
+        Assert.Equal(
+            new byte[] { 0x00, 0x0C, 0x78, 0x9C, 0x4B, 0x4C, 0x4A, 0xE6, 0x02, 0x00, 0x03, 0x7E, 0x01, 0x31 },
+            queue.FlushSocket());
+    }
+
+    [Fact]
+    public void Gen2LongPayloadFlushMatchesGs2libZlibFixture()
+    {
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen2, key: 0);
+        queue.AddPacket(Encoding.ASCII.GetBytes(new string('a', 100) + "\n"));
+
+        Assert.Equal(
+            new byte[] { 0x00, 0x0D, 0x78, 0x9C, 0x4B, 0x4C, 0xA4, 0x3D, 0xE0, 0x02, 0x00, 0xA0, 0x36, 0x25, 0xEF },
+            queue.FlushSocket());
     }
 }

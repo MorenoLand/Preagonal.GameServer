@@ -26,5 +26,9 @@ The C# port currently stops before `Player::sendLogin` and marks the session `Se
 
 ## Queue Behavior
 
-`ServerList::sendPacket` appends a newline before passing the packet into `CFileQueue::addPacket`. The list-server socket uses `ENCRYPT_GEN_2` after registration, so `CFileQueue::sendCompress` zlib-compresses queued bytes and prefixes a raw big-endian short length when flushed. This milestone tests the uncompressed packet body; full queue compression/socket flushing remains a separate protocol milestone.
-
+`ServerList::sendPacket` appends a newline before passing the packet into
+`CFileQueue::addPacket`. The list-server socket uses `ENCRYPT_GEN_2` after
+registration, so `CFileQueue::sendCompress` zlib-compresses queued bytes and
+prefixes a raw big-endian short length when flushed. The zlib socket flush
+format is now fixture-confirmed in `docs/spec/CFILEQUEUE_FIXTURE_HARNESS.md`;
+real list-server connection/auth lifecycle remains a separate milestone.

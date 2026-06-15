@@ -1,3 +1,5 @@
+using System.IO.Compression;
+
 namespace GServ.Protocol;
 
 public sealed class GraalFileQueue
@@ -171,16 +173,24 @@ public sealed class GraalFileQueue
                 return;
 
             case EncryptionGeneration.Gen5:
-                if (_outputBuffer.Count > 55)
-                    throw new NotSupportedException("Gen5 compressed socket flush is blocked until zlib/bzip2 bytes are confirmed against gs2lib.");
-
                 var payload = _outputBuffer.ToArray();
-                AddGen5SocketPayload(payload);
+                if (payload.Length > 0x2000)
+                    throw new NotSupportedException("Gen5 bzip2 socket flush is blocked until bzip2 bytes are implemented from gs2lib fixtures.");
+
+                if (payload.Length > 55)
+                    AddGen5ZlibSocketPayload(payload);
+                else
+                    AddGen5UncompressedSocketPayload(payload);
+
                 _outputBuffer.Clear();
                 return;
 
             case EncryptionGeneration.Gen2:
             case EncryptionGeneration.Gen3:
+                AddGen2Or3SocketPayload(_outputBuffer.ToArray());
+                _outputBuffer.Clear();
+                return;
+
             case EncryptionGeneration.Gen4:
                 throw new NotSupportedException(
                     $"Socket flush for {_outboundGeneration} is blocked until zlib/bzip2 bytes are confirmed against gs2lib.");
@@ -190,7 +200,17 @@ public sealed class GraalFileQueue
         }
     }
 
-    private void AddGen5SocketPayload(byte[] payload)
+    private void AddGen2Or3SocketPayload(byte[] payload)
+    {
+        var compressed = ZlibCompress(payload);
+        if (compressed.Length > 0xFFFD)
+            return;
+
+        AddBigEndianLength(compressed.Length);
+        _socketOutputBuffer.AddRange(compressed);
+    }
+
+    private void AddGen5UncompressedSocketPayload(byte[] payload)
     {
         _outboundCodec.LimitFromCompressionType(CompressionType.Uncompressed);
         var encrypted = _outboundCodec.Encrypt(payload);
@@ -202,6 +222,34 @@ public sealed class GraalFileQueue
         _socketOutputBuffer.Add((byte)framedLength);
         _socketOutputBuffer.Add((byte)CompressionType.Uncompressed);
         _socketOutputBuffer.AddRange(encrypted);
+    }
+
+    private void AddGen5ZlibSocketPayload(byte[] payload)
+    {
+        var compressed = ZlibCompress(payload);
+        if (compressed.Length > 0xFFFC)
+            return;
+
+        _outboundCodec.LimitFromCompressionType(CompressionType.Zlib);
+        var encrypted = _outboundCodec.Encrypt(compressed);
+        var framedLength = encrypted.Length + 1;
+        AddBigEndianLength(framedLength);
+        _socketOutputBuffer.Add((byte)CompressionType.Zlib);
+        _socketOutputBuffer.AddRange(encrypted);
+    }
+
+    private void AddBigEndianLength(int length)
+    {
+        _socketOutputBuffer.Add((byte)(length >> 8));
+        _socketOutputBuffer.Add((byte)length);
+    }
+
+    private static byte[] ZlibCompress(byte[] payload)
+    {
+        using var output = new MemoryStream();
+        using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, leaveOpen: true))
+            zlib.Write(payload);
+        return output.ToArray();
     }
 
     private static byte[] Combine(ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)

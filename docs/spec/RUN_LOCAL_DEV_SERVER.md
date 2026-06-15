@@ -32,14 +32,14 @@ Expected limitations:
 - closes after the diagnostic login/level boundary
 
 The protocol project now has source-confirmed socket flush primitives for
-gen1/gen6 passthrough and gen5 uncompressed payloads up to 55 bytes. The dev
-server does not yet route its full response through production socket framing
-because the real login/level response is larger than 55 bytes and therefore
-requires byte-exact zlib/bzip2 confirmation.
+gen1/gen6 passthrough, gen2/gen3 zlib, gen5 uncompressed payloads up to 55
+bytes, and gen5 zlib payloads through `0x2000` bytes. The dev server does not
+yet route its full response through production socket framing because real
+login/level responses can cross into blocked bzip2-sized sends.
 
 ## Manual Closed-Client Status
 
 A synthetic/manual TCP diagnostic is possible. A meaningful closed-source game
-client session is still not expected to work because outbound compressed gen2+
-and gen5-over-55 socket framing, continuous session streaming, and runtime
-movement are not implemented.
+client session is still not expected to work because gen4/gen5 bzip2 socket
+framing, continuous session streaming, and runtime movement are not
+implemented.

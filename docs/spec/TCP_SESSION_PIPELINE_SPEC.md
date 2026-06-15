@@ -40,8 +40,8 @@ Implemented:
   - reads exactly one length-prefixed frame without waiting for EOF
   - writes the uncompressed queued outbound bytes from `GraalFileQueue`
   - does not yet use production gen5 socket flush for the full login/level
-    response because that response exceeds the confirmed uncompressed gen5
-    threshold and would require blocked zlib/bzip2 output
+    response because typical level payloads can exceed the gen5 zlib threshold
+    and require blocked bzip2 output
 
 This is a diagnostic shell, not a production session loop.
 
@@ -51,18 +51,22 @@ This is a diagnostic shell, not a production session loop.
 that do not depend on unverified compression output:
 
 - `ENCRYPT_GEN_1` and `ENCRYPT_GEN_6`: queued bytes are emitted directly.
+- `ENCRYPT_GEN_2` and `ENCRYPT_GEN_3`: queued bytes are zlib-compressed and
+  prefixed by raw big-endian compressed length.
 - `ENCRYPT_GEN_5` with payload length `<= 55`: emits big-endian length,
   compression type `0x02`, and iterator-XOR encrypted payload bytes.
+- `ENCRYPT_GEN_5` with payload length `56..0x2000`: emits big-endian length,
+  compression type `0x04`, and iterator-XOR encrypted zlib payload bytes.
 - Partial socket writes preserve remaining framed bytes for the next flush.
 
 The dev-only TCP shell intentionally remains on uncompressed diagnostic queue
-bytes until full login/level response compression is proven byte-exact.
+bytes until full login/level response bzip2 handling is implemented.
 
 ## Known Gaps
 
 - The TCP shell processes one login frame and then closes the connection.
-- Outbound compressed socket framing for gen2/gen3/gen4 and gen5 payloads over
-  55 bytes is still blocked on `CFileQueue::sendCompress` fixtures.
+- Outbound bzip2 socket framing for gen4 and gen5 payloads over `0x2000` bytes
+  is still blocked.
 - Websocket wrapping is not implemented.
 - Continuous packet streaming, movement, reconnect cleanup, and multi-session
   forwarding are not implemented.

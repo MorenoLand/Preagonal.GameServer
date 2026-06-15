@@ -15,10 +15,11 @@
   overrides, and save/add side-effect signalling. Real `saveAccount` disk writes,
   full filesystem resync behavior, and guest random `pc:` identity generation
   remain blocked.
-- `CFileQueue` queue selection, gen1/gen6 socket passthrough, and gen5
-  uncompressed socket framing for payloads up to 55 bytes are implemented.
-  Gen2/gen3 zlib framing, gen4 bzip2/encryption framing, gen5 compressed
-  payload framing, and websocket wrapping remain blocked on byte-level fixtures.
+- `CFileQueue` queue selection, gen1/gen6 socket passthrough, gen2/gen3 zlib
+  framing, gen5 uncompressed socket framing for payloads up to 55 bytes, and
+  gen5 zlib framing for payloads through `0x2000` bytes are implemented.
+  Gen4 bzip2/encryption framing, gen5 bzip2 payload framing, and websocket
+  wrapping remain blocked.
 - A dev-only TCP/session shell exists for one length-prefixed login frame and a
   filesystem-backed `.nw` `sendLevel` boundary. It is not production-compatible:
   it uses explicit fake auth, uncompressed outbound queue bytes, one-frame

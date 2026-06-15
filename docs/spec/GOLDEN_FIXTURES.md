@@ -321,8 +321,50 @@ first send max 3 => [0, 5, 2]
 next send => [121, 122, 178, 220]
 ```
 
-Gen5 payloads longer than 55 bytes intentionally remain blocked in C# until
-the zlib/bzip2 output bytes are confirmed against `gs2lib`.
+Gen5 zlib payloads are now covered below. Gen5 bzip2 payloads remain blocked in
+C# until a bzip2 implementation strategy is added from the captured fixture.
+
+## CFileQueue zlib Socket Flush
+
+Fixtures captured with `tools/gs2lib-fixtures` against recovered `gs2lib`.
+
+Gen2 and gen3 both use the same zlib-only `CFileQueue::sendCompress` branch.
+
+`ENCRYPT_GEN_2`, key `0`, queued payload `ASCII("abc\n")`:
+
+```txt
+[0, 12, 120, 156, 75, 76, 74, 230, 2, 0, 3, 126, 1, 49]
+```
+
+`ENCRYPT_GEN_3`, key `0`, queued payload `ASCII("abc\n")`:
+
+```txt
+[0, 12, 120, 156, 75, 76, 74, 230, 2, 0, 3, 126, 1, 49]
+```
+
+`ENCRYPT_GEN_2`, key `0`, queued payload `ASCII("a" repeated 100 + "\n")`:
+
+```txt
+[0, 13, 120, 156, 75, 76, 164, 61, 224, 2, 0, 160, 54, 37, 239]
+```
+
+`ENCRYPT_GEN_5`, key `0`, queued payload
+`ASCII("a" repeated 55 + "\n")`, total length 56:
+
+```txt
+[0, 14, 4, 96, 132, 154, 154, 92, 211, 49, 130, 88, 70, 28, 19, 90]
+```
+
+Gen5 bzip2 threshold fixture, documented but not implemented in C#:
+
+```txt
+input: ASCII("a" repeated 8192 + "\n"), total length 8193
+output:
+[0, 50, 6, 90, 66, 185, 231, 73, 153, 24, 165, 11, 67, 212, 75, 100,
+ 153, 152, 226, 18, 225, 0, 128, 16, 0, 4, 32, 0, 0, 8, 32, 0,
+ 48, 205, 52, 10, 163, 31, 10, 11, 0, 97, 119, 36, 83, 133, 9, 7,
+ 52, 205, 199, 160]
+```
 
 ## Account Loading Fixtures
 

@@ -56,7 +56,9 @@ Confirmed thresholds:
 - `ENCRYPT_GEN_1` and `ENCRYPT_GEN_6`: append `pSend` directly to `oBuffer` and
   call `sendData`.
 - `ENCRYPT_GEN_2` and `ENCRYPT_GEN_3`: zlib-compress `pSend`, require length
-  `<= 0xFFFD`, prefix raw big-endian short length, then send.
+  `<= 0xFFFD`, prefix raw big-endian short length, then send. The fixture
+  harness confirms gen2 and gen3 produce identical socket bytes for the same
+  payload; gen3 byte insertion is not applied by this branch.
 - `ENCRYPT_GEN_4`: bzip2-compress, require length `<= 0xFFFD`, set encryption
   limit for BZ2, encrypt, prefix raw big-endian short length, then send.
 - `ENCRYPT_GEN_5`: choose uncompressed for length `<= 55`, zlib for `> 55`, BZ2
@@ -101,16 +103,18 @@ paths:
 - queue selection thresholds used before compression
 - output buffering across partial sends
 - socket-level passthrough for `ENCRYPT_GEN_1`/`ENCRYPT_GEN_6`
+- socket-level zlib compression for `ENCRYPT_GEN_2`/`ENCRYPT_GEN_3`
 - socket-level gen5 uncompressed payload framing for payloads `<= 55`
+- socket-level gen5 zlib framing for payloads `56..0x2000`
 - gen5 uncompressed compression type byte `0x02`
+- gen5 zlib compression type byte `0x04`
 - gen5 big-endian socket length prefix equal to `encryptedLength + 1`
 - gen5 iterator-XOR encryption using the recovered `CEncryption` behavior
-- explicit unsupported exceptions for gen2/gen3/gen4 and gen5 compressed
-  payloads until zlib/bzip2 bytes are independently proven
+- explicit unsupported exceptions for gen4 and gen5 bzip2 payloads until bzip2
+  implementation is added from fixtures
 
-Production compressed flush behavior remains blocked until zlib/bzip2 fixtures
-are byte-exact. The implemented gen5 path is intentionally limited to the
-source-confirmed uncompressed branch.
+Production bzip2 flush behavior remains blocked. Zlib socket bytes are now
+covered by the isolated `tools/gs2lib-fixtures` harness and C# golden tests.
 
 ## Current Pass Status
 
@@ -118,8 +122,13 @@ This pass implemented the first socket-level flush boundary that does not
 require unproven compression output:
 
 - gen1/gen6 socket flush emits the queued bytes directly.
+- gen2/gen3 socket flush zlib-compresses the queued bytes and prefixes the
+  compressed length as a raw big-endian short.
 - gen5 payloads up to 55 bytes are framed as:
   `GSHORT(encryptedLength + 1) + compressionType + encryptedPayload`.
+- gen5 payloads from 56 through `0x2000` bytes use zlib, compression type
+  `0x04`, gen5 iterator-XOR encryption with zlib limit `0x04`, and the same
+  length framing.
 - partial socket writes leave remaining framed bytes buffered for the next
   flush, matching the `oBuffer` / `sendData` retry model in `CFileQueue`.
 - unsupported compressed branches throw before consuming the pending diagnostic
@@ -132,9 +141,8 @@ post-dynamic runtime packets in the same order C++ calls `Player::sendPacket`.
 
 Still blocked:
 
-- gen2/gen3 zlib socket-level flush bytes
 - gen4 bzip2 + encryption socket-level flush bytes
-- gen5 zlib/bzip2 socket-level flush bytes for payloads over 55 bytes
+- gen5 bzip2 socket-level flush bytes for payloads over `0x2000` bytes
 - websocket wrapping
 - production file transfer through `PLO_FILE`
 - level resource transfer beyond pre-serialized board/layer and runtime payloads
