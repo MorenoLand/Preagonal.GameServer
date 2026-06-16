@@ -53,8 +53,10 @@ For the joining player's received props:
 
 The packet-only C# boundary preserves the caller-provided snapshot order. The
 minimal runtime selector preserves `RuntimeLevel.PlayerIds` order for no-map
-levels. Server-wide map iteration order remains a compatibility risk until
-production player-list ownership is fully matched.
+levels. The live forwarding boundary can now deliver confirmed packets to
+session sinks using the same selector. Server-wide map iteration order remains a
+compatibility risk until `std::unordered_map` ordering is golden-tested against
+the original compiled server.
 
 ## Current Stop Point
 
@@ -79,8 +81,11 @@ levelBuff then levelBuff2 for older sender versions
 ```
 
 The implemented builder covers `X/Y/Z`, `X2/Y2/Z2`, `Sprite`, `CurrentLevel`,
-and `Gani`. It does not yet send to live sockets; production recipient routing
-remains blocked on the real multi-session runtime.
+and `Gani`. `LiveWorldSessionForwarder.ApplyAndForwardConfirmedPlayerProps`
+now applies these confirmed mutations and forwards the resulting
+`PLO_OTHERPLPROPS` packet to live session sinks selected by the source-confirmed
+level-area routing rules. Real sockets/file queues remain a production
+integration blocker.
 
 ## Tests
 
@@ -96,3 +101,9 @@ remains blocked on the real multi-session runtime.
 - decoded incoming movement/player prop parsing
 - stopping at the first unconfirmed property
 - forwarded `PLO_OTHERPLPROPS` bytes for a precise-movement sender
+
+`tests/GServ.Network.Tests/LiveWorldSessionForwardingTests.cs` covers:
+
+- live level-area packet delivery in level membership order
+- map/group/distance filtering
+- confirmed movement prop mutation plus forwarded packet delivery

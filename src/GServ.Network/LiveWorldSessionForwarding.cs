@@ -1,0 +1,75 @@
+using GServ.Game;
+using GServ.Protocol;
+
+namespace GServ.Network;
+
+public interface ILiveWorldSessionSink
+{
+    ushort PlayerId { get; }
+    void QueuePacket(byte[] packet);
+}
+
+public sealed record LiveWorldForwardingDelivery(ushort PlayerId, byte[] Packet);
+
+public static class LiveWorldSessionForwarder
+{
+    public static IReadOnlyList<LiveWorldForwardingDelivery> ForwardConfirmedLevelAreaPacket(
+        RuntimeServer server,
+        RuntimePlayer sender,
+        byte[] packet,
+        IReadOnlyDictionary<ushort, ILiveWorldSessionSink> sinks,
+        IReadOnlySet<ushort>? exclude = null)
+    {
+        var recipients = LiveWorldForwardingSelector.SelectLevelAreaRecipients(
+            server,
+            sender,
+            exclude ?? new HashSet<ushort> { sender.Id });
+
+        return Deliver(packet, recipients, sinks);
+    }
+
+    public static IReadOnlyList<LiveWorldForwardingDelivery> ApplyAndForwardConfirmedPlayerProps(
+        RuntimeServer server,
+        RuntimePlayer sender,
+        IEnumerable<IncomingPlayerPropertyUpdate> updates,
+        bool senderSupportsPreciseMovement,
+        IReadOnlyDictionary<ushort, ILiveWorldSessionSink> sinks)
+    {
+        var updateArray = updates.ToArray();
+        RuntimePlayerPropsApplier.ApplyConfirmed(sender, updateArray);
+
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            sender.Id,
+            sender.PixelX,
+            sender.PixelY,
+            sender.PixelZ,
+            updateArray,
+            senderSupportsPreciseMovement,
+            appendNewline: true);
+
+        return ForwardConfirmedLevelAreaPacket(
+            server,
+            sender,
+            packet,
+            sinks,
+            new HashSet<ushort> { sender.Id });
+    }
+
+    private static IReadOnlyList<LiveWorldForwardingDelivery> Deliver(
+        byte[] packet,
+        IReadOnlyList<ushort> recipients,
+        IReadOnlyDictionary<ushort, ILiveWorldSessionSink> sinks)
+    {
+        var deliveries = new List<LiveWorldForwardingDelivery>();
+        foreach (var recipient in recipients)
+        {
+            if (!sinks.TryGetValue(recipient, out var sink))
+                continue;
+
+            sink.QueuePacket(packet);
+            deliveries.Add(new LiveWorldForwardingDelivery(recipient, packet));
+        }
+
+        return deliveries;
+    }
+}

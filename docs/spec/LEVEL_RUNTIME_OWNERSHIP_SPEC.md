@@ -15,7 +15,9 @@ sets that id on the player, and stores the player in `m_playerList[id]`. The
 assignment behaves like a map overwrite for an already-present id.
 
 When no explicit id is supplied, C++ asks `m_playerIdGenerator` for the next
-available id. The generator allocation details are not implemented in C# yet.
+available id. The C# runtime now mirrors the recovered `IdGenerator<uint16_t>`
+behavior for player ids: start at `2`, allocate monotonically, and reuse the
+smallest freed id first.
 
 `Server::deletePlayer(player)` is deferred. A non-null player is inserted into
 `m_deletedPlayers` and server-list deletion is requested. The player remains in
@@ -68,8 +70,9 @@ the main server loop. The C# model only exposes the deferred remove semantics
 needed by tests.
 
 The global server player-list iteration order in C++ comes from the underlying
-player-list container and must be validated again before live multi-session
-visibility forwarding is implemented.
+`std::unordered_map` container and must be golden-tested against the original
+compiled server before map-area forwarding can be considered fully
+production-compatible.
 
 ## Tests
 
@@ -79,5 +82,6 @@ visibility forwarding is implemented.
 - all-matching-id erase behavior from `Level::removePlayer`
 - leader detection from the front of the level player list
 - requested-id assignment and overwrite behavior in `Server::addPlayer`
+- automatic id assignment from `PLAYERID_INIT = 2` and smallest-free-id reuse
 - deferred deletion until cleanup
 - leaving the previous level before joining a new level

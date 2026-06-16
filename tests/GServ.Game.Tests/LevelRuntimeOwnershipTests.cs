@@ -48,6 +48,27 @@ public sealed class LevelRuntimeOwnershipTests
     }
 
     [Fact]
+    public void ServerAddPlayerWithoutRequestedIdStartsAtTwoAndReusesSmallestFreedId()
+    {
+        var server = new RuntimeServer();
+        var first = new RuntimePlayer(0, "pc:First", RuntimePlayerKind.Client);
+        var second = new RuntimePlayer(0, "pc:Second", RuntimePlayerKind.Client);
+
+        Assert.True(server.AddPlayer(first));
+        Assert.True(server.AddPlayer(second));
+
+        Assert.Equal(2, first.Id);
+        Assert.Equal(3, second.Id);
+
+        server.DeletePlayer(first);
+        server.CleanupDeletedPlayers();
+
+        var third = new RuntimePlayer(0, "pc:Third", RuntimePlayerKind.Client);
+        Assert.True(server.AddPlayer(third));
+        Assert.Equal(2, third.Id);
+    }
+
+    [Fact]
     public void ServerDeletePlayerDefersRemovalUntilCleanup()
     {
         var server = new RuntimeServer();

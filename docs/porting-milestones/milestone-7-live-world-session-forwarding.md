@@ -18,16 +18,16 @@
 
 ## Required Work
 
-- [ ] Re-trace `Server::playerLoggedIn`, player ID generation, duplicate session removal, level player list ordering, and deletion cleanup.
-- [ ] Update `docs/spec/LIVE_WORLD_SESSION_FORWARDING_SPEC.md`.
-- [ ] Add tests for player ID allocation, same-level membership order, removal behavior, area visibility selection, and forwarding packet order.
-- [ ] Implement live multi-session forwarding only for confirmed packet types.
-- [ ] Add guards for gameplay packet types that are not yet ported.
-- [ ] Ensure dev-only single-client behavior remains opt-in.
-- [ ] Run `dotnet build GServharp.sln`.
-- [ ] Run `dotnet test GServharp.sln`.
-- [ ] Confirm `git status --short ai_resources` is empty.
-- [ ] Commit with message `Implement live world session forwarding`.
+- [x] Re-trace `Server::playerLoggedIn`, player ID generation, duplicate session removal, level player list ordering, and deletion cleanup.
+- [x] Update `docs/spec/LIVE_WORLD_SESSION_FORWARDING_SPEC.md`.
+- [x] Add tests for player ID allocation, same-level membership order, removal behavior, area visibility selection, and forwarding packet order.
+- [x] Implement live multi-session forwarding only for confirmed packet types.
+- [x] Add guards for gameplay packet types that are not yet ported.
+- [x] Ensure dev-only single-client behavior remains opt-in.
+- [x] Run `dotnet build GServharp.sln`.
+- [x] Run `dotnet test GServharp.sln`.
+- [x] Confirm `git status --short ai_resources` is empty.
+- [x] Commit with message `Implement live world session forwarding`.
 
 ## Compatibility Constraints
 
@@ -38,3 +38,14 @@
 ## Definition Of Done
 
 - Multiple connected sessions can see and receive source-confirmed player property updates in C++ order.
+
+## Completion Notes
+
+- Implemented runtime player id generation/reuse matching recovered
+  `IdGenerator<uint16_t>` behavior.
+- Implemented source-confirmed level-area recipient selection for no-map and
+  map/group/distance branches.
+- Implemented live session-sink delivery only for already-confirmed packets and
+  the confirmed incoming movement/player-prop subset.
+- Full socket/file-queue integration and arbitrary gameplay packet forwarding
+  remain blocked.

@@ -170,12 +170,16 @@ public sealed class RuntimeServer
 {
     private readonly Dictionary<ushort, RuntimePlayer> _players = [];
     private readonly HashSet<RuntimePlayer> _deletedPlayers = [];
+    private readonly RuntimeUShortIdGenerator _playerIds = new(2);
 
     public IReadOnlyList<ushort> PlayerIds => _players.Keys.ToArray();
     public IReadOnlyCollection<RuntimePlayer> Players => _players.Values;
 
-    public bool AddPlayer(RuntimePlayer player, ushort id)
+    public bool AddPlayer(RuntimePlayer player, ushort id = ushort.MaxValue)
     {
+        if (id == ushort.MaxValue)
+            id = _playerIds.GetAvailableId();
+
         player.Id = id;
         _players[id] = player;
         return true;
@@ -199,10 +203,39 @@ public sealed class RuntimeServer
         {
             player.LeaveLevel();
             _players.Remove(player.Id);
+            _playerIds.FreeId(player.Id);
         }
 
         _deletedPlayers.Clear();
     }
+}
+
+public sealed class RuntimeUShortIdGenerator
+{
+    private readonly SortedSet<ushort> _freeIds = [];
+    private ushort _nextId;
+
+    public RuntimeUShortIdGenerator(ushort startId)
+    {
+        _nextId = startId;
+    }
+
+    public ushort GetAvailableId()
+    {
+        if (_freeIds.Count != 0)
+        {
+            var id = _freeIds.Min;
+            _freeIds.Remove(id);
+            return id;
+        }
+
+        var next = _nextId;
+        _nextId++;
+        return next;
+    }
+
+    public void FreeId(ushort id) =>
+        _freeIds.Add(id);
 }
 
 public sealed record LevelEntryVisibilitySelection(
@@ -274,5 +307,67 @@ public static class LevelEntryVisibilitySelector
         }
 
         return new LevelEntryVisibilitySelection(broadcasts, received);
+    }
+}
+
+public static class LiveWorldForwardingSelector
+{
+    public static IReadOnlyList<ushort> SelectLevelAreaRecipients(
+        RuntimeServer server,
+        RuntimePlayer sender,
+        IReadOnlySet<ushort>? exclude = null)
+    {
+        if (sender.Level is not { } level)
+            return [];
+
+        return level.Map is null
+            ? SelectWithoutMap(server, level, exclude)
+            : SelectWithMap(server, sender, level.Map, exclude);
+    }
+
+    private static IReadOnlyList<ushort> SelectWithoutMap(
+        RuntimeServer server,
+        RuntimeLevel level,
+        IReadOnlySet<ushort>? exclude)
+    {
+        var recipients = new List<ushort>();
+        foreach (var playerId in level.PlayerIds)
+        {
+            if (exclude?.Contains(playerId) == true)
+                continue;
+
+            var other = server.GetPlayer(playerId);
+            if (other is { IsClient: true })
+                recipients.Add(playerId);
+        }
+
+        return recipients;
+    }
+
+    private static IReadOnlyList<ushort> SelectWithMap(
+        RuntimeServer server,
+        RuntimePlayer sender,
+        RuntimeMap map,
+        IReadOnlySet<ushort>? exclude)
+    {
+        var recipients = new List<ushort>();
+        foreach (var other in server.Players)
+        {
+            if (exclude?.Contains(other.Id) == true)
+                continue;
+            if (!other.IsClient)
+                continue;
+            if (other.Level?.Map != map)
+                continue;
+            if (map.IsGroupMap && sender.Group != other.Group)
+                continue;
+            if (Math.Abs(other.MapX - sender.MapX) >= 2 ||
+                Math.Abs(other.MapY - sender.MapY) >= 2)
+                continue;
+
+            recipients.Add(other.Id);
+        }
+
+        return recipients;
     }
 }

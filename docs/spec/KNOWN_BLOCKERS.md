@@ -51,10 +51,13 @@
   multi-session player-list forwarding remain blocked because they enter
   level/map/NPC/player-list runtime.
 - Minimal level/player ownership is implemented for source-confirmed id
-  assignment, level player-list append/remove, leader detection, deferred
-  deletion cleanup, and runtime visibility filtering. It does not implement
-  list-server side effects, scripting hooks, player-id generation, production
-  server player-list iteration compatibility, movement, or live forwarding.
+  assignment, automatic player-id generation/reuse, level player-list
+  append/remove, leader detection, deferred deletion cleanup, runtime visibility
+  filtering, and live forwarding of already-confirmed level-area/player-prop
+  packets to session sinks. It does not implement list-server delete side
+  effects, scripting hooks, real socket/file-queue integration,
+  `std::unordered_map` map-area iteration golden compatibility, or arbitrary
+  gameplay packet forwarding.
 - Level format detection is implemented for the exact C++ extension checks and
   eight-byte signatures. A read-only indexed filesystem boundary,
   source-confirmed `loadAllFolders`/`loadFolderConfig` bucket setup, and
@@ -70,12 +73,13 @@
   remain blocked.
 - Incoming decoded `PLI_PLAYERPROPS` movement/property parsing is implemented
   for the confirmed X/Y/Z, X2/Y2/Z2, sprite, current-level, and gani subset.
-  Safe local runtime mutation and a packet builder for confirmed movement
-  `PLO_OTHERPLPROPS` forwarding bytes exist. Confirmed inbound gen1/gen2/gen3
-  and gen5 uncompressed/zlib frame decode exists, gen5 invalid compression
+  Safe local runtime mutation, a packet builder for confirmed movement
+  `PLO_OTHERPLPROPS` forwarding bytes, and a live session sink forwarder for
+  that confirmed subset exist. Confirmed inbound gen1/gen2/gen3 and gen5
+  uncompressed/zlib frame decode exists, gen5 invalid compression
   type now follows the C++ log-and-continue decrypted-payload behavior, and the
   dev-only TCP shell preserves source-confirmed `PLI_RAWDATA` state for decoded
   gen1/gen2/gen5/gen6 post-login payloads. Inbound bzip2 branches, inbound
-  bundle dispatch, live multi-session forwarding, full `setProps`, touch/link traversal,
+  bundle dispatch, full `setProps`, touch/link traversal,
   NPC/chest/combat side effects, and invalid-update behavior remain blocked.
 - Server-list connection lifecycle, reconnect backoff, registration, and text/listserver side channels need a dedicated milestone.

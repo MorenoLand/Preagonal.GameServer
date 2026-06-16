@@ -46,11 +46,14 @@
   old `sendLevel141`, production horse/baddy/NPC state construction, and live
   multi-session player-list forwarding remain blocked because they enter
   level/map/NPC/player-list runtime.
-- Minimal level/player ownership is implemented only for confirmed id
-  assignment, same-level membership order, all-matching-id removal, leader
-  detection, deferred deletion cleanup, and visibility selection. List-server
-  side effects, scripting hooks, player-id generation, and live multi-session
-  forwarding remain blocked.
+- Minimal level/player ownership is implemented for confirmed id assignment,
+  automatic player-id generation/reuse, same-level membership order,
+  all-matching-id removal, leader detection, deferred deletion cleanup,
+  visibility selection, and live forwarding of already-confirmed
+  level-area/player-prop packets to session sinks. List-server delete side
+  effects, scripting hooks, real socket/file-queue integration,
+  `std::unordered_map` map-area iteration golden compatibility, and arbitrary
+  gameplay packet forwarding remain blocked.
 - Level file format detection is implemented for confirmed extension and
   signature selection. A source-confirmed read-only indexed filesystem boundary,
   `loadAllFolders`/`loadFolderConfig` bucket setup, and filesystem-backed `.nw`
@@ -65,14 +68,14 @@
   baddy runtime props/AI, and chest opening gameplay remain blocked.
 - Incoming decoded `PLI_PLAYERPROPS` movement/property parsing is implemented
   for the confirmed X/Y/Z, X2/Y2/Z2, sprite, current-level, and gani subset.
-  Safe local runtime mutation and a packet builder for confirmed movement
-  `PLO_OTHERPLPROPS` forwarding bytes exist. Confirmed inbound gen1/gen2/gen3
-  and gen5 uncompressed/zlib frame decode exists, gen5 invalid compression
+  Safe local runtime mutation, a packet builder for confirmed movement
+  `PLO_OTHERPLPROPS` forwarding bytes, and a live session sink forwarder for
+  that confirmed subset exist. Confirmed inbound gen1/gen2/gen3 and gen5
+  uncompressed/zlib frame decode exists, gen5 invalid compression
   type now follows the C++ log-and-continue decrypted-payload behavior, and the
   dev-only TCP shell can preserve source-confirmed `PLI_RAWDATA` length state
   for decoded gen1/gen2/gen5/gen6 post-login payloads. Inbound bzip2 branches,
-  inbound bundle dispatch, live multi-session forwarding, full `setProps`,
-  touch/link traversal,
+  inbound bundle dispatch, full `setProps`, touch/link traversal,
   NPC/chest/combat side effects, and invalid-update behavior remain blocked.
 - WebSocket handling is gated by `WOLFSSL_ENABLED` code paths and needs a dedicated pass.
 - `Server::doMain()` timing branches need a dedicated timing recovery pass.
