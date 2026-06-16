@@ -33,7 +33,7 @@ No row is currently `Certified`.
 | NPC runtime | Blocked | Inert entity packet boundaries only | Script VM, NPC full props, bytecode, runtime events pending |
 | Baddy/mob runtime | Partially Implemented | Default containers/selected props | AI/combat/drop/respawn/timers pending |
 | Quests/missions/content systems | Out of scope unless source-proven | No dedicated C++ core runtime found | Do not implement built-ins without C++ source or byte-capture proof |
-| Guild/group/chat systems | Blocked | Some group-map visibility and guild verification boundaries | Full filesystem/runtime mutation and chat/guild packet flows pending |
+| Source-confirmed guild/chat/profile paths | Blocked | Some group-map visibility, chat/PM/profile handlers, and guild verification boundaries | Full filesystem/runtime mutation and chat/guild packet flows pending |
 | RC admin login and packets | Partially Implemented | Rights constants, gate decisions, selected packets | Production RC sockets and mutation families pending |
 | NC login and packets | Partially Implemented | Selected packet IDs/builders | Production NC sockets, NPC/class/weapon mutation, script execution pending |
 | Timing/save loop | Harness Ready | Fake-clock tests for source-confirmed periodic gates | Concrete runtime service wiring and live long-run captures pending |

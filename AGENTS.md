@@ -91,6 +91,11 @@ keep it as a feature-parity backlog item. Document the absence and leave it out
 of scope unless future recovered C++ source or byte-level capture proof shows
 that the original server exposed that behavior.
 
+The implementation backlog must be source-derived, not genre-derived. Do not
+add or keep generic server features such as built-in shops, trades, parties,
+quests, missions, social systems, or other gameplay services unless the C++
+source or recovered dependency contains the concrete client-facing path.
+
 If C++ behavior looks strange, ugly, duplicated, outdated, or bug-like, preserve it unless there is explicit proof that changing it is safe.
 
 Compatibility wins over clean design.

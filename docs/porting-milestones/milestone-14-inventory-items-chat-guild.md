@@ -30,7 +30,8 @@ account sources.
 - [x] Document confirmed behavior in `docs/spec/INVENTORY_ITEMS_CHAT_GUILD_SPEC.md`.
 - [x] Add compatibility tests for source-confirmed item behavior before implementation.
 - [x] Implement inventory/item add/remove/use/equip behavior only where source-confirmed.
-- [ ] Implement guild/chat/profile behavior only after packet and persistence formats are confirmed.
+- [ ] Implement only the guild/chat/profile behavior that has concrete C++
+  handlers and confirmed packet/persistence formats.
 - [ ] Preserve account save/load side effects and ordering where those systems touch account state.
 - [x] Keep behavior absent when no C++ source path exists.
 - [x] Run `dotnet build GServharp.sln`.
@@ -42,6 +43,10 @@ account sources.
 Do not implement built-in shop, trade, party, quest, or mission systems unless a
 future source/capture pass proves those systems exist in the original C++
 server. They are not confirmed C++ core features in the recovered source.
+
+Do not add generic "social" or "content" services to fill gaps. If a behavior
+is not implemented by the recovered C++ source, it is not part of the C# port
+backlog.
 
 ## Compatibility Constraints
 

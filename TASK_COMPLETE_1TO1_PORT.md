@@ -124,9 +124,10 @@ Major missing areas:
   script-visible APIs.
 - Baddy AI, combat, projectiles, hit validation, damage, drops, death, respawn.
 - Inventory, item pickup mutations, chest reward mutations, guild, chat/PM, and
-  profile systems that are present in the recovered C++ source. Built-in shop,
-  trade, party, quest, and mission systems are not confirmed in the C++ core and
-  are outside the port scope unless future source/capture proof is recovered.
+  profile systems only where the recovered C++ source has explicit handlers.
+  Built-in shop, trade, party, quest, and mission systems are not confirmed in
+  the C++ core and are outside the port scope unless future source/capture proof
+  is recovered.
 - RC/NC/admin production sockets and mutation commands.
 - Upload/write paths and update-package lifecycle.
 - Websocket/TLS/bzip2 blocked branches.
@@ -867,9 +868,12 @@ Completion criteria:
 
 ---
 
-# Always-Current Missing Feature Matrix
+# Always-Current Source-Confirmed Port Matrix
 
-Update this matrix whenever a phase makes progress.
+Update this matrix whenever a phase makes progress. Rows are allowed here only
+when the behavior is directly present in the recovered C++ source or gs2lib.
+Do not add generic game/MMO systems as "missing features"; if the C++ source
+does not implement a built-in system, the compatible C# behavior is to omit it.
 
 | Area | Status | Next Required Work |
 | --- | --- | --- |
@@ -886,7 +890,7 @@ Update this matrix whenever a phase makes progress.
 | Weapons/classes/gani | Partial | Phase 11 |
 | File upload/update packages | Partial | Phase 12 |
 | RC/NC/admin production | Partial | Phase 13 |
-| Inventory/chat/guild/profile | Mostly missing | Phase 14 |
+| Inventory/chat/guild/profile | Mostly missing, source-confirmed paths only | Phase 14 |
 | bzip2/websocket/TLS | Missing/partial | Phase 15 |
 | Production main loop | Partial | Phase 16 |
 | Client certification | Not certified | Phase 17 |

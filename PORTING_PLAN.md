@@ -7,7 +7,7 @@ Port in compatibility-first phases:
 3. Account/config persistence: text file schemas, defaults, server options, staff/admin IP checks.
 4. World/resource loading: levels, maps, files, packages, default assets, update packages.
 5. Player model and props: every property ID, login props, RC props, forwarding flags.
-6. Gameplay systems: movement, levels, items, weapons, baddies, combat, chests, signs, links.
+6. Source-confirmed gameplay systems: movement, levels, items, weapons, baddies, combat, chests, signs, links, and only other systems with explicit C++ handlers.
 7. RC/NC/admin/server-list: file browser, account editing, NPC control, list-server packets.
 8. Scripting: GS2 compiler behavior, V8 bindings/events, NPC lifecycle.
 9. Compatibility harness: golden byte fixtures from C++ and live-client captures.
@@ -17,6 +17,8 @@ For each phase:
 - Inspect C++ first.
 - Recover exact dependency source if needed.
 - Document source paths and behavior.
+- Keep absent systems absent; do not add generic feature backlog items that are
+  not source-derived.
 - Write failing compatibility tests.
 - Implement minimal C# behavior.
 - Verify with `dotnet build` and `dotnet test`.

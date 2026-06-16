@@ -10,6 +10,15 @@ server exposed it to the client.
 Dedicated C++ core shop, trade, party, quest, and mission runtimes were not
 found in this pass. They are not backlog items for the 1:1 port.
 
+Scope re-check on 2026-06-16:
+
+- `shop`, `party`, `quest`, and `mission` were not found as dedicated runtime
+  handlers/classes/modules in `ai_resources/GServer-CPP-ORIGINAL/`.
+- `trade` only matched license text and moderation text such as ban reasons,
+  not a server-side trade runtime.
+- `chat`, `private message`, `profile`, and `guild` have concrete C++ handlers
+  and therefore remain in scope only for those source-confirmed paths.
+
 ## Status
 
 Confirmed and partially ported:
