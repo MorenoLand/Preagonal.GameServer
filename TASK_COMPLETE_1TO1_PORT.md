@@ -695,7 +695,12 @@ Completion criteria:
 - `server/src/player/PlayerUpdatePackages.cpp`
 - scripting/compiler files
 
-- [ ] Document weapon/class filesystem loading and cache behavior.
+- [x] Document weapon/class filesystem loading and cache behavior.
+  - 2026-06-16: Added `docs/spec/WEAPONS_CLASSES_GANI_SPEC.md`, covering
+    weapon file parsing, bytecode/script precedence, default weapon insertion,
+    save/delete filename sanitization, weapon packet construction, class
+    loading/cache/update behavior, `PLI_UPDATESCRIPT`, `PLI_UPDATECLASS`, and
+    `PLI_UPDATEGANI` request boundaries.
 - [ ] Implement `PLO_NPCWEAPONADD`, script payload, delete, class edit/get
   flows where confirmed.
 - [ ] Implement gani checksum/script request behavior.
