@@ -84,9 +84,15 @@ all signs and sends one `PLO_SAY2` packet for every matching sign; it does not
 stop after the first match.
 
 The C# port implements the source-confirmed runtime sign-touch packet builder
-as `LevelInteraction.BuildTouchedSignPackets`. Production wiring from the live
-player movement path is still separate because server setting plumbing and the
-broader runtime dispatch loop are not complete.
+as `LevelInteraction.BuildTouchedSignPackets`. It also exposes
+`LevelInteraction.BuildMovementTriggeredSignPackets` for the confirmed movement
+branch: after a runtime player movement update has requested touch testing, the
+helper converts internal pixel coordinates back to C++ `getX()`/`getY()` tile
+coordinates by dividing by `16.0`, then applies the same `serverside`,
+`sprite % 4`, exact-Y, inclusive-X checks.
+
+This helper deliberately does not call NPC touch events from `Player::testTouch`;
+those enter script runtime through `npc.playertouchsme`.
 
 ## Confirmed Link Behavior
 
@@ -194,13 +200,14 @@ weapon, status, and stat mutation behavior.
   inclusive `Level::getLink` lookup and the client-triggered
   `PLI_LEVELWARP`/`PLI_LEVELWARPMOD` path, but did not find a direct player
   movement-to-link warp path.
-- `Player::testSign` packet construction is implemented for the confirmed
-  `PLO_SAY2` response. Live runtime invocation is blocked on server-side setting
-  plumbing and the broader movement dispatch loop. Player translation remains
-  blocked for static `Level::getSignsPacket(player)` serialization.
+- `Player::testSign` packet construction and the source-confirmed movement
+  touch-test invocation helper are implemented for the confirmed `PLO_SAY2`
+  response. Production socket-loop dispatch still has to call the helper at the
+  correct live-session point. Player translation remains blocked for static
+  `Level::getSignsPacket(player)` serialization.
 - Chest item reward mutation is blocked on a dedicated `LevelItem`/player stat
   mutation milestone.
 - Chest persistence save timing remains blocked beyond recording the in-memory
   chest key boundary.
-- NPC touch events from `Player::testTouch` are blocked because they enter
+- NPC touch events from `Player::testTouch` remain blocked because they enter
   script runtime through `npc.playertouchsme`.

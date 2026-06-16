@@ -1620,6 +1620,22 @@ runs when `serverside=true` and `sprite % 4 == 0`; the X range
 `[sign.x - 1.5, sign.x + 0.5]` is inclusive and Y must exactly equal
 `sign.y`.
 
+Movement-triggered sign helper fixture:
+
+```txt
+runtime pixelX=160, pixelY=176
+C++ getX/getY equivalent: 10, 11
+serverside=true
+sprite=0
+sign: x=10, y=11, text="Hello\n"
+```
+
+Expected packet bytes:
+
+```txt
+[185, 72, 101, 108, 108, 111, 35, 98, 10]
+```
+
 ## Server-List Auth
 
 ### SVO_VERIACC2

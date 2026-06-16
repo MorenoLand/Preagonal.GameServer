@@ -114,6 +114,35 @@ public sealed class LevelInteractionBoundaryTests
             packets);
     }
 
+    [Fact]
+    public void BuildMovementTriggeredSignPacketsUsesRuntimePlayerPixelsAfterMovement()
+    {
+        var level = LevelWithSigns(new NwLevelSign(10, 11, "Hello\n"));
+        var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            [
+                GServ.Protocol.IncomingPlayerPropertyUpdate.GShort(GServ.Protocol.PlayerPropertyId.X2, 320),
+                GServ.Protocol.IncomingPlayerPropertyUpdate.GShort(GServ.Protocol.PlayerPropertyId.Y2, 352)
+            ]);
+
+        var packets = LevelInteraction.BuildMovementTriggeredSignPackets(level, player, serverside: true);
+
+        Assert.Equal([185, 72, 101, 108, 108, 111, 35, 98, 10], packets);
+    }
+
+    [Fact]
+    public void BuildMovementTriggeredSignPacketsRequiresMovementTouchRequest()
+    {
+        var level = LevelWithSigns(new NwLevelSign(10, 11, "Hello\n"));
+        var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            [GServ.Protocol.IncomingPlayerPropertyUpdate.GChar(GServ.Protocol.PlayerPropertyId.Sprite, 0)]);
+
+        Assert.Empty(LevelInteraction.BuildMovementTriggeredSignPackets(level, player, serverside: true));
+    }
+
     private static NwLevelSnapshot LevelWithSigns(params NwLevelSign[] signs) =>
         new("GLEVNW01", [], signs, [], [], []);
 }

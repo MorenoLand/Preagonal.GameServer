@@ -516,8 +516,16 @@ behavior, and movement-loop invocation.
     `PLPROP_ADDITFLAGS`. The C# applier preserves the source-confirmed clamps,
     and `PLPROP_APCOUNTER` forwarding preserves C++ `getProp` plus-one
     serialization.
-- [ ] Wire live `testSign` invocation through confirmed movement branches.
-- [ ] Keep NPC touch script events blocked until scripting runtime exists.
+- [x] Wire live `testSign` invocation through confirmed movement branches.
+  - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
+    only after movement requested touch testing, converts internal pixels to
+    C++ `getX()`/`getY()` tile coordinates with `/16.0`, and reuses the
+    confirmed `PLO_SAY2` sign packet builder. Production socket-loop call-site
+    integration remains part of the broader live dispatch work.
+- [x] Keep NPC touch script events blocked until scripting runtime exists.
+  - 2026-06-16: The movement sign-touch helper deliberately does not invoke
+    `Player::testTouch`/`npc.playertouchsme`; NPC touch remains blocked on the
+    scripting runtime.
 - [x] Confirm whether automatic player movement-to-link warp exists; implement
   only if a direct C++ path is found.
   - 2026-06-16: Confirmed in `docs/spec/MOVEMENT_LINKS_CHESTS_SPEC.md` that

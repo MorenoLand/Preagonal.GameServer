@@ -82,6 +82,22 @@ public static class LevelInteraction
         return output.ToArray();
     }
 
+    public static byte[] BuildMovementTriggeredSignPackets(
+        NwLevelSnapshot level,
+        RuntimePlayer player,
+        bool serverside)
+    {
+        if (!player.MovementUpdated || !player.TouchTestRequested)
+            return [];
+
+        return BuildTouchedSignPackets(
+            level,
+            serverside,
+            player.Sprite,
+            player.PixelX / 16.0f,
+            player.PixelY / 16.0f);
+    }
+
     private static byte[] BuildOpenedChestPacket(byte x, byte y)
     {
         var writer = new GraalBinaryWriter();
