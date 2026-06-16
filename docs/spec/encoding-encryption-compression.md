@@ -22,6 +22,19 @@ Graal-packed integers:
 - `GINT4`: four base-128 bytes, max 471347295, each plus 32.
 - `GINT5`: five bytes storing a full uint32, first byte uses 4 high bits then four 7-bit chunks, each plus 32.
 
+End-of-buffer read behavior:
+
+- `CString::read(char*, int)` zero-fills the destination only when no bytes are
+  left before the read begins. Therefore a `readGChar()` at EOF reads raw zero,
+  subtracts 32, and `readGUChar()` exposes byte value `224`.
+- `CString::readChars(int)` clamps the requested length to bytes remaining and
+  returns the available bytes.
+- Partial multi-byte scalar reads are risky: recovered `CString::read` copies
+  the available prefix when `0 < bytesLeft < requested`, but does not
+  source-confirm zero-fill the rest of the destination. The C# port must not
+  claim deterministic compatibility for such malformed multi-byte packets
+  without a dedicated C++ fixture.
+
 Encryption generations from `CEncryption.h`:
 
 - `ENCRYPT_GEN_1 = 0`: no encryption/no compression.

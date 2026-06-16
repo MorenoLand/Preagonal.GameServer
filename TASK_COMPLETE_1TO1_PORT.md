@@ -859,6 +859,11 @@ behavior, and movement-loop invocation.
     payload coverage, matching `CString::readChars` clamping the requested
     nickname length to bytes remaining in the packet while keeping runtime
     word-filter/`setNick` side effects blocked.
+  - 2026-06-16: Added source-confirmed EOF `readGUChar` codec coverage:
+    recovered `CString::read` zero-fills when no bytes remain, so `readGChar`
+    returns raw zero minus 32 and unsigned callers observe `224`. Truncated
+    multi-byte scalar reads remain blocked until a C++ fixture proves the
+    missing-byte behavior.
   - 2026-06-16: Added dev-only local pipeline coverage for parsed-but-unported
     player-prop side effects. The diagnostic shell now logs explicit
     `PLPROP_*` blocked side-effect messages instead of throwing when a

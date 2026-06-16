@@ -417,6 +417,20 @@ Expected: `LOADATSTART` resets `loadFullMap=false` and preload selection becomes
 
 `35` is `GCHAR PLPROP_RUPEESCOUNT`; `[32, 41, 114]` is `GINT 1234`.
 
+### End-Of-Buffer `GCHAR`
+
+Recovered `CString::read(char*, int)` zero-fills the destination when no bytes
+are left before a read. `readGChar()` then subtracts 32 from raw zero and
+`readGUChar()` exposes the wrapped byte:
+
+```txt
+empty buffer + readGUChar() => 224
+```
+
+Do not extend this fixture to truncated multi-byte scalar reads without a C++
+harness: partial `CString::read` copies the available bytes but does not prove
+zero-fill for the missing suffix.
+
 Modern inbound `PLPROP_GANI` uses `GCHAR len` plus
 `CString::readChars(len)`. Terminal truncated payloads parse the remaining
 bytes and do not invent the blocked `"spin"` side-effect packets:

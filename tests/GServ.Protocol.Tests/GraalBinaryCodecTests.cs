@@ -53,4 +53,12 @@ public sealed class GraalBinaryCodecTests
 
         Assert.Equal(new byte[] { 0x12, 0x34, 0x01, 0x02, 0x03, 0x04 }, writer.ToArray());
     }
+
+    [Fact]
+    public void ReadGCharPastEndMatchesCStringZeroFilledReadBehavior()
+    {
+        var reader = new GraalBinaryReader([]);
+
+        Assert.Equal(224, reader.ReadGChar());
+    }
 }
