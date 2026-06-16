@@ -552,7 +552,10 @@ Completion criteria:
 - `server/src/player/PlayerProps.cpp`
 - `server/src/Account.cpp`
 
-- [ ] Document `LevelItem::getItemPlayerProp` for every item id.
+- [x] Document `LevelItem::getItemPlayerProp` for every item id.
+  - 2026-06-16: Added the complete 0..24 item catalog to
+    `docs/spec/INVENTORY_ITEMS_CHAT_GUILD_SPEC.md`, including property payloads,
+    weapon side effects, empty-payload cases, clamps, and invalid-id behavior.
 - [ ] Implement chest reward mutation through confirmed player props.
 - [ ] Implement item pickup/removal mutation and packets.
 - [ ] Add tests for rupees, bombs, arrows, hearts, weapons, spinattack, and

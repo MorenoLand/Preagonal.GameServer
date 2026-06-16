@@ -145,6 +145,39 @@ Confirmed payload rules:
   - if `PLSTATUS_HASSPIN` is already set, returns empty payload;
   - otherwise sets that bit and returns `PLPROP_STATUS + GCHAR status`.
 
+### Complete `getItemPlayerProp` Item Catalog
+
+| ID | Name | C++ `LevelItemType` | Confirmed player-prop result |
+| ---: | --- | --- | --- |
+| 0 | `greenrupee` | `GREENRUPEE` | `PLPROP_RUPEESCOUNT + GINT(clip(rupees + 1, 0, 9999999))` |
+| 1 | `bluerupee` | `BLUERUPEE` | `PLPROP_RUPEESCOUNT + GINT(clip(rupees + 5, 0, 9999999))` |
+| 2 | `redrupee` | `REDRUPEE` | `PLPROP_RUPEESCOUNT + GINT(clip(rupees + 30, 0, 9999999))` |
+| 3 | `bombs` | `BOMBS` | `PLPROP_BOMBSCOUNT + GCHAR(clip(bombs + 5, 0, 99))` |
+| 4 | `darts` | `DARTS` | `PLPROP_ARROWSCOUNT + GCHAR(clip(arrows + 5, 0, 99))` |
+| 5 | `heart` | `HEART` | `PLPROP_CURPOWER + GCHAR(clip(power + 1.0, 0.0, maxPower) * 2.0)` |
+| 6 | `glove1` | `GLOVE1` | `PLPROP_GLOVEPOWER + GCHAR(max(glovePower, 2))` |
+| 7 | `bow` | `BOW` | Calls `Player::addWeapon(BOW)` and returns an empty payload. |
+| 8 | `bomb` | `BOMB` | Calls `Player::addWeapon(BOMB)` and returns an empty payload. |
+| 9 | `shield` | `SHIELD` | `PLPROP_SHIELDPOWER + GCHAR(max(currentShieldPower, 1))` |
+| 10 | `sword` | `SWORD` | `PLPROP_SWORDPOWER + GCHAR(max(currentSwordPower, 1))` |
+| 11 | `fullheart` | `FULLHEART` | `PLPROP_MAXPOWER + GCHAR(clip(maxPower + 1, 0, 20)) + PLPROP_CURPOWER + GCHAR(newMax * 2)` |
+| 12 | `superbomb` | `SUPERBOMB` | Calls `Player::addWeapon(SUPERBOMB)` and returns an empty payload. |
+| 13 | `battleaxe` | `BATTLEAXE` | `PLPROP_SWORDPOWER + GCHAR(max(currentSwordPower, 2))` |
+| 14 | `goldensword` | `GOLDENSWORD` | `PLPROP_SWORDPOWER + GCHAR(4)` |
+| 15 | `mirrorshield` | `MIRRORSHIELD` | `PLPROP_SHIELDPOWER + GCHAR(max(currentShieldPower, 2))` |
+| 16 | `glove2` | `GLOVE2` | `PLPROP_GLOVEPOWER + GCHAR(3)` |
+| 17 | `lizardshield` | `LIZARDSHIELD` | `PLPROP_SHIELDPOWER + GCHAR(max(currentShieldPower, 3))` |
+| 18 | `lizardsword` | `LIZARDSWORD` | `PLPROP_SWORDPOWER + GCHAR(max(currentSwordPower, 3))` |
+| 19 | `goldrupee` | `GOLDRUPEE` | `PLPROP_RUPEESCOUNT + GINT(clip(rupees + 100, 0, 9999999))` |
+| 20 | `fireball` | `FIREBALL` | Calls `Player::addWeapon(FIREBALL)` and returns an empty payload. |
+| 21 | `fireblast` | `FIREBLAST` | Calls `Player::addWeapon(FIREBLAST)` and returns an empty payload. |
+| 22 | `nukeshot` | `NUKESHOT` | Calls `Player::addWeapon(NUKESHOT)` and returns an empty payload. |
+| 23 | `joltbomb` | `JOLTBOMB` | Calls `Player::addWeapon(JOLTBOMB)` and returns an empty payload. |
+| 24 | `spinattack` | `SPINATTACK` | If `PLSTATUS_HASSPIN` is already set, returns empty; otherwise returns `PLPROP_STATUS + GCHAR(status | PLSTATUS_HASSPIN)`. |
+
+Invalid ids and unknown item names resolve to `LevelItemType::INVALID`; the
+default branch returns an empty payload.
+
 ## Confirmed Player-Drop Removal Rules
 
 `Player::removeItem` is used by `spawnLevelItem` under `V8NPCSERVER` for
