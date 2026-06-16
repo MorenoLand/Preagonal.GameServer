@@ -1,0 +1,152 @@
+# Player Props Runtime Catalog
+
+Authoritative sources:
+
+- `ai_resources/GServer-CPP-ORIGINAL/server/src/player/PlayerProps.cpp`
+- `ai_resources/GServer-CPP-ORIGINAL/server/src/player/Player.cpp`
+- `ai_resources/GServer-CPP-ORIGINAL/server/include/Player.h`
+- `ai_resources/GServer-CPP-ORIGINAL/server/include/Account.h`
+
+This catalog covers every `PLPROP_*` branch handled by
+`Player::setProps(CString& pPacket, uint8_t options, Player* rc)`. It is a
+runtime mutation/forwarding catalog, not permission to implement every branch at
+once. Each C# implementation slice must still add focused byte fixtures and keep
+blocked side effects guarded.
+
+## Option Flags
+
+`Player.h` defines the option bits passed to `setProps`:
+
+| Flag | Value | Confirmed meaning |
+| --- | ---: | --- |
+| `PLSETPROPS_SETBYPLAYER` | `0x01` | Player-originated update; some V8 builds reject server-only fields under this flag. |
+| `PLSETPROPS_FORWARD` | `0x02` | Forward eligible props to other players. |
+| `PLSETPROPS_FORWARDSELF` | `0x04` | Echo eligible props back through `PLO_PLAYERPROPS`. |
+
+`msgPLI_PLAYERPROPS` calls:
+
+```cpp
+setProps(pPacket, PLSETPROPS_SETBYPLAYER | PLSETPROPS_FORWARD);
+```
+
+## Forwarding Shape
+
+`Player.cpp` defines `__sendLocal[propscount]`. After each recognized property
+branch, `setProps` appends `GCHAR propId + getProp(propId)` to `levelBuff` when
+`PLSETPROPS_FORWARD` is set and `__sendLocal[propId]` is true. When
+`PLSETPROPS_FORWARDSELF` is set, it appends the same property to `selfBuff`.
+
+Several branches append extra packets before this generic tail:
+
+- `PLPROP_NICKNAME` appends to `globalBuff`, and also to `selfBuff` unless
+  `PLSETPROPS_FORWARDSELF` is set.
+- `PLPROP_HEADGIF` appends to `globalBuff` when the head actually changes.
+- legacy movement `PLPROP_X/Y/Z` appends precise mirror props
+  `PLPROP_X2/Y2/Z2` to `levelBuff2`.
+- precise movement `PLPROP_X2/Y2/Z2` appends legacy mirror props
+  `PLPROP_X/Y/Z` to `levelBuff2`.
+- `PLPROP_MAXPOWER`, revive from `PLPROP_STATUS`, `PLPROP_ATTACHNPC`,
+  `PLPROP_CARRYNPC`, `PLPROP_UDPPORT`, and `PLPROP_PSTATUSMSG` have additional
+  direct sends/side effects described below.
+
+At the end, only logged-in and loaded players flush buffers:
+
+```txt
+globalBuff -> PLO_OTHERPLPROPS + GSHORT playerId + globalBuff to all except self
+levelBuff/levelBuff2 -> PLO_OTHERPLPROPS + GSHORT playerId to level area except self
+selfBuff -> PLO_PLAYERPROPS + selfBuff to self
+```
+
+For sender client versions `>= CLVER_2_3`, C++ sends `levelBuff2` before
+`levelBuff`; older clients see `levelBuff` before `levelBuff2`.
+
+## Runtime Property Branches
+
+| ID | C++ symbol | Read encoding | Direct mutation / behavior | Extra forwarding and side effects | C# status |
+| ---: | --- | --- | --- | --- | --- |
+| 0 | `PLPROP_NICKNAME` | `GCHAR len` + bytes | Applies word filter, defaults empty warned nickname to `unknown`, then `setNick`. | Adds global `PLO_OTHERPLPROPS`; echoes to self unless `FORWARDSELF` is set. | Blocked on word filter/name side effects. |
+| 1 | `PLPROP_MAXPOWER` | `GUChar` | Sets max power and current power to max in non-V8 path. | Adds `PLPROP_CURPOWER` to level/self buffers; V8 also adds max power. | Blocked except serialization. |
+| 2 | `PLPROP_CURPOWER` | `GUChar / 2` | Refuses healing when AP `< 40`; otherwise `setPower`. | Generic local/self forwarding only. | Blocked on AP/power state. |
+| 3 | `PLPROP_RUPEESCOUNT` | `GUInt`, capped at `9,999,999` | Sets gralats. RC path checks `normaladminscanchangegralats` or `PLPERM_SETRIGHTS`. | Generic forwarding only if `__sendLocal` permits; this prop is not local-forwarded. | Blocked on RC permission/config mutation. |
+| 4 | `PLPROP_ARROWSCOUNT` | `GUChar` | Stores arrows clipped `0..99`. | No local forwarding in `__sendLocal`. | Blocked. |
+| 5 | `PLPROP_BOMBSCOUNT` | `GUChar` | Stores bombs clipped `0..99`. | No local forwarding in `__sendLocal`. | Blocked. |
+| 6 | `PLPROP_GLOVEPOWER` | `GUChar` | Stores glove power capped at `3` in non-V8 path. | No local forwarding in `__sendLocal`. | Blocked. |
+| 7 | `PLPROP_BOMBPOWER` | `GUChar` | Stores bomb power clipped `0..3`. | No local forwarding in `__sendLocal`. | Blocked. |
+| 8 | `PLPROP_SWORDPOWER` | `GUChar`, optional `GCHAR len` + image | `<=4` selects default `swordN` capped by `swordlimit`; `>4` subtracts `30` and reads custom image. Old clients append `.gif` when extensionless. | Generic local/self forwarding. | Blocked for runtime; login serialization exists. |
+| 9 | `PLPROP_SHIELDPOWER` | `GUChar`, optional `GCHAR len` + image | `<=3` selects default `shieldN` capped by `shieldlimit`; `>3` subtracts `10` and reads custom image. One-byte 1.41 bug path continues without mutation when no bytes remain. | Generic local/self forwarding. | Blocked for runtime; login serialization exists. |
+| 10 | `PLPROP_GANI` | old client: `GUChar`/image bytes; modern: `GCHAR len` + bytes | Old clients mutate bow power/image. Modern clients call `setGani`. | `"spin"` sends four `PLO_HITOBJECTS` packets around the player. Generic forwarding applies. | Movement parser covers modern string only; spin blocked. |
+| 11 | `PLPROP_HEADGIF` | `GUChar len`, optional image bytes | `<100` default head, `>100` custom `len - 100`, trims embedded newline, old clients append `.gif`; `100` means no change. | Adds global prop when changed; generic local/self forwarding also applies. | Blocked for runtime. |
+| 12 | `PLPROP_CURCHAT` | `GCHAR len`, stores up to `223` bytes | Sets chat, updates last-chat time, runs `processChat`, applies word filter if unprocessed. | May echo filtered chat to self; V8 sends chat to level NPCs. Generic local/self forwarding. | Blocked on chat/filter/scripting. |
+| 13 | `PLPROP_COLORS` | five `GUChar` values | Stores five character colors. | Generic forwarding. | Blocked for runtime. |
+| 14 | `PLPROP_ID` | `GUShort` | Reads and ignores. | No local forwarding. | Safe no-op candidate. |
+| 15 | `PLPROP_X` | `GUChar` | Stores `m_x = value * 8`, clears paused bit, movement timestamp/update, enables touch test. | Adds `PLPROP_X2` mirror to `levelBuff2`; generic forwarding. | Implemented for confirmed movement subset. |
+| 16 | `PLPROP_Y` | `GUChar` | Stores `m_y = value * 8`, clears paused bit, movement timestamp/update, enables touch test. | Adds `PLPROP_Y2` mirror to `levelBuff2`; generic forwarding. | Implemented for confirmed movement subset. |
+| 17 | `PLPROP_SPRITE` | `GUChar` | Stores sprite; non-V8 enables touch test. | Generic forwarding. | Implemented for confirmed movement subset. |
+| 18 | `PLPROP_STATUS` | `GUChar` | Stores status; revive restores hearts by AP; death increments deaths/drops outside sparring; may rotate level leader. | Revive appends `PLPROP_CURPOWER`; may send `PLO_ISLEADER`. Generic forwarding. | Blocked on death/drop/leader behavior. |
+| 19 | `PLPROP_CARRYSPRITE` | `GUChar` | Stores carry sprite. | Generic forwarding. | Blocked. |
+| 20 | `PLPROP_CURLEVEL` | `GCHAR len` + bytes | Non-V8 stores `m_levelName`; V8 reads/discards. | Generic forwarding. | Implemented for confirmed movement subset as state-only. |
+| 21 | `PLPROP_HORSEGIF` | `GCHAR len` + bytes, max read `219` | Stores horse image; old clients append `.gif` when extensionless. | Generic forwarding. | Blocked. |
+| 22 | `PLPROP_HORSEBUSHES` | `GUChar` | Stores horse bomb count. | No local forwarding. | Blocked. |
+| 23 | `PLPROP_EFFECTCOLORS` | `GCHAR len`, optional `GInt4` | Reads effect color bytes when length is positive; no visible field mutation in recovered branch. | No local forwarding. | Blocked/no-op candidate after fixture. |
+| 24 | `PLPROP_CARRYNPC` | `GUInt` | Stores carried NPC id, with duplicate-carry ownership checks unless `duplicatecanbecarried` is true. | May send self `PLO_PLAYERPROPS`, self/global `PLO_NPCDEL2`, and level `PLO_OTHERPLPROPS`. | Blocked on NPC/runtime ownership. |
+| 25 | `PLPROP_APCOUNTER` | `GUShort` | Stores AP counter. | Generic forwarding. | Blocked. |
+| 26 | `PLPROP_MAGICPOINTS` | `GUChar` | Stores magic points capped at `100` in non-V8 path. | No local forwarding. | Blocked. |
+| 27 | `PLPROP_KILLSCOUNT` | `GInt` | Reads and ignores. | No local forwarding. | Safe no-op candidate. |
+| 28 | `PLPROP_DEATHSCOUNT` | `GInt` | Reads and ignores. | No local forwarding. | Safe no-op candidate. |
+| 29 | `PLPROP_ONLINESECS` | `GInt` | Reads and ignores. | No local forwarding. | Safe no-op candidate. |
+| 30 | `PLPROP_IPADDR` | `GInt5` | Reads and ignores. | Generic forwarding if `__sendLocal` tail applies. | Blocked; client-originated IP forwarding risk. |
+| 31 | `PLPROP_UDPPORT` | `GInt` | Stores UDP port. | If loaded and id valid, sends `PLO_OTHERPLPROPS + id + PLPROP_UDPPORT + raw int` to any client except self. Generic tail also applies. | Blocked on UDP/forwarding. |
+| 32 | `PLPROP_ALIGNMENT` | `GUChar` | Stores AP capped at `100` in non-V8 path. | Generic forwarding. | Blocked. |
+| 33 | `PLPROP_ADDITFLAGS` | `GUChar` | Stores additional flags. | No local forwarding. | Blocked. |
+| 34 | `PLPROP_ACCOUNTNAME` | `GCHAR len` + bytes | Reads and ignores. | Generic forwarding. | Safe parse/no-op candidate with forwarding fixture. |
+| 35 | `PLPROP_BODYIMG` | `GCHAR len` + bytes | Calls `setBodyImage`. | Generic forwarding. | Blocked. |
+| 36 | `PLPROP_RATING` | `GInt` | Reads into `len`; ELO mutation is commented out. | Generic forwarding. | Safe no-op candidate with forwarding fixture. |
+| 37-41 | `PLPROP_GATTRIB1..5` | `GCHAR len` + bytes | Stores `ganiAttributes[0..4]`. | Generic forwarding. | Blocked. |
+| 42 | `PLPROP_ATTACHNPC` | `GUChar object_type` + `GUInt npcID` | Stores attached NPC id. Object type is read but only NPC is supported. | Explicitly appends attach prop to `levelBuff`; generic local tail is false for id 42. | Blocked on NPC semantics. |
+| 43 | `PLPROP_GMAPLEVELX` | `GUChar` | If current level has GMAP map, leaves level and sets level at `(newX, currentMapY)`. | Generic forwarding. | Blocked on live map/level runtime. |
+| 44 | `PLPROP_GMAPLEVELY` | `GUChar` | If current level has GMAP map, leaves level and sets level at `(currentMapX, newY)`. | Generic forwarding. | Blocked on live map/level runtime. |
+| 45 | `PLPROP_Z` | `GUChar` | Stores `m_z = (value - 50) * 8`, clears paused bit, movement timestamp/update, enables touch test. | Adds `PLPROP_Z2` mirror to `levelBuff2`; generic forwarding. | Implemented for confirmed movement subset. |
+| 46-49 | `PLPROP_GATTRIB6..9` | `GCHAR len` + bytes | Stores `ganiAttributes[5..8]`. | Generic forwarding. | Blocked. |
+| 50 | `PLPROP_JOINLEAVELVL` | none in active branch | Commented-out unknown branch; active code has no read/mutation. | No local forwarding. | Safe no-byte branch candidate. |
+| 51 | `PLPROP_PCONNECTED` | none | No-op. | No local forwarding. | Safe no-byte branch candidate. |
+| 52 | `PLPROP_PLANGUAGE` | `GCHAR len` + bytes | Stores language string. | Generic forwarding. | Blocked. |
+| 53 | `PLPROP_PSTATUSMSG` | `GUChar` | Stores player-list status message. | If loaded and id valid, sends `PLO_OTHERPLPROPS + id + PLPROP_PSTATUSMSG + GCHAR status` to all except self. | Blocked on player-list forwarding. |
+| 54-74 | `PLPROP_GATTRIB10..30` | `GCHAR len` + bytes | Stores `ganiAttributes[9..29]`. | Generic forwarding. | Blocked. |
+| 75 | `PLPROP_OSTYPE` | `GCHAR len` + bytes | Stores OS string. | No local forwarding. | Blocked. |
+| 76 | `PLPROP_TEXTCODEPAGE` | `GInt` | Stores environment code page. | No local forwarding. | Blocked. |
+| 77 | `PLPROP_UNKNOWN77` | not handled | Falls through default invalid branch. | Stops parsing and returns before invalid-disconnect tail is reached. | Must remain unsupported. |
+| 78 | `PLPROP_X2` | `GUShort` | Stores signed pixel X: low bit is sign, remaining bits are absolute value shifted right one; clears paused/movement/touch. | Adds `PLPROP_X` mirror to `levelBuff2`; generic forwarding. | Implemented for confirmed movement subset. |
+| 79 | `PLPROP_Y2` | `GUShort` | Same signed pixel encoding for Y. | Adds `PLPROP_Y` mirror to `levelBuff2`; generic forwarding. | Implemented for confirmed movement subset. |
+| 80 | `PLPROP_Z2` | `GUShort` | Same signed pixel encoding for Z. | Adds `PLPROP_Z` mirror to `levelBuff2`; generic forwarding. | Implemented for confirmed movement subset. |
+| 81 | `PLPROP_UNKNOWN81` | `GUChar` | Reads and ignores. | No local forwarding. | Safe no-op candidate. |
+| 82 | `PLPROP_COMMUNITYNAME` | `GCHAR len` + bytes | Reads and ignores. | Generic forwarding. | Safe parse/no-op candidate with forwarding fixture. |
+
+## Invalid Property Behavior
+
+The default branch logs the unidentified property id and a packet hex dump, sets
+`sentInvalid = true`, then immediately `return`s from `setProps`. Because the
+function returns before the later `if (sentInvalid)` block, the invalid-packet
+disconnect counter at the bottom is not reached from this default path in the
+recovered source.
+
+This differs from `msgPLI_NULL`, which has its own invalid-packet counter and
+disconnect behavior. C# must keep these paths separate.
+
+## Implementation Guidance
+
+Recommended safe slices:
+
+1. no-op/read-only props with no local forwarding: `ID`, `KILLSCOUNT`,
+   `DEATHSCOUNT`, `ONLINESECS`, `UNKNOWN81`, `JOINLEAVELVL`, `PCONNECTED`.
+2. isolated scalar inventory/stat props without gameplay side effects:
+   arrows, bombs, glove, bomb power, AP counter, magic points, additional flags.
+3. string identity/visual props with forwarding fixtures:
+   body/head/sword/shield/horse/language/community/gani attributes.
+4. movement and map props only after `testSign`, `testTouch`, GMAP level change,
+   and forwarding order fixtures are expanded.
+5. status/carry/chat/NPC props only after combat, filter, chat, NPC, and
+   scripting prerequisites exist.
+
+Do not implement side effects that depend on word filtering, NPC ownership,
+script events, combat/death, RC permissions, or map ownership until those
+systems have their own C++-confirmed fixtures.

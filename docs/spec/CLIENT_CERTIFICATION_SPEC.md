@@ -119,8 +119,7 @@ The following cases are required before claiming full client compatibility:
 - inventory/item pickup/drop/weapon flows
 - NPC visibility and script-triggered client packets
 - baddy/mob runtime packets
-- quests/missions/content-driven flows
-- party/guild/social flows
+- source-confirmed guild/chat/profile flows
 - RC login and common admin packet families
 - NC login and common NPC/class/weapon packet families
 - shutdown/disconnect/timeout behavior

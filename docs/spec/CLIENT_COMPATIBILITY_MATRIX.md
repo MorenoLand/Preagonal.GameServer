@@ -26,14 +26,14 @@ No row is currently `Certified`.
 | Warp/world entry | Partially Implemented | Existing/missing/same-level/unstick packet boundaries | Full level runtime and old `sendLevel141` fixtures pending |
 | Level board/resource transfer | Partially Implemented | `.nw` static loading and selected dynamic packet boundaries | `.graal`/`.zelda`/`.gmap`, bzip2 socket frames, runtime state pending |
 | Movement/player-prop forwarding | Partially Implemented | Confirmed inbound subset and forwarding packet builders | Full `setProps`, NPC/combat side effects, invalid-update behavior pending |
-| Chat/social/private messages | Blocked | No full certified runtime | Needs C++ trace/captures and production session routing |
+| Chat/private messages/profile | Blocked | No full certified runtime | Needs C++ trace/captures and production session routing |
 | File wanted/cache/update transfer | Partially Implemented | Confirmed cache/checksum/chunk packet boundaries | Uploads, package lifecycle, bzip2 frames, live client captures pending |
 | Combat | Partially Implemented | Selected packet builders/resource clamps/status transitions | Full hit/gameplay simulation and script/NPC side effects pending |
-| Inventory/items/weapons | Partially Implemented | Selected pickup/drop/weapon side effects | Durable inventory/runtime/shop/trade behavior pending |
+| Inventory/items/weapons | Partially Implemented | Selected pickup/drop/weapon side effects | Durable inventory/runtime behavior pending |
 | NPC runtime | Blocked | Inert entity packet boundaries only | Script VM, NPC full props, bytecode, runtime events pending |
 | Baddy/mob runtime | Partially Implemented | Default containers/selected props | AI/combat/drop/respawn/timers pending |
-| Quests/missions/content systems | Blocked | No full runtime | Source/capture pass still required |
-| Party/guild/group/social systems | Blocked | Some group-map visibility boundaries | Full filesystem/runtime mutation and social packet flows pending |
+| Quests/missions/content systems | Out of scope unless source-proven | No dedicated C++ core runtime found | Do not implement built-ins without C++ source or byte-capture proof |
+| Guild/group/chat systems | Blocked | Some group-map visibility and guild verification boundaries | Full filesystem/runtime mutation and chat/guild packet flows pending |
 | RC admin login and packets | Partially Implemented | Rights constants, gate decisions, selected packets | Production RC sockets and mutation families pending |
 | NC login and packets | Partially Implemented | Selected packet IDs/builders | Production NC sockets, NPC/class/weapon mutation, script execution pending |
 | Timing/save loop | Harness Ready | Fake-clock tests for source-confirmed periodic gates | Concrete runtime service wiring and live long-run captures pending |

@@ -28,6 +28,13 @@
   replay from live repositories remain blocked.
 - Full login success is blocked on production account/default account loading side effects, remaining `sendLoginClient` branches, `sendLoginRC`/`sendLoginNC`, and world warp behavior.
 - The login packet parse boundary, server-list auth boundary, source-confirmed beginning of `Player::sendLogin`, `Server::playerLoggedIn` list-server add side effect, minimal pre-warp `sendLoginClient` packet order, the confirmed `__sendLogin` property ID table, login property serialization, and old-client `PLPROP_GANI`/`PLPROP_BOWGIF` encoding are implemented. The current stop point is `ReadyForLevelWarp`, immediately before `warp(m_levelName, getX(), getY())`.
+- `Player::setProps` has a source-confirmed runtime branch catalog in
+  `docs/spec/PLAYER_PROPS_RUNTIME_CATALOG.md`. The C# implementation still only
+  covers the confirmed movement subset; most property mutation branches are
+  blocked until their downstream systems are fixture-confirmed.
+- Built-in shop, trade, party, quest, and mission systems are not confirmed in
+  the recovered C++ core. They are outside the C# port scope unless future
+  source/capture proof shows a client-facing C++ path.
 - Old-version BIGMAP file-send workaround is implemented for supplied map
   snapshots through the confirmed file-transfer boundary. `flaghack_ip` is
   traced, but full duplicate flag emission is blocked on

@@ -4,6 +4,10 @@
 - The beginning of `Player::sendLogin` is implemented only through the pre-world continuation boundary. C# stops at `ReadyForWorldEntry`, immediately before `Server::playerLoggedIn(shared_from_this())`.
 - `Server::playerLoggedIn` and the beginning of `sendLoginClient` are implemented only through a source-confirmed pre-warp boundary. C# stops at `ReadyForLevelWarp`, immediately before `warp(m_levelName, getX(), getY())`.
 - The `sendProps(__sendLogin)` property ID table/order is implemented as a source-confirmed C# constant. Full production emission remains blocked on account/default-account data loading and runtime-dependent properties outside the login set. The old-client `PLPROP_GANI`/`PLPROP_BOWGIF` serialization branch is implemented for confirmed login/property serializer paths.
+- `Player::setProps` runtime branches are now cataloged in
+  `PLAYER_PROPS_RUNTIME_CATALOG.md`. Only the previously confirmed movement
+  subset is implemented; most runtime mutations remain blocked on word-filter,
+  NPC, combat/death, RC permission, GMAP, chat, and scripting prerequisites.
 - The C# pre-warp boundary now uses the confirmed property serializer for explicit property IDs instead of inventing defaults.
 - Production startup now resolves the server name from overrides,
   `startupserver.txt`, or exactly one `servers/` directory, and loads
@@ -188,8 +192,10 @@
   drops, persistence writes, hit validation, sparring-zone warp integration, and
   script/NPC side effects remain blocked until their surrounding runtime
   behavior is ported.
-- Inventory/shop/social/quest work is implemented only for confirmed level item
-  pickup payloads, player-drop removal rules, weapon pickup state side effects,
-  and explicit guards for untraced durable systems. Full inventory runtime
-  wiring, shops, trade, party, quests/missions, chat/PM/social, guild filesystem
-  mutation, profile behavior, and script/content-driven systems remain blocked.
+- Inventory/chat/guild/profile work is implemented only for confirmed level
+  item pickup payloads, player-drop removal rules, and weapon pickup state side
+  effects. Full inventory runtime wiring, chat/PM/profile behavior, guild
+  filesystem mutation, and script/content-driven behavior from the C++ runtime
+  remain blocked. Dedicated built-in shop, trade, party, quest, and mission
+  runtimes were not found in the recovered C++ core and are outside scope unless
+  future source/capture proof shows a client-facing C++ path.

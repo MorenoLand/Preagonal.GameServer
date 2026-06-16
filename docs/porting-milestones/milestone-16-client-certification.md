@@ -20,7 +20,7 @@
 - [x] Build or document how to run the original C++ server with the same test content used by the C# server.
 - [x] Create `docs/spec/CLIENT_CERTIFICATION_SPEC.md`.
 - [x] Add packet capture harnesses that compare C++ and C# byte sequences for identical client actions.
-- [ ] Add integration tests for login, warp, movement, chat, file transfer, combat, inventory, NPCs, quests, RC/NC, and shutdown.
+- [ ] Add integration tests for login, warp, movement, chat, file transfer, combat, inventory, NPCs, RC/NC, and shutdown.
 - [x] Add a compatibility matrix in `docs/spec/CLIENT_COMPATIBILITY_MATRIX.md`.
 - [ ] Fix any mismatches by returning to the relevant earlier milestone source files.
 - [x] Run `dotnet build GServharp.sln`.

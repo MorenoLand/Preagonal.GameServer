@@ -93,7 +93,10 @@ Still blocked:
 
 - inbound gen4/gen5 bzip2 decrypt/decompress for real post-login client frames
   in the dev shell
-- full `Player::setProps` implementation for all property ids
+- full `Player::setProps` implementation for all property ids. The runtime
+  branch catalog now lives in
+  `docs/spec/PLAYER_PROPS_RUNTIME_CATALOG.md`, but most branches remain
+  implementation-blocked by their downstream systems.
 - `PLPROP_GANI == "spin"` hit-object side effects
 - `PLPROP_STATUS`, carry NPC, chat, touch/link/chest/NPC/combat side effects
 - real `Server::sendPacketToLevelArea` socket forwarding to other sessions

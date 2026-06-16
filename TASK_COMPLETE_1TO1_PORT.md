@@ -123,8 +123,10 @@ Major missing areas:
 - NPC/script runtime, V8/GS2 compiler integration, bytecode, lifecycle, and
   script-visible APIs.
 - Baddy AI, combat, projectiles, hit validation, damage, drops, death, respawn.
-- Inventory, item pickup mutations, chest reward mutations, shops, trade,
-  quests, party, guild, social/chat/PM/profile systems.
+- Inventory, item pickup mutations, chest reward mutations, guild, chat/PM, and
+  profile systems that are present in the recovered C++ source. Built-in shop,
+  trade, party, quest, and mission systems are not confirmed in the C++ core and
+  are outside the port scope unless future source/capture proof is recovered.
 - RC/NC/admin production sockets and mutation commands.
 - Upload/write paths and update-package lifecycle.
 - Websocket/TLS/bzip2 blocked branches.
@@ -493,7 +495,13 @@ behavior, and movement-loop invocation.
 - `server/include/Player.h`
 - `server/src/level/Level.cpp`
 
-- [ ] Catalog every `PLPROP_*` handled by `setProp`/`setProps`.
+- [x] Catalog every `PLPROP_*` handled by `setProp`/`setProps`.
+  - 2026-06-16: Added `docs/spec/PLAYER_PROPS_RUNTIME_CATALOG.md`, covering
+    every active `Player::setProps` branch from `PLPROP_NICKNAME` through
+    `PLPROP_COMMUNITYNAME`, including read encoding, mutation/side effects,
+    forwarding behavior, invalid-property behavior, and safe implementation
+    slicing guidance. `PLPROP_UNKNOWN77` is explicitly documented as
+    unsupported/default-invalid in the recovered source.
 - [ ] Implement source-confirmed property parsing/mutation/forwarding in small
   tested subsets.
 - [ ] Wire live `testSign` invocation through confirmed movement branches.
@@ -524,7 +532,8 @@ Completion criteria:
 - [ ] Implement item pickup/removal mutation and packets.
 - [ ] Add tests for rupees, bombs, arrows, hearts, weapons, spinattack, and
   invalid item ids where confirmed.
-- [ ] Keep shops/trade/quests blocked for later phases.
+- [ ] Keep shop/trade/party/quest/mission behavior out of scope unless future
+  source/capture proof shows a built-in C++ server path.
 
 Completion criteria:
 
@@ -654,28 +663,28 @@ Completion criteria:
 
 - RC/NC clients can perform source-confirmed admin workflows.
 
-## Phase 14: Inventory, Shops, Trade, Quests, Party, Guild, Social
+## Phase 14: Inventory, Guild, Chat, And Profile
 
-**Goal:** Port durable gameplay/social systems.
+**Goal:** Port source-confirmed durable inventory, guild, chat, and profile
+systems. Do not add built-in shop, trade, party, quest, or mission systems
+unless future source/capture proof shows they exist in the original C++ server.
 
 **Source files to trace first:**
 
-- all shop/trade/quest/party/guild/social/chat/profile related files under
-  `server/src/`
+- all inventory/item/guild/chat/profile related files under `server/src/`
 - related account/player persistence code
 
 - [ ] Inventory durable runtime and save/load behavior.
-- [ ] Shops and prices.
-- [ ] Trade flow.
-- [ ] Quests/missions and rewards.
-- [ ] Party behavior.
 - [ ] Guild filesystem mutation and display behavior.
-- [ ] Chat/PM/profile/social packets.
+- [ ] Chat/PM/profile packets.
+- [ ] Verify shop/trade/party/quest/mission absence or future source proof; do
+  not implement built-in behavior without proof.
 - [ ] Add golden tests for every confirmed packet/rule branch.
 
 Completion criteria:
 
-- Durable gameplay/social systems match C++ for confirmed flows.
+- Durable inventory, guild, chat, and profile systems match C++ for confirmed
+  flows; absent systems remain absent from the port.
 
 ## Phase 15: Compression, Encryption, Websocket, TLS Remaining Branches
 
@@ -773,7 +782,7 @@ Update this matrix whenever a phase makes progress.
 | Weapons/classes/gani | Partial | Phase 11 |
 | File upload/update packages | Partial | Phase 12 |
 | RC/NC/admin production | Partial | Phase 13 |
-| Inventory/shop/social/quests | Mostly missing | Phase 14 |
+| Inventory/chat/guild/profile | Mostly missing | Phase 14 |
 | bzip2/websocket/TLS | Missing/partial | Phase 15 |
 | Production main loop | Partial | Phase 16 |
 | Client certification | Not certified | Phase 17 |

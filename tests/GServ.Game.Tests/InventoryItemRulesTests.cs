@@ -87,13 +87,4 @@ public sealed class InventoryItemRulesTests
         Assert.True(InventoryItemRules.TryRemoveForPlayerDrop(LevelItemType.SpinAttack, state));
         Assert.Equal((PlayerStatus)0, state.Status);
     }
-
-    [Fact]
-    public void UnknownDurableSystemsRemainExplicitlyBlocked()
-    {
-        Assert.Throws<NotSupportedException>(() => DurableGameplayGuards.RequireShopRuntime());
-        Assert.Throws<NotSupportedException>(() => DurableGameplayGuards.RequireTradeRuntime());
-        Assert.Throws<NotSupportedException>(() => DurableGameplayGuards.RequirePartyRuntime());
-        Assert.Throws<NotSupportedException>(() => DurableGameplayGuards.RequireQuestRuntime());
-    }
 }

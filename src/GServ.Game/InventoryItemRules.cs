@@ -179,17 +179,3 @@ public static class InventoryItemRules
         return (byte)Math.Max(current, candidate);
     }
 }
-
-public static class DurableGameplayGuards
-{
-    public static void RequireShopRuntime() => ThrowBlocked("shop");
-
-    public static void RequireTradeRuntime() => ThrowBlocked("trade");
-
-    public static void RequirePartyRuntime() => ThrowBlocked("party");
-
-    public static void RequireQuestRuntime() => ThrowBlocked("quest/mission");
-
-    private static void ThrowBlocked(string system) =>
-        throw new NotSupportedException($"{system} runtime is blocked until exact original C++ packet and persistence behavior is documented.");
-}
