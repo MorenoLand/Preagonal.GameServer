@@ -117,6 +117,7 @@ public static class IncomingPlayerPropsParser
                 case PlayerPropertyId.KillsCount:
                 case PlayerPropertyId.DeathsCount:
                 case PlayerPropertyId.OnlineSeconds:
+                case PlayerPropertyId.Rating:
                     reader.ReadGInt();
                     updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
                     break;

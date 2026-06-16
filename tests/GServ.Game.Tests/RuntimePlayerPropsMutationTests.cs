@@ -62,6 +62,7 @@ public sealed class RuntimePlayerPropsMutationTests
             IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.KillsCount),
             IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.DeathsCount),
             IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.OnlineSeconds),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.Rating),
             IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.JoinLeaveLevel),
             IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.PlayerConnected),
             IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.Unknown81)

@@ -14,6 +14,15 @@ client-facing behavior must remain source-compatible with the original C++
 server. Implement only behavior proven from `ai_resources/GServer-CPP-ORIGINAL/`
 and recovered dependencies under `external/`.
 
+**Scope boundary:** This is a source-faithful port, not a feature invention
+project. A gameplay/service area is in scope only when the recovered original
+C++ source or exact dependency source contains a concrete client-facing handler,
+packet path, persistence path, or runtime rule for it. Packet captures are for
+certifying and debugging source-confirmed behavior; they must not be used to add
+features that the recovered C++ source does not implement. Built-in shops,
+trades, parties, quests, missions, generic social systems, or other genre
+features remain absent unless recovered original source proves otherwise.
+
 **Tech Stack:** C#/.NET, xUnit, PowerShell, C++ source tracing, recovered
 `gs2lib`, optional fixture harnesses under `tools/`.
 
@@ -127,7 +136,8 @@ Major missing areas:
   profile systems only where the recovered C++ source has explicit handlers.
   Built-in shop, trade, party, quest, and mission systems are not confirmed in
   the C++ core. They are not missing features for this port; they are outside
-  scope unless future source/capture proof is recovered.
+  scope unless future recovered original C++ source or exact dependency source
+  proves otherwise.
 - RC/NC/admin production sockets and mutation commands.
 - Upload/write paths and update-package lifecycle.
 - Websocket/TLS/bzip2 blocked branches.
@@ -328,7 +338,8 @@ safe world-entry boundaries.
   - 2026-06-16: Documented `flaghack_ip`: C++ mutates `gr.ip`, immediately
     sends `PLO_FLAGSET gr.ip=<remote-ip>`, then later sends all flags from
     `std::unordered_map`. Full C# emission is blocked until the duplicate flag
-    ordering is resolved by source/capture evidence.
+    ordering is resolved by recovered original source or exact dependency
+    evidence.
 - [x] Trace and implement confirmed weapon/protected-weapon/class login packet
   branches.
   - 2026-06-16: Documented the C++ `m_weaponList`,
@@ -543,6 +554,12 @@ behavior, and movement-loop invocation.
     The parser reads `GCHAR len + bytes`, the runtime applier mirrors
     `Account::setBodyImage` by truncating to 223 bytes/chars, and forwarding
     emits the current body image through the C++ generic local prop payload.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_RATING` consume-only
+    mutation boundary. The parser consumes the incoming `GInt`, and the runtime
+    applier performs no ELO mutation because the recovered C++ assignment is
+    commented out. Generic forwarding for rating remains blocked until the
+    current `getProp(PLPROP_RATING)` ELO/deviation state is wired without
+    inventing defaults.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -602,10 +619,12 @@ Completion criteria:
     payload side effects, invalid catalog IDs/names, and invalid item reward
     empty payload behavior.
 - [x] Keep shop/trade/party/quest/mission behavior out of scope unless future
-  source/capture proof shows a built-in C++ server path.
+  recovered original C++ source or exact dependency source shows a built-in C++
+  server path.
   - 2026-06-16: Removed these as future implementation scope. The port now
-    treats them as absent from the recovered C++ core unless future source or
-    byte-capture proof shows a client-facing original server path.
+    treats them as absent from the recovered C++ core unless future recovered
+    original C++ source or exact dependency source shows a client-facing
+    original server path.
 
 Completion criteria:
 
@@ -828,7 +847,8 @@ Completion criteria:
 
 **Goal:** Port source-confirmed durable inventory, guild, chat, and profile
 systems. Do not add built-in shop, trade, party, quest, or mission systems
-unless future source/capture proof shows they exist in the original C++ server.
+unless future recovered original C++ source or exact dependency source shows
+they exist in the original C++ server.
 Absence in the recovered C++ source is considered faithful behavior, not a
 backlog gap.
 
@@ -841,9 +861,9 @@ backlog gap.
 - [ ] Guild filesystem mutation and display behavior.
 - [ ] Chat/PM/profile packets.
 - [x] Remove built-in shop/trade/party/quest/mission systems from feature scope
-  unless future recovered C++ source or byte-capture proof shows the original
-  server exposed them. Current source pass found no dedicated C++ core runtime
-  for these systems, so absence is the compatible behavior.
+  unless future recovered original C++ source or exact dependency source shows
+  the original server exposed them. Current source pass found no dedicated C++
+  core runtime for these systems, so absence is the compatible behavior.
 - [ ] Add golden tests for every confirmed packet/rule branch.
 
 Completion criteria:

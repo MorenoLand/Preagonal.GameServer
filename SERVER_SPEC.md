@@ -16,8 +16,10 @@ Externally visible compatibility areas:
 - Systems not implemented by the recovered C++ source are not compatibility
   gaps. They are out of scope for the faithful port. Do not add built-in shops,
   trades, parties, quests, missions, social systems, or other generic gameplay
-  features unless future recovered source or byte-capture evidence proves a
-  client-facing C++ path.
+  features unless future recovered original C++ source or exact dependency
+  source proves a client-facing C++ path. Packet captures may validate
+  source-confirmed behavior but must not create new feature scope by
+  themselves.
 
 Implemented in this phase:
 

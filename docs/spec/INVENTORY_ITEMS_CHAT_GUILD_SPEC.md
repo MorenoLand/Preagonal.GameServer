@@ -4,8 +4,8 @@
 
 This document covers only behavior found in the recovered C++ server source.
 Anything not present in `ai_resources/GServer-CPP-ORIGINAL/` is outside the
-C# port scope unless a future source/capture pass proves that the original C++
-server exposed it to the client.
+C# port scope unless future recovered original C++ source or exact dependency
+source proves that the original C++ server exposed it to the client.
 
 Dedicated C++ core shop, trade, party, quest, and mission runtimes were not
 found in this pass. They are not backlog items for the 1:1 port.
@@ -99,9 +99,9 @@ The recovered C++ server source does not contain dedicated built-in modules for:
 - quests;
 - missions.
 
-These may exist in specific server content through scripts, classes, flags, or
-level data, but content-defined behavior is not a new C# built-in feature. The
-port should support the original script/content mechanisms when those C++ paths
+These may exist in specific server resources through scripts, classes, flags, or
+level data, but resource-defined behavior is not a new C# built-in feature. The
+port should support the original script/resource mechanisms when those C++ paths
 are implemented, not invent replacement gameplay systems.
 
 ## Confirmed Item Pickup Payloads

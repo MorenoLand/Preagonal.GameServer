@@ -10,7 +10,10 @@
 - Absence in the C++ source is compatibility behavior. Built-in shops, trades,
   parties, quests, missions, social systems, or other generic gameplay services
   are outside this port unless a concrete C++ handler/persistence path or
-  byte-capture proof is recovered.
+  exact recovered dependency path is found.
+- Packet captures are for certification and mismatch diagnosis only. They do
+  not add new feature scope when the recovered C++ source does not implement
+  that feature.
 - If behavior is unclear, document it and leave implementation guarded or absent.
 - Preserve byte order, integer clamping, signed/unsigned quirks, packet delimiters, raw length transitions, compression thresholds, and bug-compatible behavior.
 - Internal C# names may be professional, but docs and tests must trace back to original C++ names.

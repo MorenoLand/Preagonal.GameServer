@@ -42,17 +42,17 @@ account sources.
 
 Built-in shop, trade, party, quest, and mission systems are outside the current
 port backlog because the recovered C++ source does not contain confirmed core
-runtime paths for them. Reopen scope only if a future source/capture pass proves
-that the original C++ server exposed a concrete client-facing path.
+runtime paths for them. Reopen scope only if future recovered original C++
+source or exact dependency source proves that the original C++ server exposed a
+concrete client-facing path.
 
-Do not add generic "social" or "content" services to fill gaps. If a behavior
-is not implemented by the recovered C++ source, it is not part of the C# port
-backlog.
+Do not add generic service categories to fill gaps. If a behavior is not
+implemented by the recovered C++ source, it is not part of the C# port backlog.
 
 ## Compatibility Constraints
 
 - Do not drop unclear account fields.
-- Do not invent social/content rules.
+- Do not invent rules for absent systems.
 - Do not infer missing packet behavior from Rust/Python.
 
 ## Definition Of Done

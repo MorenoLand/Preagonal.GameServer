@@ -89,15 +89,17 @@ Do not remove, simplify, approximate, reinterpret, rename, rebalance, or redesig
 Absence is also compatibility behavior. If a gameplay or service system is not
 present in the original C++ source, do not add it as a C# built-in and do not
 keep it as a feature-parity backlog item. Document the absence and leave it out
-of scope unless future recovered C++ source or byte-level capture proof shows
-that the original server exposed that behavior.
+of scope unless future recovered original C++ source or exact dependency source
+shows that the original server exposed that behavior.
 
 The implementation backlog must be source-derived, not genre-derived. Do not
 add or keep generic server features such as built-in shops, trades, parties,
 quests, missions, social systems, or other gameplay services unless the C++
-source or recovered dependency contains the concrete client-facing path. If a
-system is absent from the recovered C++ source, the faithful C# behavior is to
-leave it absent rather than adding a modern equivalent.
+source or recovered dependency contains the concrete client-facing path. Packet
+captures may certify already source-confirmed behavior, but they do not expand
+the implementation scope beyond the recovered original source. If a system is
+absent from the recovered C++ source, the faithful C# behavior is to leave it
+absent rather than adding a modern equivalent.
 
 If C++ behavior looks strange, ugly, duplicated, outdated, or bug-like, preserve it unless there is explicit proof that changing it is safe.
 

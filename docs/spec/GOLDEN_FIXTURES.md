@@ -2131,3 +2131,14 @@ player id `7`, body image `body.png`, newline appended by `sendPacket`:
 PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_BODYIMG + GCHAR(8) + "body.png" + "\n"
 [40, 32, 39, 67, 40, 98, 111, 100, 121, 46, 112, 110, 103, 10]
 ```
+
+Source-confirmed `PLPROP_RATING` consume-only update:
+
+```txt
+PLPROP_RATING + GInt(123456)
+```
+
+The incoming value is consumed, but the recovered C++ runtime mutation is
+commented out. Full generic forwarding for this property must use the current
+`getProp(PLPROP_RATING)` ELO/deviation state and remains blocked until that
+state is wired without invented defaults.

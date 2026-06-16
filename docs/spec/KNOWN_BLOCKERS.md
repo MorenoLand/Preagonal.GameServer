@@ -37,7 +37,7 @@
   set because C++ references `PLO_FULLSTOP`, but the C++ tree and recovered
   `IEnums.h` only define `PLO_FULLSTOP2 = 177`. The C# boundary reports
   `LoginServerFullStopBlocked` and must not substitute `PLO_FULLSTOP2` without
-  recovered original source or byte-capture proof.
+  recovered original source or exact dependency proof.
 - Exact `CString::guntokenize()` behavior for ban reasons remains blocked; current C# tests cover plain reasons and the confirmed newline-to-carriage-return replacement path only.
 - Real account/password validation must not be invented. The C++ server delegates password/auth verification to the list server through `SVO_VERIACC2`/`SVI_VERIACC2`.
 - Production auth now has confirmed list-server packet body builders for
@@ -200,4 +200,5 @@
   remain blocked. Dedicated built-in shop, trade, party, quest, and mission
   runtimes were not found in the recovered C++ core. They are not blockers or
   missing features for the faithful port; they are outside scope unless future
-  source/capture proof shows a client-facing C++ path.
+  recovered original C++ source or exact dependency source shows a
+  client-facing C++ path.

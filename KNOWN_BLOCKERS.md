@@ -34,8 +34,8 @@
   blocked until their downstream systems are fixture-confirmed.
 - Built-in shop, trade, party, quest, and mission systems are not confirmed in
   the recovered C++ core. This is not a compatibility blocker. They are outside
-  the C# port scope unless future source/capture proof shows a client-facing
-  C++ path.
+  the C# port scope unless future recovered original C++ source or exact
+  dependency source shows a client-facing C++ path.
 - Old-version BIGMAP file-send workaround is implemented for supplied map
   snapshots through the confirmed file-transfer boundary. `flaghack_ip` is
   traced, but full duplicate flag emission is blocked on
@@ -50,7 +50,7 @@
   for the recovered source set because C++ references `PLO_FULLSTOP`, but the
   C++ tree and recovered `IEnums.h` only define `PLO_FULLSTOP2 = 177`. The C#
   boundary reports `LoginServerFullStopBlocked` and must not substitute
-  `PLO_FULLSTOP2` without recovered original source or byte-capture proof.
+  `PLO_FULLSTOP2` without recovered original source or exact dependency proof.
 - `CFileQueue` queue selection, gen1/gen6 socket passthrough, gen2/gen3 zlib
   framing, gen5 uncompressed socket framing for payloads up to 55 bytes, and
   gen5 zlib framing for payloads through `0x2000` bytes are implemented.
