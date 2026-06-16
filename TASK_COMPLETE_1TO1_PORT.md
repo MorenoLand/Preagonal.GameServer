@@ -667,6 +667,10 @@ behavior, and movement-loop invocation.
     power/image without changing modern `gani`, and generic forwarding emits
     the C++ old-client bow payload shape. Modern `gani == "spin"`
     `PLO_HITOBJECTS` side effects remain blocked.
+  - 2026-06-16: Added source-confirmed modern `PLPROP_GANI` truncated terminal
+    payload coverage, matching `CString::readChars` clamping the requested gani
+    string length to bytes remaining in the packet while keeping `"spin"`
+    `PLO_HITOBJECTS` side effects blocked.
   - 2026-06-16: Added source-confirmed generic local forwarding for the safe
     `__sendLocal` scalar subset `PLPROP_CARRYSPRITE` and `PLPROP_ALIGNMENT`.
     Forwarding uses `getProp`-equivalent payloads and preserves the C++

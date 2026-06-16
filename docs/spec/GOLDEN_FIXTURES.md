@@ -417,6 +417,14 @@ Expected: `LOADATSTART` resets `loadFullMap=false` and preload selection becomes
 
 `35` is `GCHAR PLPROP_RUPEESCOUNT`; `[32, 41, 114]` is `GINT 1234`.
 
+Modern inbound `PLPROP_GANI` uses `GCHAR len` plus
+`CString::readChars(len)`. Terminal truncated payloads parse the remaining
+bytes and do not invent the blocked `"spin"` side-effect packets:
+
+```txt
+PLPROP_GANI + GCHAR(4) + "wa" => "wa"
+```
+
 ### Old Client `PLPROP_GANI` / `PLPROP_BOWGIF`
 
 For clients older than `CLVER_2_1`, property id `10` is still written as

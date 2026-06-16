@@ -104,6 +104,22 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedModernGaniByClampingDeclaredLengthToRemainingBytes()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.Gani);
+        body.WriteGChar(4);
+        body.WriteBytes("wa"u8);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray(), ClientVersionId.Client21);
+
+        Assert.True(result.Success);
+        var update = Assert.Single(result.Updates);
+        Assert.Equal(PlayerPropertyId.Gani, update.PropertyId);
+        Assert.Equal("wa", update.StringValue);
+    }
+
+    [Fact]
     public void StopsOnFirstInvalidUnknown77PropertyLikeCppSetPropsDefaultReturn()
     {
         var body = new GraalBinaryWriter();
