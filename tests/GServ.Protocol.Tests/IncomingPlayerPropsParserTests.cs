@@ -955,6 +955,34 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void BuildsConfirmedForwardedLegacyZPropWithPreciseMirrorForOlderSender()
+    {
+        var updates = new[]
+        {
+            IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.Z, 46)
+        };
+
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: -32,
+            updates,
+            senderSupportsPreciseMovement: false,
+            appendNewline: true);
+
+        Assert.Equal(
+            new byte[]
+            {
+                40, 32, 39,
+                77, 78,
+                112, 32, 97,
+                10
+            },
+            packet);
+    }
+
+    [Fact]
     public void BuildsConfirmedForwardedMovementPropsForOlderSender()
     {
         var updates = new[]

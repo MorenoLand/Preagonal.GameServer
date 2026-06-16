@@ -767,6 +767,9 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed legacy `PLPROP_Z` forwarding fixture
     proving the inverse mirror path emits `PLPROP_Z2` before `PLPROP_Z` for
     modern senders.
+  - 2026-06-16: Added the matching old-sender legacy `PLPROP_Z` forwarding
+    fixture, proving versions older than `CLVER_2_3` emit `PLPROP_Z` before
+    its precise `PLPROP_Z2` mirror.
   - 2026-06-16: Added source-confirmed blocked/update boundary fixtures for
     `PLPROP_ACCOUNTNAME`: exact inbound byte consumption, no invented mutation
     value, and no runtime account-name change. Broader malformed-value fixtures

@@ -1867,6 +1867,23 @@ PLPROP_Z GCHAR(46)
     10]
 ```
 
+For sender versions older than `CLVER_2_3`, the same legacy Z input writes
+`levelBuff` before `levelBuff2`, so `PLPROP_Z` precedes the precise `PLPROP_Z2`
+mirror:
+
+```txt
+PLO_OTHERPLPROPS
+GSHORT 7
+PLPROP_Z GCHAR(46)
+PLPROP_Z2 GSHORT(65)
+"\n"
+
+=> [40, 32, 39,
+    77, 78,
+    112, 32, 97,
+    10]
+```
+
 For sender versions older than `CLVER_2_3`, C++ writes `levelBuff` before
 `levelBuff2`, so the same precise input emits the precise props before the
 legacy mirrors:
