@@ -92,6 +92,16 @@
   are implemented; automatic player link warp, runtime `PLO_SAY2` sign touch,
   and chest item reward mutation remain blocked.
 - Server-list connection lifecycle, reconnect backoff, registration, and text/listserver side channels need a dedicated milestone.
+- Production timing boundaries now cover the source-confirmed `Server::doMain`
+  one-second gate, 5s/60s/180s/300s periodic server jobs, server-list reconnect
+  backoff, `Player::doTimedEvents` idle/no-data/save/reset gates, and
+  `PLO_NEWWORLDTIME` packet bytes. The real infinite host loop, concrete
+  player/level/server-list repository wiring, `cleanupDeletedPlayers` V8
+  retention, AP/singleplayer runtime execution, and production shutdown
+  side effects remain blocked until the surrounding runtime services exist.
+- WolfSSL/websocket HTTP upgrade behavior is traced and documented, but frame
+  wrapping/unwrapping and TLS integration remain blocked pending a dedicated
+  byte-level compatibility pass.
 - RC/NC/admin is implemented only as a confirmed boundary: rights constants,
   RC/NC login gate decision text, selected RC/NC packet builders, protected
   file download checks, folder-right parsing, and server-list ping/request-list
