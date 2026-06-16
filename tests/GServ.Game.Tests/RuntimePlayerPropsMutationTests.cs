@@ -257,6 +257,20 @@ public sealed class RuntimePlayerPropsMutationTests
     }
 
     [Fact]
+    public void AppliesConfirmedAttachNpcUnsignedIdWhenSignedFallbackCannotRepresentIt()
+    {
+        var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
+
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            [new IncomingPlayerPropertyUpdate(PlayerPropertyId.AttachNpc, GCharValue: 224, GUIntValue: 4_294_438_880u)]);
+
+        Assert.Equal(4_294_438_880u, player.AttachedNpcId);
+        Assert.False(player.MovementUpdated);
+        Assert.False(player.TouchTestRequested);
+    }
+
+    [Fact]
     public void AppliesConfirmedHeadImagePropWithCppLengthLimit()
     {
         var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);

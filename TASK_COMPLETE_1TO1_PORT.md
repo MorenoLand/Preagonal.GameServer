@@ -642,6 +642,11 @@ behavior, and movement-loop invocation.
     integer encoding as `readGInt()`. Runtime mutation, duplicate-carry
     ownership checks, `PLO_NPCDEL2`, self-reset packets, and forwarding remain
     blocked until NPC/runtime ownership is ported exactly.
+  - 2026-06-16: Preserved unsigned `readGUInt()` values for `PLPROP_CARRYNPC`
+    and `PLPROP_ATTACHNPC` in the incoming update model. Malformed terminal
+    `PLPROP_CARRYNPC` now exposes the same `4294438880` unsigned value that the
+    C++ zero-filled scalar decode produces instead of collapsing to a signed
+    negative value.
   - 2026-06-16: Implemented the source-confirmed `PLPROP_HEADGIF` state
     mutation and generic local forwarding boundary. The parser preserves the
     C++ `len < 100` default-head mapping, `len == 100` no-change sentinel,

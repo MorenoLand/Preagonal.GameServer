@@ -209,7 +209,7 @@ public static class RuntimePlayerPropsApplier
                     break;
 
                 case GServ.Protocol.PlayerPropertyId.AttachNpc:
-                    player.AttachedNpcId = unchecked((uint)update.GIntValue.GetValueOrDefault());
+                    player.AttachedNpcId = GetUnsignedInt(update);
                     break;
 
                 case GServ.Protocol.PlayerPropertyId.CurrentLevel:
@@ -386,6 +386,9 @@ public static class RuntimePlayerPropsApplier
         var value = encoded >> 1;
         return (encoded & 0x0001) != 0 ? -value : value;
     }
+
+    private static uint GetUnsignedInt(GServ.Protocol.IncomingPlayerPropertyUpdate update) =>
+        update.GUIntValue ?? unchecked((uint)update.GIntValue.GetValueOrDefault());
 
     private static bool TryGetGaniAttributeIndex(GServ.Protocol.PlayerPropertyId propertyId, out int index)
     {

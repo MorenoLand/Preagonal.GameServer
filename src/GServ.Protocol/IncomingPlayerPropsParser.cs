@@ -21,6 +21,7 @@ public sealed record IncomingPlayerPropertyUpdate(
     byte? GCharValue = null,
     ushort? GShortValue = null,
     int? GIntValue = null,
+    uint? GUIntValue = null,
     string? StringValue = null,
     IReadOnlyList<byte>? BytesValue = null)
 {
@@ -32,6 +33,9 @@ public sealed record IncomingPlayerPropertyUpdate(
 
     public static IncomingPlayerPropertyUpdate GInt(PlayerPropertyId propertyId, int value) =>
         new(propertyId, GIntValue: value);
+
+    public static IncomingPlayerPropertyUpdate GUInt(PlayerPropertyId propertyId, uint value) =>
+        new(propertyId, GIntValue: value <= int.MaxValue ? (int)value : null, GUIntValue: value);
 
     public static IncomingPlayerPropertyUpdate String(PlayerPropertyId propertyId, string value) =>
         new(propertyId, StringValue: value);
@@ -92,7 +96,7 @@ public static class IncomingPlayerPropsParser
                     break;
 
                 case PlayerPropertyId.CarryNpc:
-                    updates.Add(IncomingPlayerPropertyUpdate.GInt(propertyId, reader.ReadGInt()));
+                    updates.Add(IncomingPlayerPropertyUpdate.GUInt(propertyId, reader.ReadGUInt()));
                     break;
 
                 case PlayerPropertyId.Nickname:
@@ -144,10 +148,13 @@ public static class IncomingPlayerPropsParser
                     break;
 
                 case PlayerPropertyId.AttachNpc:
+                    var attachObjectType = reader.ReadGChar();
+                    var attachNpcId = reader.ReadGUInt();
                     updates.Add(new IncomingPlayerPropertyUpdate(
                         propertyId,
-                        GCharValue: reader.ReadGChar(),
-                        GIntValue: reader.ReadGInt()));
+                        GCharValue: attachObjectType,
+                        GIntValue: attachNpcId <= int.MaxValue ? (int)attachNpcId : null,
+                        GUIntValue: attachNpcId));
                     break;
 
                 case PlayerPropertyId.X2:
@@ -423,7 +430,7 @@ public static class IncomingPlayerPropsForwarding
                     WriteProperty(levelBuff, PlayerPropertyId.AttachNpc, writer =>
                     {
                         writer.WriteGChar(0);
-                        writer.WriteGInt(unchecked((uint)update.GIntValue.GetValueOrDefault()));
+                        writer.WriteGInt(GetUnsignedInt(update));
                     });
                     break;
 
@@ -547,6 +554,9 @@ public static class IncomingPlayerPropsForwarding
         propertyId is >= PlayerPropertyId.GAttrib1 and <= PlayerPropertyId.GAttrib5
             or >= PlayerPropertyId.GAttrib6 and <= PlayerPropertyId.GAttrib9
             or >= PlayerPropertyId.GAttrib10 and <= PlayerPropertyId.GAttrib30;
+
+    private static uint GetUnsignedInt(IncomingPlayerPropertyUpdate update) =>
+        update.GUIntValue ?? unchecked((uint)update.GIntValue.GetValueOrDefault());
 }
 
 public sealed record IncomingPlayerPropsForwardingState(

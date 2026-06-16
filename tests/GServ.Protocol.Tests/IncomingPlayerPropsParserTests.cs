@@ -511,6 +511,20 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedTerminalCarryNpcWithoutPayloadAsUnsignedGIntValue()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.CarryNpc);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray(), ClientVersionId.Client21);
+
+        Assert.True(result.Success);
+        var update = Assert.Single(result.Updates);
+        Assert.Equal(PlayerPropertyId.CarryNpc, update.PropertyId);
+        Assert.Equal(4_294_438_880u, update.GUIntValue);
+    }
+
+    [Fact]
     public void ParsesConfirmedSwordAndShieldPowerRawValuesAndCustomImages()
     {
         var body = new GraalBinaryWriter();

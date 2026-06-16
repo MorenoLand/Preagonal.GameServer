@@ -1178,6 +1178,14 @@ decodes as unsigned `4294438880`, then clamps to the maximum:
 PLPROP_RUPEESCOUNT => 9999999
 ```
 
+Inbound `PLPROP_CARRYNPC` also uses `CString::readGUInt()`. A terminal
+malformed carry-NPC prop with no payload therefore preserves the unsigned
+decoded value instead of a signed negative fallback:
+
+```txt
+PLPROP_CARRYNPC => 4294438880
+```
+
 Modern `sendLevel` no-map visibility tail fixture:
 
 ```txt
