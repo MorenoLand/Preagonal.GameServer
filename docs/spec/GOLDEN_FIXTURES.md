@@ -2470,3 +2470,19 @@ bytes: 40 32 39 74 32 32 32 155 10
 This fixture covers only the source-confirmed property payload boundary. NPC
 existence, attachment validation, and exact level recipient routing remain
 blocked on the NPC/runtime systems.
+
+Source-confirmed `PLPROP_CARRYNPC` parser boundary:
+
+```txt
+PLPROP_CARRYNPC + GUInt(123)
+PLPROP_X + GCHAR(70)
+=> parser updates: CARRYNPC=123, X=70
+```
+
+`gs2lib` proves `readGUInt()` delegates to the same three-byte Graal integer
+encoding as `readGInt()`. The recovered C++ runtime then performs duplicate
+carry ownership checks, may send self `PLO_PLAYERPROPS`, may send `PLO_NPCDEL2`,
+may broadcast `PLO_OTHERPLPROPS`, and finally stores `m_carryNpcId`. C# covers
+only the source-confirmed byte-consumption boundary here; mutation and
+client-visible side effects remain blocked until NPC/runtime ownership is
+ported.

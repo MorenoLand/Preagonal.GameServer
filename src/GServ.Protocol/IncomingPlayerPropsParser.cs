@@ -90,6 +90,10 @@ public static class IncomingPlayerPropsParser
                     updates.Add(IncomingPlayerPropertyUpdate.GInt(propertyId, Math.Min(reader.ReadGInt(), 9_999_999)));
                     break;
 
+                case PlayerPropertyId.CarryNpc:
+                    updates.Add(IncomingPlayerPropertyUpdate.GInt(propertyId, reader.ReadGInt()));
+                    break;
+
                 case PlayerPropertyId.CurrentLevel:
                 case PlayerPropertyId.BodyImage:
                 case PlayerPropertyId.PlayerLanguage:

@@ -295,6 +295,23 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedCarryNpcByReadingGUIntWithoutApplyingOwnershipRules()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.CarryNpc);
+        body.WriteGInt(123);
+        body.WriteGChar((byte)PlayerPropertyId.X);
+        body.WriteGChar(70);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray(), ClientVersionId.Client21);
+
+        Assert.True(result.Success);
+        Assert.Equal([PlayerPropertyId.CarryNpc, PlayerPropertyId.X], result.Updates.Select(update => update.PropertyId));
+        Assert.Equal(123, result.Updates[0].GIntValue);
+        Assert.Equal((byte)70, result.Updates[1].GCharValue);
+    }
+
+    [Fact]
     public void ParsesConfirmedSwordAndShieldPowerRawValuesAndCustomImages()
     {
         var body = new GraalBinaryWriter();

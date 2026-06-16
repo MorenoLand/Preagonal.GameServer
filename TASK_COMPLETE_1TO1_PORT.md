@@ -621,6 +621,11 @@ behavior, and movement-loop invocation.
     serialization uses `GCHAR(0) + GINT(attachedNpcId)` like
     `getProp(PLPROP_ATTACHNPC)`. NPC attachment validation, NPC lifecycle
     semantics, and exact recipient routing remain blocked.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_CARRYNPC` parser
+    boundary. `gs2lib` proves `readGUInt()` uses the same three-byte Graal
+    integer encoding as `readGInt()`. Runtime mutation, duplicate-carry
+    ownership checks, `PLO_NPCDEL2`, self-reset packets, and forwarding remain
+    blocked until NPC/runtime ownership is ported exactly.
   - 2026-06-16: Implemented the source-confirmed `PLPROP_HEADGIF` state
     mutation and generic local forwarding boundary. The parser preserves the
     C++ `len < 100` default-head mapping, `len == 100` no-change sentinel,
@@ -780,6 +785,9 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed `PLPROP_GMAPLEVELX/Y` parser fixture
     proving exact `GUChar` consumption while keeping live GMAP level switching
     blocked on source-compatible map transition wiring.
+  - 2026-06-16: Added source-confirmed `PLPROP_CARRYNPC` parser fixture proving
+    exact `GUInt`/three-byte Graal integer consumption while keeping ownership
+    side effects blocked on NPC runtime.
 
 Completion criteria:
 
