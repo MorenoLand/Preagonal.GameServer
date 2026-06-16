@@ -52,6 +52,39 @@ public sealed class ProtocolConstantTests
     }
 
     [Fact]
+    public void ConfirmedRcNcPacketIdsMatchGs2libIEnums()
+    {
+        Assert.Equal(51, (int)PlayerToServerPacketId.RcServerOptionsGet);
+        Assert.Equal(52, (int)PlayerToServerPacketId.RcServerOptionsSet);
+        Assert.Equal(53, (int)PlayerToServerPacketId.RcFolderConfigGet);
+        Assert.Equal(54, (int)PlayerToServerPacketId.RcFolderConfigSet);
+        Assert.Equal(83, (int)PlayerToServerPacketId.RcPlayerRightsGet);
+        Assert.Equal(84, (int)PlayerToServerPacketId.RcPlayerRightsSet);
+        Assert.Equal(89, (int)PlayerToServerPacketId.RcFileBrowserStart);
+        Assert.Equal(92, (int)PlayerToServerPacketId.RcFileBrowserDownload);
+        Assert.Equal(103, (int)PlayerToServerPacketId.NcNpcGet);
+        Assert.Equal(106, (int)PlayerToServerPacketId.NcNpcScriptGet);
+        Assert.Equal(115, (int)PlayerToServerPacketId.NcWeaponListGet);
+        Assert.Equal(116, (int)PlayerToServerPacketId.NcWeaponGet);
+        Assert.Equal(150, (int)PlayerToServerPacketId.NcLevelListGet);
+
+        Assert.Equal(62, (int)ServerToPlayerPacketId.RcPlayerRightsGet);
+        Assert.Equal(65, (int)ServerToPlayerPacketId.RcFileBrowserDirList);
+        Assert.Equal(66, (int)ServerToPlayerPacketId.RcFileBrowserDir);
+        Assert.Equal(67, (int)ServerToPlayerPacketId.RcFileBrowserMessage);
+        Assert.Equal(74, (int)ServerToPlayerPacketId.RcChat);
+        Assert.Equal(79, (int)ServerToPlayerPacketId.NpcServerAddress);
+        Assert.Equal(103, (int)ServerToPlayerPacketId.RcMaxUploadFileSize);
+        Assert.Equal(157, (int)ServerToPlayerPacketId.NcNpcAttributes);
+        Assert.Equal(160, (int)ServerToPlayerPacketId.NcNpcScript);
+        Assert.Equal(167, (int)ServerToPlayerPacketId.NcWeaponListGet);
+        Assert.Equal(192, (int)ServerToPlayerPacketId.NcWeaponGet);
+
+        Assert.Equal(16, (int)ServerToListServerPacketId.Ping);
+        Assert.Equal(26, (int)ServerToListServerPacketId.RequestList);
+    }
+
+    [Fact]
     public void PlayerTypeBitsMatchGs2libIEnums()
     {
         Assert.Equal(1, (int)PlayerSessionType.Client);

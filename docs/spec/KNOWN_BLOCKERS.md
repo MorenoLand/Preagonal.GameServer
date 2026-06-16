@@ -92,3 +92,9 @@
   are implemented; automatic player link warp, runtime `PLO_SAY2` sign touch,
   and chest item reward mutation remain blocked.
 - Server-list connection lifecycle, reconnect backoff, registration, and text/listserver side channels need a dedicated milestone.
+- RC/NC/admin is implemented only as a confirmed boundary: rights constants,
+  RC/NC login gate decision text, selected RC/NC packet builders, protected
+  file download checks, folder-right parsing, and server-list ping/request-list
+  packet bodies. Production RC/NC sockets, account/admin-IP wiring,
+  server-option mutations, file browser disk mutations, NPC/class/weapon
+  mutation, script execution, and complex `gtokenize()` payloads remain blocked.

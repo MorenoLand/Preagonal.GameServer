@@ -1259,3 +1259,89 @@ Example message `"Bad password."`:
 ```txt
 [48] + ASCII("Bad password.") + [10]
 ```
+
+## RC/NC/Admin Boundary
+
+### `PLO_RC_CHAT`
+
+`PLO_RC_CHAT = 74`; packet id is written as GCHAR `74 + 32 = 106`.
+
+```txt
+PLO_RC_CHAT "New RC: Ruan" "\n"
+=> [106, 78, 101, 119, 32, 82, 67, 58, 32, 82, 117, 97, 110, 10]
+```
+
+### `PLO_RC_MAXUPLOADFILESIZE`
+
+`Player::sendLogin` sends `PLO_RC_MAXUPLOADFILESIZE` to RC users with
+`1048576 * 20`.
+
+```txt
+PLO_RC_MAXUPLOADFILESIZE GINT5(20971520) "\n"
+=> [135, 32, 42, 32, 32, 32, 10]
+```
+
+### `PLO_RC_FILEBROWSER_MESSAGE`
+
+```txt
+PLO_RC_FILEBROWSER_MESSAGE "Welcome to the File Browser." "\n"
+=> ASCII("cWelcome to the File Browser.\n")
+```
+
+### `PLO_RC_FILEBROWSER_DIR`
+
+Input:
+
+```txt
+current folder: levels/
+entry: start.nw, rights rw, size 100, modified time 1
+```
+
+Packet:
+
+```txt
+[98,
+ 39, 108, 101, 118, 101, 108, 115, 47,
+ 32,
+ 54,
+ 40, 115, 116, 97, 114, 116, 46, 110, 119,
+ 34, 114, 119,
+ 32, 32, 32, 32, 132,
+ 32, 32, 32, 32, 33,
+ 10]
+```
+
+### `PLO_NC_WEAPONLISTGET`
+
+```txt
+PLO_NC_WEAPONLISTGET "SwordTool" "Gui" "\n"
+=> [199, 41, 83, 119, 111, 114, 100, 84, 111, 111, 108, 35, 71, 117, 105, 10]
+```
+
+### `PLO_NC_WEAPONGET`
+
+`PlayerNC.cpp::msgPLI_NC_WEAPONGET` replaces script newlines with byte `0xA7`.
+
+```txt
+PLO_NC_WEAPONGET "Tool" "tool.png" "a\nb" "\n"
+=> [224, 36, 84, 111, 111, 108, 40, 116, 111, 111, 108, 46, 112, 110, 103, 97, 167, 98, 10]
+```
+
+### `PLO_NPCSERVERADDR`
+
+```txt
+PLO_NPCSERVERADDR GSHORT(7) "127.0.0.1,14950" "\n"
+=> ASCII("o '127.0.0.1,14950\n")
+```
+
+### Server-List Operational Packets
+
+```txt
+SVO_PING
+=> [48]
+```
+
+```txt
+SVO_REQUESTLIST GSHORT(7) "accounts"
+=> [58, 32, 39, 97, 99, 99, 111, 117, 110, 116, 115]
+```

@@ -105,4 +105,20 @@ public sealed class ServerListAuthPacketTests
             "?" + "Listserver,settings,allowedversions,G3D0311C,\"name,with/slash\"",
             Encoding.ASCII.GetString(bytes));
     }
+
+    [Fact]
+    public void PingPacketUsesConfirmedServerToListOpcode()
+    {
+        Assert.Equal([(byte)48], ServerListAuthPackets.Ping());
+    }
+
+    [Fact]
+    public void RequestListTextForPlayerUsesConfirmedOpcodeAndGShortPlayerId()
+    {
+        var bytes = ServerListAuthPackets.RequestListTextForPlayer(7, "accounts");
+
+        Assert.Equal(
+            new byte[] { 58, 32, 39, 97, 99, 99, 111, 117, 110, 116, 115 },
+            bytes);
+    }
 }
