@@ -144,5 +144,5 @@ Still blocked:
 - gen5 bzip2 payloads `> 0x2000`
 - websocket wrapping
 - full dev TCP shell integration for login/level payloads that cross into
-  bzip2-sized sends
-
+  bzip2-sized sends; the current dev shell uses confirmed gen5 zlib framing
+  only when the queued diagnostic response stays at or below `0x2000` bytes

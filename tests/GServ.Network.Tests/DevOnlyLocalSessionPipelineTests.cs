@@ -53,9 +53,9 @@ public sealed class DevOnlyLocalSessionPipelineTests
         Assert.Equal(DevOnlyLocalStopPoint.BeforeRuntimeWorldSimulation, result.StopPoint);
         Assert.Contains(result.Log, line => line.Contains("DEV-ONLY auth accepted", StringComparison.Ordinal));
         Assert.Contains(result.Log, line => line.Contains("Loaded .nw level start.nw", StringComparison.Ordinal));
-        Assert.Contains(LevelNamePacket("start.nw"), result.OutboundBytes);
-        Assert.Contains(new byte[] { 132, 32, 96, 34, 10, 133 }, result.OutboundBytes);
-        Assert.Contains(new byte[] { 36, 32, 42, 43, 34, 35, 10 }, result.OutboundBytes);
+        Assert.Equal(0x04, result.OutboundBytes[2]);
+        Assert.DoesNotContain(LevelNamePacket("start.nw"), result.OutboundBytes);
+        Assert.Contains(result.Log, line => line.Contains("DEV-ONLY socket flush used Gen5", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -73,7 +73,8 @@ public sealed class DevOnlyLocalSessionPipelineTests
         Assert.False(result.Accepted);
         Assert.Equal(SessionLifecycle.ReadyForLevelWarp, result.Lifecycle);
         Assert.Equal(DevOnlyLocalStopPoint.MissingLevel, result.StopPoint);
-        Assert.Contains(
+        Assert.Equal(0x04, result.OutboundBytes[2]);
+        Assert.DoesNotContain(
             new byte[] { 47, (byte)'m', (byte)'i', (byte)'s', (byte)'s', (byte)'i', (byte)'n', (byte)'g', (byte)'.', (byte)'n', (byte)'w', 10 },
             result.OutboundBytes);
     }
@@ -104,10 +105,43 @@ public sealed class DevOnlyLocalSessionPipelineTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var read = await stream.ReadAsync(buffer, timeout.Token);
         received.AddRange(buffer[..read]);
+        client.Close();
 
         var result = await serveTask;
         Assert.True(result.Accepted);
-        Assert.Contains(LevelNamePacket("start.nw"), received.ToArray());
+        Assert.Equal(0x04, received[2]);
+    }
+
+    [Fact]
+    public async Task TcpShellProcessesLoginThenStopsClearlyOnUnsupportedSecondFrame()
+    {
+        using var temp = new TemporaryDirectory();
+        var world = Directory.CreateDirectory(Path.Combine(temp.Path, "world"));
+        File.WriteAllText(Path.Combine(world.FullName, "start.nw"), "GLEVNW01\n");
+
+        var fileSystem = new IndexedServerFileSystem(temp.Path);
+        fileSystem.AddDirectory("world", "*.nw");
+        var pipeline = new DevOnlyLocalSessionPipeline(
+            new DevOnlyLocalServerOptions(EnableDevOnlyAuth: true, LevelName: "start.nw"),
+            new NwLevelFileLoader(fileSystem));
+        using var server = new DevOnlyLocalTcpServer(IPAddress.Loopback, port: 0, pipeline);
+        server.Start();
+
+        var serveTask = server.AcceptOneAsync(CancellationToken.None);
+        using var client = new TcpClient();
+        await client.ConnectAsync(IPAddress.Loopback, server.Port);
+        await using var stream = client.GetStream();
+        await stream.WriteAsync(LengthFrame(Client3LoginPacket()));
+        await stream.WriteAsync(LengthFrame([0x20, 0x0A]));
+
+        var buffer = new byte[8192];
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var read = await stream.ReadAsync(buffer, timeout.Token);
+
+        var result = await serveTask;
+        Assert.True(read > 0);
+        Assert.True(result.Accepted);
+        Assert.Contains(result.Log, line => line.Contains("Unsupported post-login frame", StringComparison.Ordinal));
     }
 
     private static byte[] Client3LoginPacket()

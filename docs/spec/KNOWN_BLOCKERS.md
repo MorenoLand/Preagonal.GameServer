@@ -20,10 +20,12 @@
   gen5 zlib framing for payloads through `0x2000` bytes are implemented.
   Gen4 bzip2/encryption framing, gen5 bzip2 payload framing, and websocket
   wrapping remain blocked.
-- A dev-only TCP/session shell exists for one length-prefixed login frame and a
+- A dev-only TCP/session shell exists for length-prefixed TCP input and a
   filesystem-backed `.nw` `sendLevel` boundary. It is not production-compatible:
-  it uses explicit fake auth, uncompressed outbound queue bytes, one-frame
-  processing, and closes before movement/runtime simulation.
+  it uses explicit fake auth, stops on unsupported post-login frames before
+  gameplay/runtime dispatch, and selects the current-modtime level branch so
+  small/medium responses can use confirmed gen5 zlib `FlushSocket` framing
+  without entering blocked bzip2 board payload output.
 - First isolated warp packet builders are implemented. The C# port now has a
   source-confirmed `setLevel` pre-runtime boundary for missing levels,
   `PLO_PLAYERWARP`, `PLO_PLAYERWARP2`, and modern non-zero-modtime no-warp

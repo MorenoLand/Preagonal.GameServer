@@ -944,18 +944,23 @@ DevOnlyLocalStopPoint.BeforeRuntimeWorldSimulation
 The outbound byte stream includes:
 
 ```txt
-PLO_SIGNATURE
-PLO_UNKNOWN168
-sendLoginClient pre-warp packets
-PLO_PLAYERWARP for modTime 0
-PLO_LEVELNAME "start.nw"
-PLO_RAWDATA + parsed board packet
-PLO_LEVELMODTIME
-links/signs/chests packets
+gen5 socket frame with compression type 0x04 for small/medium responses
 ```
 
-These bytes are uncompressed diagnostic queue bytes, not production gen5 socket
-frames.
+The decrypted/decompressed queue payload is the confirmed login/pre-runtime
+packet sequence. The dev shell currently selects the source-confirmed
+current-modtime `sendLevel` branch, so a tiny `.nw` diagnostic response does not
+include the raw board `PLO_RAWDATA` packet and stays below the blocked bzip2
+threshold.
+
+Unsupported second length-prefixed frame after the login boundary:
+
+```txt
+input: first Client3 login frame, then a second frame [0x20, 0x0A]
+result: Accepted=true
+log contains:
+"Unsupported post-login frame received by dev-only shell; continuous loop stopped before gameplay/runtime packet handling."
+```
 
 ## Server-List Auth
 

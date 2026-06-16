@@ -7,10 +7,10 @@ explicitly dev-only and is not production-compatible.
 
 The current C# codebase has protocol/session/account/level-boundary components,
 and now has read-only filesystem-backed `.nw` loading into the static
-`sendLevel` boundary. The shell can accept one length-prefixed login frame, run
-the confirmed login/account/world-entry boundaries with dev-only auth, load a
-`.nw` file, send the confirmed static level packets, and stop before runtime
-world simulation.
+`sendLevel` boundary. The shell can accept a TCP client, read length-prefixed
+frames in sequence, run the confirmed login/account/world-entry boundaries with
+dev-only auth, load a `.nw` file, send confirmed pre-runtime level packets
+through `CFileQueue.FlushSocket`, and stop before runtime world simulation.
 
 ## Run Command
 
@@ -25,21 +25,40 @@ enable the fake auth path.
 
 Expected limitations:
 
-- accepts one client/login frame at a time
+- accepts one client at a time
 - uses dev-only local auth, not the production list server
-- writes uncompressed queued diagnostic bytes for the full login/level response
+- writes socket-framed queued bytes through confirmed `CFileQueue.FlushSocket`
+  paths
+- uses the source-confirmed "level modtime already current" branch during the
+  diagnostic `.nw` boundary to avoid blocked bzip2 board payloads
 - stops before movement, NPCs, scripts, file transfer, and live world runtime
-- closes after the diagnostic login/level boundary
+- stops clearly on unsupported post-login frames before gameplay/runtime packet
+  dispatch
 
 The protocol project now has source-confirmed socket flush primitives for
 gen1/gen6 passthrough, gen2/gen3 zlib, gen5 uncompressed payloads up to 55
-bytes, and gen5 zlib payloads through `0x2000` bytes. The dev server does not
-yet route its full response through production socket framing because real
-login/level responses can cross into blocked bzip2-sized sends.
+bytes, and gen5 zlib payloads through `0x2000` bytes.
 
 ## Manual Closed-Client Status
 
-A synthetic/manual TCP diagnostic is possible. A meaningful closed-source game
-client session is still not expected to work because gen4/gen5 bzip2 socket
-framing, continuous session streaming, and runtime movement are not
-implemented.
+A synthetic/manual TCP diagnostic is possible. A tiny closed-source game client
+connection test may now reach the first socket-framed login/level boundary if
+the client sends the same supported Client3 login prelude and can tolerate the
+diagnostic "level already current" branch.
+
+Recommended tiny level fixture:
+
+```txt
+<root>/world/start.nw
+GLEVNW01
+```
+
+Run:
+
+```bash
+dotnet run --project src/GServ/GServ.csproj -- --dev-only-local --dev-root <root> --dev-level start.nw --port 14900
+```
+
+A meaningful playable session is still not expected because full board payload
+bzip2 framing, production auth/server-list behavior, movement, NPCs, scripts,
+file transfer, and live world runtime are not implemented.

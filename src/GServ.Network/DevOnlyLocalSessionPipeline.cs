@@ -38,11 +38,21 @@ public sealed class DevOnlyLocalSessionPipeline(
 {
     public DevOnlyLocalSessionResult ProcessLengthPrefixedInput(ReadOnlySpan<byte> input)
     {
+        var connection = CreateConnection();
+        return connection.ProcessLengthPrefixedInput(input);
+    }
+
+    public DevOnlyLocalSessionConnection CreateConnection() =>
+        new(this, options.PlayerId);
+
+    internal DevOnlyLocalSessionResult ProcessConnectionInput(
+        ClientSessionSkeleton session,
+        List<string> log,
+        ReadOnlySpan<byte> input)
+    {
         if (!options.EnableDevOnlyAuth)
             throw new InvalidOperationException("Dev-only auth must be explicitly enabled.");
 
-        var log = new List<string>();
-        var session = new ClientSessionSkeleton(options.PlayerId);
         foreach (var frame in PacketFramer.ReadLengthPrefixedFrames(input))
         {
             if (session.LoginPacket is null)
@@ -53,6 +63,9 @@ public sealed class DevOnlyLocalSessionPipeline(
                 RunDevOnlyLoginFlow(session, log);
                 return Finish(session, session.Lifecycle == SessionLifecycle.DynamicLevelPayloadSent, ToStopPoint(session), log);
             }
+
+            log.Add("Unsupported post-login frame received by dev-only shell; continuous loop stopped before gameplay/runtime packet handling.");
+            return Finish(session, session.Lifecycle == SessionLifecycle.DynamicLevelPayloadSent, ToStopPoint(session), log);
         }
 
         return Finish(session, false, DevOnlyLocalStopPoint.Rejected, log);
@@ -137,7 +150,7 @@ public sealed class DevOnlyLocalSessionPipeline(
         SendLevelBoundary.BeginModern(
             session,
             ModernLevelPayload.FromNwStatic(staticPayload),
-            new SendLevelRequest(RequestedModTime: 0, CachedLevelModTime: 0, FromAdjacent: false));
+            new SendLevelRequest(RequestedModTime: loaded.ModTime, CachedLevelModTime: 0, FromAdjacent: false));
     }
 
     private static DevOnlyLocalStopPoint ToStopPoint(ClientSessionSkeleton session) =>
@@ -152,16 +165,41 @@ public sealed class DevOnlyLocalSessionPipeline(
         ClientSessionSkeleton session,
         bool accepted,
         DevOnlyLocalStopPoint stopPoint,
-        IReadOnlyList<string> log)
+        List<string> log)
     {
         var queue = new GraalFileQueue();
+        if (session.LoginPacket is { } login)
+            ConfigureSocketFlush(queue, login, log);
+
         queue.AddPacket(session.TakeOutboundBytes());
         return new DevOnlyLocalSessionResult(
             accepted,
             session.Lifecycle,
             stopPoint,
-            queue.FlushUncompressed(forceSendFiles: true),
+            queue.FlushSocket(forceSendFiles: true),
             log);
+    }
+
+    private static void ConfigureSocketFlush(
+        GraalFileQueue queue,
+        LoginPacket login,
+        List<string> log)
+    {
+        if (login.Type is PlayerSessionType.Client3 or PlayerSessionType.RemoteControl2 && login.EncryptionKey is { } key)
+        {
+            queue.SetCodec(EncryptionGeneration.Gen5, key);
+            log.Add($"DEV-ONLY socket flush used Gen5 with login key {key}.");
+            return;
+        }
+
+        if (login.Type == PlayerSessionType.Web)
+        {
+            queue.SetCodec(EncryptionGeneration.Gen1, key: 0);
+            log.Add("DEV-ONLY socket flush used Gen1 for web client.");
+            return;
+        }
+
+        throw new NotSupportedException($"Dev-only socket flush for {login.Type} is not source-confirmed yet.");
     }
 
     private sealed record DevOnlyLevelLookup(LevelEntrySnapshot? Level) : ILevelLookup
@@ -275,4 +313,20 @@ public sealed class DevOnlyLocalSessionPipeline(
                 .Skip(1)
                 .ToArray();
     }
+}
+
+public sealed class DevOnlyLocalSessionConnection
+{
+    private readonly DevOnlyLocalSessionPipeline _pipeline;
+    private readonly ClientSessionSkeleton _session;
+    private readonly List<string> _log = [];
+
+    internal DevOnlyLocalSessionConnection(DevOnlyLocalSessionPipeline pipeline, ushort playerId)
+    {
+        _pipeline = pipeline;
+        _session = new ClientSessionSkeleton(playerId);
+    }
+
+    public DevOnlyLocalSessionResult ProcessLengthPrefixedInput(ReadOnlySpan<byte> input) =>
+        _pipeline.ProcessConnectionInput(_session, _log, input);
 }

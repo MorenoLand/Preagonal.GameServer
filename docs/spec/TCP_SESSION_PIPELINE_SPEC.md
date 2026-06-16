@@ -37,11 +37,11 @@ Implemented:
   - stops at `DynamicLevelPayloadSent` before live world simulation
 - `DevOnlyLocalTcpServer`
   - accepts one TCP client at a time
-  - reads exactly one length-prefixed frame without waiting for EOF
-  - writes the uncompressed queued outbound bytes from `GraalFileQueue`
-  - does not yet use production gen5 socket flush for the full login/level
-    response because typical level payloads can exceed the gen5 zlib threshold
-    and require blocked bzip2 output
+  - reads length-prefixed frames in a continuous per-connection loop
+  - reuses one `ClientSessionSkeleton` for all frames on that connection
+  - writes outbound bytes through `GraalFileQueue.FlushSocket`
+  - stops clearly on the first unsupported post-login frame before movement,
+    gameplay, NPC, script, or map runtime handling
 
 This is a diagnostic shell, not a production session loop.
 
@@ -59,14 +59,28 @@ that do not depend on unverified compression output:
   compression type `0x04`, and iterator-XOR encrypted zlib payload bytes.
 - Partial socket writes preserve remaining framed bytes for the next flush.
 
-The dev-only TCP shell intentionally remains on uncompressed diagnostic queue
-bytes until full login/level response bzip2 handling is implemented.
+The dev-only TCP shell now routes confirmed login/level boundary output through
+`FlushSocket`.
+
+For Client3 and RC2 login packets with a confirmed login encryption key, the
+shell configures `ENCRYPT_GEN_5` and therefore emits socket bytes with the
+confirmed gen5 length prefix, compression type, zlib/uncompressed choice, and
+iterator-XOR encryption. For web-client login packets, it uses confirmed gen1
+passthrough behavior.
+
+The shell deliberately asks the send-level boundary for the source-confirmed
+"client already has this level modtime" branch. That keeps small diagnostic
+`.nw` payloads in the gen5 zlib range and avoids the still-blocked bzip2 branch.
+It also means a fresh closed-source client may not receive a full board payload
+yet.
 
 ## Known Gaps
 
-- The TCP shell processes one login frame and then closes the connection.
+- The TCP shell processes multiple frames for one connection, but after login it
+  stops on unsupported post-login input instead of dispatching gameplay/runtime
+  packets.
 - Outbound bzip2 socket framing for gen4 and gen5 payloads over `0x2000` bytes
   is still blocked.
 - Websocket wrapping is not implemented.
-- Continuous packet streaming, movement, reconnect cleanup, and multi-session
-  forwarding are not implemented.
+- Movement, reconnect cleanup, and multi-session forwarding are not
+  implemented.

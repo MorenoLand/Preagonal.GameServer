@@ -22,13 +22,35 @@ public sealed class DevOnlyLocalTcpServer : IDisposable
     {
         using var client = await _listener.AcceptTcpClientAsync(cancellationToken);
         await using var stream = client.GetStream();
-        var input = await ReadOneLengthPrefixedFrame(stream, cancellationToken);
+        var connection = _pipeline.CreateConnection();
+        DevOnlyLocalSessionResult? result = null;
 
-        var result = _pipeline.ProcessLengthPrefixedInput(input);
-        if (result.OutboundBytes.Length != 0)
-            await stream.WriteAsync(result.OutboundBytes, cancellationToken);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            byte[] input;
+            try
+            {
+                input = await ReadOneLengthPrefixedFrame(stream, cancellationToken);
+            }
+            catch (EndOfStreamException) when (result is not null)
+            {
+                break;
+            }
 
-        return result;
+            result = connection.ProcessLengthPrefixedInput(input);
+            if (result.OutboundBytes.Length != 0)
+                await stream.WriteAsync(result.OutboundBytes, cancellationToken);
+
+            if (result.Log.Any(line => line.Contains("Unsupported post-login frame", StringComparison.Ordinal)))
+                break;
+        }
+
+        return result ?? new DevOnlyLocalSessionResult(
+            Accepted: false,
+            Lifecycle: SessionLifecycle.Disconnected,
+            StopPoint: DevOnlyLocalStopPoint.Rejected,
+            OutboundBytes: [],
+            Log: ["Client disconnected before sending a length-prefixed frame."]);
     }
 
     private static async Task<byte[]> ReadOneLengthPrefixedFrame(

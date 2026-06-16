@@ -139,6 +139,13 @@ The C# boundary still queues normal newline packets, `PLO_RAWDATA` headers,
 pre-serialized board/layer payload bytes, dynamic level packets, and first
 post-dynamic runtime packets in the same order C++ calls `Player::sendPacket`.
 
+The dev-only TCP shell now uses this boundary for its confirmed small/medium
+login and pre-runtime level response. Client3/RC2 sessions with a login key are
+sent through gen5 socket framing; web sessions use gen1 passthrough. The shell
+keeps the diagnostic `.nw` path on the source-confirmed current-modtime branch
+so it does not emit board payloads that would require the blocked gen5 bzip2
+path.
+
 Still blocked:
 
 - gen4 bzip2 + encryption socket-level flush bytes

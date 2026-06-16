@@ -59,6 +59,12 @@ The C# port has outbound login/player property serialization for confirmed
 login and level-entry packets, but it does not yet parse live incoming movement
 or player property updates.
 
+The dev-only TCP shell now keeps a continuous per-connection read loop after
+login, but any post-login frame currently stops the session with an explicit
+unsupported-frame log before `PLI_PLAYERPROPS` dispatch. This preserves the
+safe boundary until `Player::setProps` forwarding, touch/link traversal, and
+runtime side effects are fully traced.
+
 ## Required Recovery Before Implementation
 
 Trace first:

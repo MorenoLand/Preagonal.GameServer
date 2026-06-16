@@ -11,10 +11,12 @@
   gen5 zlib framing for payloads through `0x2000` bytes are implemented.
   Gen4 bzip2/encryption framing, gen5 bzip2 payload framing, and websocket
   wrapping remain blocked.
-- A dev-only TCP/session shell exists for a one-frame diagnostic login ->
-  filesystem `.nw` -> `sendLevel` boundary. It is not production-compatible and
-  must remain opt-in because it uses fake local auth, uncompressed outbound
-  queue bytes, and closes before continuous movement/runtime simulation.
+- A dev-only TCP/session shell exists for diagnostic login -> filesystem `.nw`
+  -> `sendLevel` boundary. It is not production-compatible and must remain
+  opt-in because it uses fake local auth, stops on unsupported post-login frames
+  before gameplay/runtime dispatch, and selects the current-modtime level branch
+  so small/medium responses can use confirmed gen5 zlib `FlushSocket` framing
+  without entering blocked bzip2 board payload output.
 - Production account loading has a pure `GRACC001` parser, but full service behavior is blocked on exact filesystem/default-account save behavior and guest RNG.
 - Isolated warp packet builders are implemented. A source-confirmed
   `setLevel` pre-runtime boundary now handles missing levels, `PLO_PLAYERWARP`,
