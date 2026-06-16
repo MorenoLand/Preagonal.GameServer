@@ -671,7 +671,12 @@ server-side behavior.
     recovered V8 binding groups (`server`, `player`, `npc`, `level`, `weapon`,
     `environment`, and nested constructor groups). Every entry is explicitly
     marked unimplemented until function-by-function C++ behavior is ported.
-- [ ] Add golden bytecode/packet fixtures where possible.
+- [x] Add golden bytecode/packet fixtures where possible.
+  - 2026-06-16: Packet fixtures exist for source-confirmed NPC/baddy/weapon
+    packet wrappers and blocked scripting guards. Bytecode fixtures are not
+    possible from the current snapshot because the exact original
+    `gs2compiler` gitlink and canonical bytecode/header outputs are not
+    source-confirmed; this remains documented as a blocker rather than guessed.
 
 Completion criteria:
 

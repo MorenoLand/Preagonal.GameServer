@@ -1534,6 +1534,22 @@ killerAp=1, loserAp=99 => killerAp=0, apCounter=30
 killerAp=90, loserAp=19 => killerAp=90, apCounter=0
 ```
 
+## Scripting Bytecode Fixture Boundary
+
+No GS2 bytecode golden fixture is currently considered canonical.
+
+The original C++ source proves that `GS2Context::CreateHeader` prefixes compiled
+bytecode with a header containing script type, script name, save-to-disk flag,
+and ten random Graal bytes. However, the exact original `gs2compiler` gitlink is
+not available in the recovered source snapshot. The recovered
+`external/gs2compiler` checkout is a supporting reference only.
+
+Until the exact compiler commit or original C++ bytecode captures are recovered,
+the C# port keeps compiler/runtime adapters blocked and tests only the explicit
+blocked boundary. Packet fixtures for already-confirmed NPC, baddy, combat, and
+weapon wrapper bytes remain valid because they come from the C++ server and
+`gs2lib` packet definitions, not from guessed bytecode output.
+
 Gen5 socket-framed post-login `PLI_PLAYERPROPS` movement frame with key `42`:
 
 ```txt
