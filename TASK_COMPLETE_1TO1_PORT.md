@@ -651,8 +651,14 @@ server-side behavior.
     usage, but does not preserve a usable `160000` gitlink entry or populated
     submodule checkout. `external/gs2compiler` remains a supporting reference at
     `4fa0a26ca75ac5238fe34a1d90ef9a459b02c2f9`, not canonical bytecode source.
-- [ ] Document SourceCode classification, GS1/GS2 compilation, bytecode headers,
+- [x] Document SourceCode classification, GS1/GS2 compilation, bytecode headers,
   V8 bindings, script lifecycle, errors, and scheduling.
+  - 2026-06-16: `docs/spec/SCRIPTING_RUNTIME_SPEC.md` now documents
+    `SourceCode` slicing, GS1/GS2 marker rules, recovered `GS2Context`
+    compilation/header behavior, `GS2ScriptManager` synchronous cache boundary,
+    script lifecycle entry points, V8 binding source inventory and registered
+    constructors, scheduling, and error reporting. Full function-by-function V8
+    binding port remains a later implementation blocker.
 - [ ] Implement compiler invocation or compatible bytecode path only when
   source-confirmed.
 - [ ] Implement NPC lifecycle, events, props, and packet forwarding in slices.

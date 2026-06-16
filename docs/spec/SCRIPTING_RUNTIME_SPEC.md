@@ -164,6 +164,79 @@ Confirmed lifecycle entry points under `V8NPCSERVER`:
 The exact V8 object model, binding API surface, scheduling semantics, exception
 formatting, and sandbox behavior are not ported.
 
+## V8 Binding Source Inventory
+
+The recovered C++ source registers V8 constructors and global helpers from the
+following implementation files. This inventory identifies the authoritative
+source locations for a future function-by-function binding port; it is not
+permission to approximate or replace the API.
+
+| File | Confirmed responsibility |
+| --- | --- |
+| `V8FunctionsImpl.cpp` | global template helpers, including `print`, `server`, and `global` setup. |
+| `V8EnvironmentImpl.cpp` | `environment` constructor and environment callbacks such as `reportException`, `setCallBack`, and `setNpcEvents`. |
+| `V8ServerImpl.cpp` | `server` and `server.flags` constructors; HTTP helpers, level/NPC/player lookup, string persistence, shoot params, logging, RC/NC sends, time/server flag helpers. |
+| `V8PlayerImpl.cpp` | `player`, `player.attr`, `player.colors`, and `player.flags` constructors; player properties, weapon helpers, flags, colors, position, account/name/state accessors. |
+| `V8NPCImpl.cpp` | `npc`, `npc.attr`, `npc.colors`, `npc.flags`, and `npc.save` constructors; NPC properties, flags/save data, timeout/timer registration, trigger/action registration. |
+| `V8LevelImpl.cpp` | `level`, `level.tiles`, `level.links`, `level.signs`, `level.chests`, and `level.npcs` constructors; level save/search/shoot/explosion/NPC/tile/link/sign/chest collections. |
+| `V8LevelLinkImpl.cpp` | `LevelLink` wrapper constructor and link field accessors. |
+| `V8LevelSignImpl.cpp` | `LevelSign` wrapper constructor and sign field accessors. |
+| `V8LevelChestImpl.cpp` | `LevelChest` wrapper constructor and chest field accessors. |
+| `V8WeaponImpl.cpp` | `weapon` constructor and weapon wrapper accessors. |
+| `V8ScriptEnv.cpp` / `V8ScriptEnv.h` | V8 isolate/context/global template management, constructor registry, `TryCatch` parsing, and last-error storage. |
+
+Confirmed constructor registrations found through `env->setConstructor(...)`:
+
+```txt
+environment
+server
+server.flags
+player
+player.attr
+player.colors
+player.flags
+npc
+npc.attr
+npc.colors
+npc.flags
+npc.save
+level
+level.tiles
+level.links
+level.signs
+level.chests
+level.npcs
+LevelLink wrapper
+LevelSign wrapper
+LevelChest wrapper
+Weapon wrapper
+```
+
+The next scripting implementation slice must extract each getter, setter, method
+name, argument count/type check, thrown error string, return value, side effect,
+and ownership/lifetime rule directly from these files before enabling any
+runtime execution.
+
+## Scheduling And Error Handling Details
+
+`ScriptExecutionContext::runExecution` moves queued actions into a local vector,
+clears the queue before execution so scripts can enqueue follow-up actions, then
+invokes each action in order. Failed invokes call
+`ScriptEngine::reportScriptException(m_scriptEngine->getScriptError())`.
+
+`ScriptEngine::runScripts` first runs timers, then, inside one V8 function scope,
+iterates queued NPCs and weapons:
+
+- NPCs returning `PendingEvents` stay queued.
+- NPCs returning `Delete` are collected and deleted after the iteration.
+- weapons run and then the weapon update queue is cleared.
+- deleted callbacks are only freed once `!func->isReferenced()`.
+
+`executeNpc` wraps the user server-side source into a function object, caches by
+exact wrapped code, invokes with exception catching, and reports NPC exceptions
+with `levelName,x,y` plus optional NPC name. `executeWeapon` follows the same
+compile/cache/invoke shape but reports the script error directly.
+
 ## C# Status
 
 Implemented:
