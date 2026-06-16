@@ -78,4 +78,39 @@ public sealed class CombatPacketTests
             [59, 48, 49, 50, 10],
             CombatPackets.BaddyHurtToLeader([16, 48, 49, 50], appendNewline: true));
     }
+
+    [Fact]
+    public void ParsesInboundClaimPkerAndAppliesSourceConfirmedUnsignedShortDecoding()
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.ClaimPker);
+        packet.WriteGShort(25);
+
+        var parsed = CombatPackets.ParseClaimPker(packet.ToArray());
+
+        Assert.True(parsed.Success);
+        Assert.Equal(25u, parsed.Packet!.KillerPlayerId);
+    }
+
+    [Fact]
+    public void ParsesClaimPkerWithMissingGShortBytesLikeGs2libEOFZeroFill()
+    {
+        var parsed = CombatPackets.ParseClaimPker([(byte)((byte)PlayerToServerPacketId.ClaimPker + 32)]);
+
+        Assert.True(parsed.Success);
+        Assert.Equal((ushort)61408, parsed.Packet!.KillerPlayerId);
+    }
+
+    [Fact]
+    public void ParsesInboundBaddyHurtKeepsExactIncomingPayloadForLeaderForward()
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.BaddyHurt);
+        packet.WriteBytes([16, 32, 33, 100]);
+
+        var parsed = CombatPackets.ParseBaddyHurt(packet.ToArray());
+
+        Assert.True(parsed.Success);
+        Assert.Equal([16, 32, 33, 100], parsed.Packet!.Payload);
+    }
 }

@@ -9,8 +9,44 @@ public sealed record InboundHurtPlayerPacket(
 
 public sealed record InboundHurtPlayerParseResult(bool Success, InboundHurtPlayerPacket? Packet);
 
+public sealed record InboundBaddyHurtPacket(byte[] Payload);
+
+public sealed record InboundBaddyHurtParseResult(bool Success, InboundBaddyHurtPacket? Packet);
+
+public sealed record InboundClaimPkerPacket(ushort KillerPlayerId);
+
+public sealed record InboundClaimPkerParseResult(bool Success, InboundClaimPkerPacket? Packet);
+
 public static class CombatPackets
 {
+    public static InboundBaddyHurtParseResult ParseBaddyHurt(ReadOnlySpan<byte> clientPacket)
+    {
+        if (clientPacket.IsEmpty)
+            return new InboundBaddyHurtParseResult(false, null);
+
+        var reader = new GraalBinaryReader(clientPacket);
+        var opcode = (PlayerToServerPacketId)reader.ReadGChar();
+        if (opcode != PlayerToServerPacketId.BaddyHurt)
+            return new InboundBaddyHurtParseResult(false, null);
+
+        var payload = clientPacket[1..].ToArray();
+        return new InboundBaddyHurtParseResult(true, new InboundBaddyHurtPacket(payload));
+    }
+
+    public static InboundClaimPkerParseResult ParseClaimPker(ReadOnlySpan<byte> clientPacket)
+    {
+        if (clientPacket.IsEmpty)
+            return new InboundClaimPkerParseResult(false, null);
+
+        var reader = new GraalBinaryReader(clientPacket);
+        var opcode = (PlayerToServerPacketId)reader.ReadGChar();
+        if (opcode != PlayerToServerPacketId.ClaimPker)
+            return new InboundClaimPkerParseResult(false, null);
+
+        var killer = (ushort)reader.ReadGShort();
+        return new InboundClaimPkerParseResult(true, new InboundClaimPkerPacket(killer));
+    }
+
     public static byte[] BombAdd(ushort playerId, ReadOnlySpan<byte> clientPacket, bool appendNewline = false)
     {
         var writer = new GraalBinaryWriter();

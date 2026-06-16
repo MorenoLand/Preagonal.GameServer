@@ -5,6 +5,7 @@ public enum PlayerToServerPacketId : byte
     LevelWarp = 0,
     BoardModify = 1,
     PlayerProps = 2,
+    ClaimPker = 14,
     BaddyProps = 15,
     BaddyHurt = 16,
     BaddyAdd = 17,

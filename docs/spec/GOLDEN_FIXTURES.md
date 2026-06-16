@@ -1783,6 +1783,29 @@ in:  [16, 48, 49, 50]
 out: [59, 48, 49, 50, 10]
 ```
 
+`PLI_CLAIMPKER` fixture:
+
+```txt
+in:  [46, 58, 57]
+    ^ PLI_CLAIMPKER (14 + 32)
+      58,57 = GSHORT(25) decoded as 25
+out: parsed payload: KillerPlayerId = 25
+```
+
+`PLI_CLAIMPKER` EOF fallback fixture:
+
+```txt
+in: [46]
+out: parsed payload: KillerPlayerId = 61408
+```
+
+`PLI_BADDYHURT` parse payload safety fixture:
+
+```txt
+in: [48, 16, 32, 33, 100]
+out: parsed payload bytes [16, 32, 33, 100] are preserved for leader-forward
+```
+
 Non-spar `CLAIMPKER` AP-loss examples:
 
 ```txt

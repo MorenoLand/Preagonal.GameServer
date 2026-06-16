@@ -44,6 +44,61 @@ public sealed class ProductionPostLoginPacketDispatcherTests
     }
 
     [Fact]
+    public void DispatchDecodedPacketBlocksClaimPKerAndParsesKillerId()
+    {
+        var player = new RuntimePlayer(2, "pc:Ruan", RuntimePlayerKind.Client);
+        var dispatcher = new ProductionPostLoginPacketDispatcher(player);
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.ClaimPker);
+        packet.WriteGShort(21);
+
+        var result = dispatcher.DispatchDecodedPacket(packet.ToArray());
+
+        Assert.Equal(ProductionPostLoginPacketDispatchStatus.Blocked, result.Status);
+        Assert.False(result.ContinueSession);
+        Assert.Contains("PLI_CLAIMPKER", result.Message, StringComparison.Ordinal);
+        Assert.Equal(0, dispatcher.InvalidPacketCount);
+    }
+
+    [Fact]
+    public void DispatchDecodedPacketBlocksBaddyHurtAndKeepsPayloadOnly()
+    {
+        var player = new RuntimePlayer(2, "pc:Ruan", RuntimePlayerKind.Client);
+        var dispatcher = new ProductionPostLoginPacketDispatcher(player);
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.BaddyHurt);
+        packet.WriteBytes([16, 32, 33]);
+
+        var result = dispatcher.DispatchDecodedPacket(packet.ToArray());
+
+        Assert.Equal(ProductionPostLoginPacketDispatchStatus.Blocked, result.Status);
+        Assert.False(result.ContinueSession);
+        Assert.Contains("PLI_BADDYHURT", result.Message, StringComparison.Ordinal);
+        Assert.Equal(0, dispatcher.InvalidPacketCount);
+    }
+
+    [Fact]
+    public void DispatchDecodedPacketBlocksHurtPlayerUntilCombatRuntimeIsWired()
+    {
+        var player = new RuntimePlayer(2, "pc:Ruan", RuntimePlayerKind.Client);
+        var dispatcher = new ProductionPostLoginPacketDispatcher(player);
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.HurtPlayer);
+        packet.WriteGShort(9);
+        packet.WriteGChar(10);
+        packet.WriteGChar(20);
+        packet.WriteGChar(5);
+        packet.WriteGInt(200);
+
+        var result = dispatcher.DispatchDecodedPacket(packet.ToArray());
+
+        Assert.Equal(ProductionPostLoginPacketDispatchStatus.Blocked, result.Status);
+        Assert.False(result.ContinueSession);
+        Assert.Contains("PLI_HURTPLAYER", result.Message, StringComparison.Ordinal);
+        Assert.Equal(0, dispatcher.InvalidPacketCount);
+    }
+
+    [Fact]
     public void DispatchDecodedPacketBlocksParsedPlayerPropWhoseRuntimeSideEffectsAreNotPorted()
     {
         var player = new RuntimePlayer(2, "pc:Ruan", RuntimePlayerKind.Client);

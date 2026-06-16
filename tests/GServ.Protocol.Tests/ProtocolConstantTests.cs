@@ -9,6 +9,7 @@ public sealed class ProtocolConstantTests
     public void ConfirmedCorePacketIdsMatchGs2libIEnums()
     {
         Assert.Equal(50, (int)PlayerToServerPacketId.RawData);
+        Assert.Equal(14, (int)PlayerToServerPacketId.ClaimPker);
         Assert.Equal(252, (int)PlayerToServerPacketId.SetEncryptionKey);
         Assert.Equal(253, (int)PlayerToServerPacketId.Bundle);
         Assert.Equal(0, (int)ServerToPlayerPacketId.LevelBoard);

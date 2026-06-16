@@ -66,6 +66,30 @@ public sealed class ProductionPostLoginPacketDispatcher
         if (rawPacketId == (byte)PlayerToServerPacketId.PlayerProps)
             return DispatchPlayerProps(rawPacketId, packet[1..]);
 
+        if (rawPacketId == (byte)PlayerToServerPacketId.ClaimPker)
+        {
+            var parsed = CombatPackets.ParseClaimPker(packet);
+            return parsed.Success
+                ? ProductionPostLoginPacketDispatcherResult(parsed, rawPacketId)
+                : ProductionPostLoginPacketDispatcherResult(null, rawPacketId);
+        }
+
+        if (rawPacketId == (byte)PlayerToServerPacketId.BaddyHurt)
+        {
+            var parsed = CombatPackets.ParseBaddyHurt(packet);
+            return parsed.Success
+                ? ProductionPostLoginPacketDispatcherResult(parsed, rawPacketId)
+                : ProductionPostLoginPacketDispatcherResult(null, rawPacketId);
+        }
+
+        if (rawPacketId == (byte)PlayerToServerPacketId.HurtPlayer)
+        {
+            var parsed = CombatPackets.ParseHurtPlayer(packet);
+            return parsed.Success
+                ? ProductionPostLoginPacketDispatcherResult(parsed, rawPacketId)
+                : ProductionPostLoginPacketDispatcherResult(null, rawPacketId);
+        }
+
         if (CppPlayerPacketDispatchTable.IsAssigned(rawPacketId))
             return ProductionPostLoginPacketDispatchResult.Blocked(
                 rawPacketId,
@@ -100,6 +124,19 @@ public sealed class ProductionPostLoginPacketDispatcher
             rawPacketId,
             PlayerToServerPacketId.PlayerProps,
             "Applied confirmed PLI_PLAYERPROPS subset.");
+    }
+
+    private ProductionPostLoginPacketDispatchResult ProductionPostLoginPacketDispatcherResult(
+        object? parsedPacket,
+        byte rawPacketId)
+    {
+        return parsedPacket is null
+            ? ProductionPostLoginPacketDispatchResult.Blocked(
+                rawPacketId,
+                $"{CppPlayerPacketDispatchTable.NameOf(rawPacketId)} could not be parsed safely yet.")
+            : ProductionPostLoginPacketDispatchResult.Blocked(
+                rawPacketId,
+                $"{CppPlayerPacketDispatchTable.NameOf(rawPacketId)} packet payload was parsed, but runtime combat side effects are intentionally blocked until production wiring is confirmed.");
     }
 
     private static string CppNameOf(PlayerPropertyId propertyId) =>
