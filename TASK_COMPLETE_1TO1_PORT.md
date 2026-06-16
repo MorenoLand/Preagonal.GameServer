@@ -343,7 +343,13 @@ safe world-entry boundaries.
     `external/gs2lib/include/IEnums.h`; only `PLO_FULLSTOP2 = 177` is present.
     The C# continuation now reports `LoginServerFullStopBlocked` and refuses to
     emit guessed full-stop or ghost-icon bytes for this branch.
-- [ ] Implement old-client `PLPROP_GANI` behavior if confirmed.
+- [x] Implement old-client `PLPROP_GANI` behavior if confirmed.
+  - 2026-06-16: Confirmed from `PlayerProps.cpp::getProp` that for clients
+    older than `CLVER_2_1`, `PLPROP_GANI` serializes legacy bow data:
+    `GCHAR bowPower` when `bowImage` is empty, otherwise
+    `GCHAR(10 + bowImage.length)` plus raw bow image bytes. The C# property
+    serializer and pre-warp boundary now apply this behavior and the C++
+    `pCount = 37` old-client cutoff.
 - [ ] Add golden packet-order fixtures for modern and old clients.
 - [ ] Update `docs/spec/SENDLOGINCLIENT_PACKET_FLOW.md`,
   `docs/spec/GOLDEN_FIXTURES.md`, and blockers.

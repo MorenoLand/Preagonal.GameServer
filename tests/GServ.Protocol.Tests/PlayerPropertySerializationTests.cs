@@ -110,6 +110,44 @@ public sealed class PlayerPropertySerializationTests
     }
 
     [Fact]
+    public void PreClient21GaniPropertySerializesBowPowerWhenBowImageIsEmpty()
+    {
+        var source = BaseSource() with { BowPower = 3, BowImage = "" };
+        var bytes = PlayerPropertySerializer.SerializeConfirmedLoginSubset(
+            source,
+            [PlayerPropertyId.Gani],
+            preClient21: true);
+
+        Assert.Equal(new byte[] { 42, 35 }, bytes);
+    }
+
+    [Fact]
+    public void PreClient21GaniPropertySerializesBowImageWithLengthOffset()
+    {
+        var source = BaseSource() with { BowPower = 3, BowImage = "bow.gif" };
+        var bytes = PlayerPropertySerializer.SerializeConfirmedLoginSubset(
+            source,
+            [PlayerPropertyId.Gani],
+            preClient21: true);
+
+        Assert.Equal(
+            new byte[] { 42, 49, (byte)'b', (byte)'o', (byte)'w', (byte)'.', (byte)'g', (byte)'i', (byte)'f' },
+            bytes);
+    }
+
+    [Fact]
+    public void ModernClientGaniPropertyKeepsGaniStringEncoding()
+    {
+        var source = BaseSource() with { Gani = "walk", BowPower = 3, BowImage = "bow.gif" };
+        var bytes = PlayerPropertySerializer.SerializeConfirmedLoginSubset(
+            source,
+            [PlayerPropertyId.Gani],
+            preClient21: false);
+
+        Assert.Equal(new byte[] { 42, 36, (byte)'w', (byte)'a', (byte)'l', (byte)'k' }, bytes);
+    }
+
+    [Fact]
     public void PlayerPropsPacketWrapsConfirmedSubsetWithPloPlayerpropsAndNewline()
     {
         var source = BaseSource();

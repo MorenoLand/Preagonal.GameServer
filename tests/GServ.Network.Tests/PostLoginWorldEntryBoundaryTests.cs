@@ -108,6 +108,30 @@ public sealed class PostLoginWorldEntryBoundaryTests
     }
 
     [Fact]
+    public void OldClientLoginPropsSerializeGaniPropertyAsBowPower()
+    {
+        var session = ReadyForWorldEntrySession("GNW13110");
+        var snapshot = BaseSnapshot() with
+        {
+            LoginPropertyIds = [PlayerPropertyId.Gani, PlayerPropertyId.CommunityName],
+            LoginPropertySource = BasePropertySource() with { Gani = "idle", BowPower = 3, BowImage = "" }
+        };
+
+        _ = PostLoginWorldEntryBoundary.BeginClient(session, snapshot);
+
+        Assert.Equal(
+            new byte[]
+            {
+                41, 42, 35, 10,
+                226, 10,
+                66, (byte)'B', (byte)'o', (byte)'m', (byte)'b', 10,
+                66, (byte)'B', (byte)'o', (byte)'w', 10,
+                222, 10
+            },
+            session.TakeOutboundBytes());
+    }
+
+    [Fact]
     public void WeaponProtectedWeaponAndClassPacketsKeepConfirmedSendLoginClientOrder()
     {
         var session = ReadyForWorldEntrySession("G3D28095");

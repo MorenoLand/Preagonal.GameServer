@@ -228,6 +228,34 @@ Wrapped as `PLO_PLAYERPROPS` with newline:
 
 `35` is `GCHAR PLPROP_RUPEESCOUNT`; `[32, 41, 114]` is `GINT 1234`.
 
+### Old Client `PLPROP_GANI` / `PLPROP_BOWGIF`
+
+For clients older than `CLVER_2_1`, property id `10` is still written as
+`GCHAR 10` (`42`) but the value is the legacy bow payload.
+
+Empty bow image with `bowPower = 3`:
+
+```txt
+[42, 35]
+```
+
+Bow image `"bow.gif"`:
+
+```txt
+[42, 49, 98, 111, 119, 46, 103, 105, 102]
+```
+
+Old-client pre-warp login boundary with only `PLPROP_GANI`/bow power followed
+by the confirmed fixed pre-warp packets:
+
+```txt
+[41, 42, 35, 10,
+ 226, 10,
+ 66, 66, 111, 109, 98, 10,
+ 66, 66, 111, 119, 10,
+ 222, 10]
+```
+
 ### Minimal Client Pre-Warp Packet Sequence
 
 Input fixture:

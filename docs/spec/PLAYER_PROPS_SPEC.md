@@ -110,6 +110,11 @@ Examples:
 - `PLPROP_CURPOWER`: `GCHAR (hitpoints * 2)`
 - `PLPROP_RUPEESCOUNT`: `GINT gralats`
 - `PLPROP_SWORDPOWER`: `GCHAR (swordPower + 30)`, `GCHAR swordImage.length`, raw sword image bytes
+- `PLPROP_GANI` for clients older than `CLVER_2_1`: this is
+  `PLPROP_BOWGIF`; if `bowImage` is non-empty, serialize
+  `GCHAR(10 + bowImage.length)` plus raw bow image bytes, otherwise serialize
+  `GCHAR bowPower`
+- `PLPROP_GANI` for clients `CLVER_2_1+`: `GCHAR gani.length`, raw gani bytes
 - `PLPROP_CURLEVEL`: `GCHAR levelName.length`, raw level name bytes for the non-GMAP/non-singleplayer fixture path
 - `PLPROP_IPADDR`: `GINT5 accountIp`
 - `PLPROP_UDPPORT`: `GINT udpPort`
@@ -119,7 +124,10 @@ Examples:
 - `PLPROP_X2/Y2/Z2`: signed Graal short coordinate encoding from C++ `writeGShort`
 - `PLPROP_PCONNECTED` and `PLPROP_UNKNOWN81`: property id only, no value bytes
 
-The serializer takes explicit property IDs and sorts them ascending to match `sendProps`.
+The serializer takes explicit property IDs and sorts them ascending to match
+`sendProps`. `PostLoginWorldEntryBoundary` now also applies the C++ old-client
+`pCount = 37` cutoff before serialization, so supplied modern-only IDs are not
+emitted to clients older than `CLVER_2_1`.
 
 ## Side Effects
 

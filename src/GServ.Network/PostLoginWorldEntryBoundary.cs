@@ -60,9 +60,14 @@ public static class PostLoginWorldEntryBoundary
 
         var serverListAddPlayerPacket = BuildServerListAddPlayerPacket(snapshot);
 
+        var preClient21 = session.LoginPacket?.VersionId < ClientVersionId.Client21;
+        var loginPropertyIds = preClient21
+            ? snapshot.LoginPropertyIds.Where(id => (byte)id < 37)
+            : snapshot.LoginPropertyIds;
         var loginPropertiesPayload = PlayerPropertySerializer.SerializeConfirmedLoginSubset(
             snapshot.LoginPropertySource,
-            snapshot.LoginPropertyIds);
+            loginPropertyIds,
+            preClient21: preClient21);
         session.QueuePacket(PlayerPropertySerializer.BuildPlayerPropsPacket(loginPropertiesPayload, appendNewline: true));
 
         SendOldClientMapWorkaround(session, options);

@@ -3,7 +3,7 @@
 - Full `Player::sendLogin` is blocked on production account file loading, player property serialization, world/level entry, file queue flush behavior, RC/NC login packet families, and optional scripting hooks.
 - The beginning of `Player::sendLogin` is implemented only through the pre-world continuation boundary. C# stops at `ReadyForWorldEntry`, immediately before `Server::playerLoggedIn(shared_from_this())`.
 - `Server::playerLoggedIn` and the beginning of `sendLoginClient` are implemented only through a source-confirmed pre-warp boundary. C# stops at `ReadyForLevelWarp`, immediately before `warp(m_levelName, getX(), getY())`.
-- The `sendProps(__sendLogin)` property ID table/order is implemented as a source-confirmed C# constant. Full production emission remains blocked on account/default-account data loading, old-client `PLPROP_GANI` behavior, and runtime-dependent properties outside the login set.
+- The `sendProps(__sendLogin)` property ID table/order is implemented as a source-confirmed C# constant. Full production emission remains blocked on account/default-account data loading and runtime-dependent properties outside the login set. The old-client `PLPROP_GANI`/`PLPROP_BOWGIF` serialization branch is implemented for confirmed login/property serializer paths.
 - The C# pre-warp boundary now uses the confirmed property serializer for explicit property IDs instead of inventing defaults.
 - Production startup now resolves the server name from overrides,
   `startupserver.txt`, or exactly one `servers/` directory, and loads

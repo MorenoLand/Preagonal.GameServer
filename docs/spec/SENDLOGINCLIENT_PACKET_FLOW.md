@@ -30,6 +30,11 @@ STOP before warp(m_levelName, getX(), getY())
 PLO_PLAYERPROPS + encoded property payload
 ```
 
+For clients older than `CLVER_2_1`, `sendProps` first forces `pCount = 37`.
+The C# pre-warp boundary now mirrors that cutoff and uses the source-confirmed
+old `PLPROP_GANI`/`PLPROP_BOWGIF` payload: bow image length plus image when
+`bowImage` is non-empty, otherwise bow power.
+
 `Player::sendPacket` appends `\n` to each packet unless already present.
 
 ## Implemented C# Boundary

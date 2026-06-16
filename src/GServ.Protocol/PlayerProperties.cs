@@ -135,6 +135,8 @@ public sealed record PlayerPropertySource(
     byte GmapLevelX = 0,
     byte GmapLevelY = 0,
     byte StatusMessage = 0,
+    byte BowPower = 0,
+    string BowImage = "",
     string Language = "English");
 
 public static class SendLoginPropertySet
@@ -287,13 +289,14 @@ public static class PlayerPropertySerializer
 
     public static byte[] SerializeConfirmedLoginSubset(
         PlayerPropertySource source,
-        IEnumerable<PlayerPropertyId> propertyIds)
+        IEnumerable<PlayerPropertyId> propertyIds,
+        bool preClient21 = false)
     {
         var writer = new GraalBinaryWriter();
         foreach (var propertyId in propertyIds.Distinct().OrderBy(id => (byte)id))
         {
             writer.WriteGChar((byte)propertyId);
-            WritePropertyValue(writer, source, propertyId);
+            WritePropertyValue(writer, source, propertyId, preClient21);
         }
 
         return writer.ToArray();
@@ -318,7 +321,7 @@ public static class PlayerPropertySerializer
                 continue;
 
             writer.WriteGChar((byte)propertyId);
-            WritePropertyValue(writer, source, propertyId);
+            WritePropertyValue(writer, source, propertyId, preClient21: false);
         }
 
         return writer.ToArray();
@@ -348,7 +351,11 @@ public static class PlayerPropertySerializer
         return writer.ToArray();
     }
 
-    private static void WritePropertyValue(GraalBinaryWriter writer, PlayerPropertySource source, PlayerPropertyId propertyId)
+    private static void WritePropertyValue(
+        GraalBinaryWriter writer,
+        PlayerPropertySource source,
+        PlayerPropertyId propertyId,
+        bool preClient21)
     {
         switch (propertyId)
         {
@@ -382,6 +389,21 @@ public static class PlayerPropertySerializer
                 WriteGCharString(writer, source.ShieldImage);
                 return;
             case PlayerPropertyId.Gani:
+                if (preClient21)
+                {
+                    if (source.BowImage.Length > 0)
+                    {
+                        writer.WriteGChar((byte)(10 + source.BowImage.Length));
+                        writer.WriteBytes(Encoding.ASCII.GetBytes(source.BowImage));
+                    }
+                    else
+                    {
+                        writer.WriteGChar(source.BowPower);
+                    }
+
+                    return;
+                }
+
                 WriteGCharString(writer, source.Gani);
                 return;
             case PlayerPropertyId.HeadGif:

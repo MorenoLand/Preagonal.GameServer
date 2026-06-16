@@ -55,6 +55,17 @@ Wrapped packet with newline:
 entries in emitted order. `SendLoginPropertySet.ForClient(preClient21: true)`
 matches `Player::sendProps` with `pCount = 37`.
 
+For clients older than `CLVER_2_1`, `PLPROP_GANI` keeps property id `10` but
+uses the old `PLPROP_BOWGIF` payload:
+
+```txt
+empty bow image: GCHAR bowPower
+non-empty bow image: GCHAR(10 + bowImage.length) + bowImage bytes
+```
+
+The pre-warp login boundary applies the same old-client cutoff even if the
+caller supplies the modern full table.
+
 The serializer supports the confirmed `__sendLogin` IDs. Production use still
 requires real account/player values rather than invented defaults.
 
@@ -62,4 +73,4 @@ requires real account/player values rather than invented defaults.
 
 The pre-warp login boundary now calls `PlayerPropertySerializer.SerializeConfirmedLoginSubset` instead of accepting arbitrary login prop bytes for the tested path.
 
-Full production `__sendLogin` emission remains blocked until account/default-account loading and version-specific branches are implemented.
+Full production `__sendLogin` emission still requires real account/default-account values, but the source-confirmed old-client `PLPROP_GANI`/`PLPROP_BOWGIF` branch is implemented.
