@@ -315,8 +315,17 @@ safe world-entry boundaries.
 - `server/src/Server.cpp`
 - `server/src/level/Level.cpp`
 
-- [ ] Trace and document old-version map-file workaround.
-- [ ] Trace and document flaghack mutation.
+- [x] Trace and document old-version map-file workaround.
+  - 2026-06-16: Documented and implemented the source-confirmed
+    `CLVER_2_31`/`CLVER_1_411` BIGMAP workaround in
+    `PostLoginWorldEntryBoundary`, routing supplied BIGMAP entries through the
+    confirmed `FileTransferBoundary.HandleWantFile` immediately after
+    `sendProps(__sendLogin)` and before `PLO_CLEARWEAPONS`.
+- [x] Trace and document flaghack mutation.
+  - 2026-06-16: Documented `flaghack_ip`: C++ mutates `gr.ip`, immediately
+    sends `PLO_FLAGSET gr.ip=<remote-ip>`, then later sends all flags from
+    `std::unordered_map`. Full C# emission is blocked until the duplicate flag
+    ordering is resolved by source/capture evidence.
 - [ ] Trace and implement confirmed weapon/protected-weapon/class login packet
   branches.
 - [ ] Resolve or permanently block `PLO_FULLSTOP` vs `PLO_FULLSTOP2` with source

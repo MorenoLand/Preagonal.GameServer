@@ -4,11 +4,15 @@ Authoritative source: `ai_resources/GServer-CPP-ORIGINAL/server/src/player/Playe
 
 ## Confirmed Order Before Warp
 
-For a normal client path with no old-version map workaround, no login flags, no weapons/classes/protected weapons, and no zlib-fix branch, the pre-warp order is:
+For a normal client path with no old-version map workaround, no login flags, no
+weapons/classes/protected weapons, and no zlib-fix branch, the pre-warp order
+is:
 
 ```txt
 sendProps(__sendLogin)
+optional old-version BIGMAP file sends through msgPLI_WANTFILE
 PLO_CLEARWEAPONS
+optional immediate flaghack_ip PLO_FLAGSET "gr.ip=<remote-ip>"
 player flags as PLO_FLAGSET
 server flags as PLO_FLAGSET
 PLO_NPCWEAPONDEL "Bomb"
@@ -29,6 +33,13 @@ PLO_PLAYERPROPS + encoded property payload
 
 `PostLoginWorldEntryBoundary.BeginClient` implements the source-confirmed packet wrappers and ordering above using `PlayerPropertySerializer.SerializeConfirmedLoginSubset` for the tested property payload and ordered flag lists.
 
+It now accepts optional `PostLoginClientOptions` for the old-version map-file
+workaround. When the parsed login version is exactly `CLVER_2_31` or
+`CLVER_1_411`, it iterates the supplied map list and calls the confirmed
+`FileTransferBoundary.HandleWantFile` only for `BIGMAP` entries. This preserves
+the C++ position of the side effect immediately after `sendProps(__sendLogin)`
+and before `PLO_CLEARWEAPONS`. GMAP entries are skipped.
+
 It marks the session:
 
 ```txt
@@ -45,13 +56,49 @@ ReadyForWorldEntry -> ReadyForLevelWarp
 - `PLO_SERVERLISTCONNECTED = 190`; C++ source calls this `PLO_UNKNOWN190`
 - `PLO_CLEARWEAPONS = 194`
 
+## Old-Version Map Workaround
+
+Source:
+
+```cpp
+if (m_versionId == CLVER_2_31 || m_versionId == CLVER_1_411)
+{
+    for (const auto& map: m_server->getMapList())
+    {
+        if (map->getType() == MapType::BIGMAP)
+            msgPLI_WANTFILE(CString() << map->getMapName());
+    }
+}
+```
+
+`msgPLI_WANTFILE` reads the filename and calls `sendFile`. For clients older
+than `CLVER_2_1`, the filename gets `.gif` appended when it has no extension.
+For `CLVER_2_31`, the file transfer path includes mod time, raw-data wrapping,
+and the existing `PLO_FILE` chunk behavior implemented by `FileTransferBoundary`.
+
+## `flaghack_ip`
+
+Source:
+
+```cpp
+if (settings.getBool("flaghack_ip", false) == true)
+    this->setFlag("gr.ip", this->m_accountIpStr, true);
+```
+
+`Player::setFlag(..., sendToPlayer=true)` first mutates the account flag map
+through `Account::setFlag`, then immediately sends `PLO_FLAGSET gr.ip=<ip>` to
+the player. `sendLoginClient` then iterates `m_flagList` and sends all flags.
+Because `m_flagList` is a C++ `std::unordered_map`, the second occurrence of
+`gr.ip` has no portable stable order relative to other player flags unless a
+future capture proves the concrete compiled/runtime order. The C# port does not
+invent that ordering yet.
+
 ## Deferred Branches Before Warp
 
 These are traced but not implemented yet:
 
 - spar deviation recalculation mutates account/player state
-- old client `CLVER_2_31`/`CLVER_1_411` map-file workaround through `msgPLI_WANTFILE`
-- `flaghack_ip` mutation of `gr.ip`
+- `flaghack_ip` full duplicate flag emission order after unordered-map mutation
 - weapon list emission and default weapon conversion through `msgPLI_WEAPONADD`
 - protected weapon auto-add
 - class packet emission for `m_versionId >= CLVER_4_0211`

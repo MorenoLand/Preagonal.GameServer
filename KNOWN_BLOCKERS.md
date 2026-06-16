@@ -28,7 +28,12 @@
   replay from live repositories remain blocked.
 - Full login success is blocked on production account/default account loading side effects, remaining `sendLoginClient` branches, `sendLoginRC`/`sendLoginNC`, and world warp behavior.
 - The login packet parse boundary, server-list auth boundary, source-confirmed beginning of `Player::sendLogin`, `Server::playerLoggedIn` list-server add side effect, minimal pre-warp `sendLoginClient` packet order, the confirmed `__sendLogin` property ID table, and login property serialization are implemented. The current stop point is `ReadyForLevelWarp`, immediately before `warp(m_levelName, getX(), getY())`.
-- Old-version map-file workaround, `flaghack_ip`, weapons, protected weapons, classes, and zlib-fix NPC weapon branches in `sendLoginClient` are traced but not implemented.
+- Old-version BIGMAP file-send workaround is implemented for supplied map
+  snapshots through the confirmed file-transfer boundary. `flaghack_ip` is
+  traced, but full duplicate flag emission is blocked on
+  `std::unordered_map` ordering. Weapons, protected weapons, classes, and
+  zlib-fix NPC weapon branches in `sendLoginClient` are traced but not
+  implemented.
 - The login-server-name branch in `Player::sendLogin` is blocked because C++ references `PLO_FULLSTOP`, but recovered `IEnums.h` only defines `PLO_FULLSTOP2 = 177`.
 - `CFileQueue` queue selection, gen1/gen6 socket passthrough, gen2/gen3 zlib
   framing, gen5 uncompressed socket framing for payloads up to 55 bytes, and

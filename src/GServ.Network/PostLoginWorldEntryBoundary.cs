@@ -5,6 +5,18 @@ namespace GServ.Network;
 
 public sealed record LoginFlag(string Name, string Value);
 
+public enum LoginMapType
+{
+    BigMap,
+    GMap
+}
+
+public sealed record LoginMapFile(string MapName, LoginMapType Type);
+
+public sealed record PostLoginClientOptions(
+    IResourceFileSystem? ResourceFileSystem,
+    IReadOnlyList<LoginMapFile> Maps);
+
 public sealed record PostLoginPlayerSnapshot(
     ushort PlayerId,
     PlayerSessionType Type,
@@ -34,7 +46,8 @@ public static class PostLoginWorldEntryBoundary
 {
     public static PostLoginClientBoundaryResult BeginClient(
         ClientSessionSkeleton session,
-        PostLoginPlayerSnapshot snapshot)
+        PostLoginPlayerSnapshot snapshot,
+        PostLoginClientOptions? options = null)
     {
         if (session.Lifecycle != SessionLifecycle.ReadyForWorldEntry)
             throw new InvalidOperationException("sendLoginClient boundary requires ReadyForWorldEntry.");
@@ -45,6 +58,9 @@ public static class PostLoginWorldEntryBoundary
             snapshot.LoginPropertySource,
             snapshot.LoginPropertyIds);
         session.QueuePacket(PlayerPropertySerializer.BuildPlayerPropsPacket(loginPropertiesPayload, appendNewline: true));
+
+        SendOldClientMapWorkaround(session, options);
+
         session.QueuePacket(BlankPacket(ServerToPlayerPacketId.ClearWeapons, appendNewline: true));
 
         foreach (var flag in snapshot.PlayerFlags)
@@ -62,6 +78,29 @@ public static class PostLoginWorldEntryBoundary
             true,
             serverListAddPlayerPacket,
             PostLoginClientStopPoint.BeforeWarp);
+    }
+
+    private static void SendOldClientMapWorkaround(
+        ClientSessionSkeleton session,
+        PostLoginClientOptions? options)
+    {
+        if (session.LoginPacket?.VersionId is not (ClientVersionId.Client231 or ClientVersionId.Client1411))
+            return;
+
+        if (options?.ResourceFileSystem is null)
+            return;
+
+        foreach (var map in options.Maps)
+        {
+            if (map.Type != LoginMapType.BigMap)
+                continue;
+
+            FileTransferBoundary.HandleWantFile(
+                session,
+                options.ResourceFileSystem,
+                map.MapName,
+                session.LoginPacket.VersionId);
+        }
     }
 
     public static byte[] BuildServerListAddPlayerPacket(PostLoginPlayerSnapshot snapshot)

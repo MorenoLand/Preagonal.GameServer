@@ -69,6 +69,44 @@ public sealed class PostLoginWorldEntryBoundaryTests
             result.ServerListAddPlayerPacket);
     }
 
+    [Fact]
+    public void OldClientMapWorkaroundSendsLoadedBigMapFilesBeforeClearWeapons()
+    {
+        var session = ReadyForWorldEntrySession("GNW28015");
+        var snapshot = BaseSnapshot();
+        var files = new MemoryResourceFileSystem();
+        files.Add("worldmap.txt", "mapdata"u8.ToArray(), modTime: 1);
+        files.Add("ignored.gmap", "gmapdata"u8.ToArray(), modTime: 1);
+
+        _ = PostLoginWorldEntryBoundary.BeginClient(
+            session,
+            snapshot,
+            new PostLoginClientOptions(
+                ResourceFileSystem: files,
+                Maps:
+                [
+                    new LoginMapFile("worldmap.txt", LoginMapType.BigMap),
+                    new LoginMapFile("ignored.gmap", LoginMapType.GMap)
+                ]));
+
+        Assert.Equal(
+            new byte[] { 41, 10 }
+                .Concat(FileTransferPackets.BuildFileChunk(
+                    "worldmap.txt",
+                    "mapdata"u8,
+                    modTime: 1,
+                    includeModTime: true))
+                .Concat(new byte[]
+                {
+                    226, 10,
+                    66, (byte)'B', (byte)'o', (byte)'m', (byte)'b', 10,
+                    66, (byte)'B', (byte)'o', (byte)'w', 10,
+                    222, 10
+                })
+                .ToArray(),
+            session.TakeOutboundBytes());
+    }
+
     private static PostLoginPlayerSnapshot BaseSnapshot()
     {
         var account = new GraalBinaryWriter();
@@ -143,13 +181,13 @@ public sealed class PostLoginWorldEntryBoundaryTests
             TextCodePage: 1252,
             CommunityName: "Ruan");
 
-    private static ClientSessionSkeleton ReadyForWorldEntrySession()
+    private static ClientSessionSkeleton ReadyForWorldEntrySession(string versionToken = "G3D0311C")
     {
         var session = new ClientSessionSkeleton(7);
         var packet = new GraalBinaryWriter();
         packet.WriteGChar(5);
         packet.WriteGChar(42);
-        packet.WriteBytes("G3D0311C"u8);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(versionToken));
         packet.WriteGChar(4);
         packet.WriteBytes("Ruan"u8);
         packet.WriteGChar(2);
@@ -164,5 +202,16 @@ public sealed class PostLoginWorldEntryBoundaryTests
             new PlayerSendLoginOptions(false, "Graal Reborn", [])).Accepted);
         _ = session.TakeOutboundBytes();
         return session;
+    }
+
+    private sealed class MemoryResourceFileSystem : IResourceFileSystem
+    {
+        private readonly Dictionary<string, ResourceFile> _files = new(StringComparer.Ordinal);
+
+        public void Add(string name, byte[] data, long modTime) =>
+            _files[name] = new ResourceFile(name, data, modTime);
+
+        public ResourceFile? Find(string file) =>
+            _files.GetValueOrDefault(file);
     }
 }

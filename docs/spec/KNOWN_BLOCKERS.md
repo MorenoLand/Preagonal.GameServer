@@ -19,7 +19,12 @@
   invalid-packet counting. Multi-session scheduling, deferred deletion cleanup,
   concrete production auth socket-loop wiring, and gameplay dispatch are not
   implemented yet.
-- Old-version map-file workaround, flaghack mutation, weapons, protected weapons, classes, and zlib-fix NPC weapon branches in `sendLoginClient` are traced but not implemented.
+- Old-version BIGMAP file-send workaround is implemented for supplied map
+  snapshots through the confirmed file-transfer boundary. `flaghack_ip` is
+  traced, but full duplicate flag emission is blocked on
+  `std::unordered_map` ordering. Weapons, protected weapons, classes, and
+  zlib-fix NPC weapon branches in `sendLoginClient` are traced but not
+  implemented.
 - The login-server-name branch is blocked because C++ references `PLO_FULLSTOP`, but recovered `IEnums.h` only defines `PLO_FULLSTOP2 = 177`. Do not assume they are equivalent without source proof.
 - Exact `CString::guntokenize()` behavior for ban reasons remains blocked; current C# tests cover plain reasons and the confirmed newline-to-carriage-return replacement path only.
 - Real account/password validation must not be invented. The C++ server delegates password/auth verification to the list server through `SVO_VERIACC2`/`SVI_VERIACC2`.

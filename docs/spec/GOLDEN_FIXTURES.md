@@ -144,6 +144,20 @@ Notes:
 - `64` after player id is `GCHAR PLTYPE_CLIENT3` (`32 + 32`).
 - Property ids are also written as `GCHAR`.
 
+### Old Client BIGMAP Workaround
+
+For `CLVER_2_31` and map list entries:
+
+```txt
+BIGMAP "worldmap.txt"
+GMAP "ignored.gmap"
+```
+
+`sendLoginClient` calls `msgPLI_WANTFILE("worldmap.txt")` immediately after
+`sendProps(__sendLogin)` and before `PLO_CLEARWEAPONS`; the GMAP is skipped.
+The resulting bytes are the existing `PLO_RAWDATA` plus `PLO_FILE` file-transfer
+fixture for `"worldmap.txt"`, because this branch delegates to `sendFile`.
+
 ## Player Property Serialization
 
 ### `__sendLogin` Property ID Table
