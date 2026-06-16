@@ -1245,7 +1245,13 @@ shutdown side effects.
 - [ ] Implement AP/singleplayer timed runtime behavior only when prerequisites
   exist.
 - [ ] Implement production shutdown side effects.
-- [ ] Add timing tests with fake clocks.
+- [x] Add timing tests with fake clocks.
+  - 2026-06-16: Verified existing `ProductionTimingBoundaryTests` cover
+    source-confirmed fake-time boundaries through `TimeSpan` inputs and fake
+    server-list reconnect jitter: one-second scheduler gate/order, five-minute
+    job order, strict player timeout/save/reset thresholds, disconnected
+    socket deletion, reconnect backoff cap/jitter, and `PLO_NEWWORLDTIME`
+    packet bytes.
 
 Completion criteria:
 
