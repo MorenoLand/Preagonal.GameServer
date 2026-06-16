@@ -11,6 +11,24 @@ public interface ILiveWorldSessionSink
 
 public sealed record LiveWorldForwardingDelivery(ushort PlayerId, byte[] Packet);
 
+public enum LiveWorldPlayerPropsForwardingStatus
+{
+    Delivered,
+    Blocked
+}
+
+public sealed record LiveWorldPlayerPropsForwardingResult(
+    LiveWorldPlayerPropsForwardingStatus Status,
+    string Message,
+    IReadOnlyList<LiveWorldForwardingDelivery> Deliveries)
+{
+    public static LiveWorldPlayerPropsForwardingResult Delivered(IReadOnlyList<LiveWorldForwardingDelivery> deliveries) =>
+        new(LiveWorldPlayerPropsForwardingStatus.Delivered, "Applied and forwarded confirmed player props.", deliveries);
+
+    public static LiveWorldPlayerPropsForwardingResult Blocked(string message) =>
+        new(LiveWorldPlayerPropsForwardingStatus.Blocked, message, []);
+}
+
 public static class LiveWorldSessionForwarder
 {
     public static IReadOnlyList<LiveWorldForwardingDelivery> ForwardConfirmedOneLevelPacket(
@@ -50,8 +68,39 @@ public static class LiveWorldSessionForwarder
         bool senderSupportsPreciseMovement,
         IReadOnlyDictionary<ushort, ILiveWorldSessionSink> sinks)
     {
+        var result = TryApplyAndForwardConfirmedPlayerProps(
+            server,
+            sender,
+            updates,
+            senderSupportsPreciseMovement,
+            sinks);
+
+        if (result.Status == LiveWorldPlayerPropsForwardingStatus.Blocked)
+            throw new NotSupportedException(result.Message);
+
+        return result.Deliveries;
+    }
+
+    public static LiveWorldPlayerPropsForwardingResult TryApplyAndForwardConfirmedPlayerProps(
+        RuntimeServer server,
+        RuntimePlayer sender,
+        IEnumerable<IncomingPlayerPropertyUpdate> updates,
+        bool senderSupportsPreciseMovement,
+        IReadOnlyDictionary<ushort, ILiveWorldSessionSink> sinks)
+    {
         var updateArray = updates.ToArray();
-        RuntimePlayerPropsApplier.ApplyConfirmed(sender, updateArray);
+        foreach (var update in updateArray)
+        {
+            try
+            {
+                RuntimePlayerPropsApplier.ApplyConfirmed(sender, [update]);
+            }
+            catch (NotSupportedException ex)
+            {
+                return LiveWorldPlayerPropsForwardingResult.Blocked(
+                    $"{CppNameOf(update.PropertyId)} was parsed with source-confirmed bytes, but its runtime side effects are not ported yet: {ex.Message}");
+            }
+        }
 
         var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
             sender.Id,
@@ -70,12 +119,14 @@ public static class LiveWorldSessionForwarder
                 EloRating: sender.EloRating,
                 EloDeviation: sender.EloDeviation));
 
-        return ForwardConfirmedLevelAreaPacket(
+        var deliveries = ForwardConfirmedLevelAreaPacket(
             server,
             sender,
             packet,
             sinks,
             new HashSet<ushort> { sender.Id });
+
+        return LiveWorldPlayerPropsForwardingResult.Delivered(deliveries);
     }
 
     private static IReadOnlyList<LiveWorldForwardingDelivery> Deliver(
@@ -106,4 +157,15 @@ public static class LiveWorldSessionForwarder
 
         return sender.CurrentLevelName;
     }
+
+    private static string CppNameOf(PlayerPropertyId propertyId) =>
+        propertyId switch
+        {
+            PlayerPropertyId.Nickname => "PLPROP_NICKNAME",
+            PlayerPropertyId.CarryNpc => "PLPROP_CARRYNPC",
+            PlayerPropertyId.GmapLevelX => "PLPROP_GMAPLEVELX",
+            PlayerPropertyId.GmapLevelY => "PLPROP_GMAPLEVELY",
+            PlayerPropertyId.Status => "PLPROP_STATUS",
+            _ => $"PLPROP_{(byte)propertyId}"
+        };
 }

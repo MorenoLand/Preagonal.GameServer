@@ -220,6 +220,32 @@ public sealed class LiveWorldSessionForwardingTests
     }
 
     [Fact]
+    public void TryApplyAndForwardPlayerPropsBlocksParsedButUnportedSideEffectsWithoutForwarding()
+    {
+        var server = new RuntimeServer();
+        var level = new RuntimeLevel("start.nw");
+        var sender = Add(server, 7, RuntimePlayerKind.Client, level);
+        Add(server, 8, RuntimePlayerKind.Client, level);
+        var sinks = CreateSinks(7, 8);
+
+        var result = LiveWorldSessionForwarder.TryApplyAndForwardConfirmedPlayerProps(
+            server,
+            sender,
+            [
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.X, 70),
+                IncomingPlayerPropertyUpdate.String(PlayerPropertyId.Nickname, "Ruan")
+            ],
+            senderSupportsPreciseMovement: false,
+            AsSinks(sinks));
+
+        Assert.Equal(LiveWorldPlayerPropsForwardingStatus.Blocked, result.Status);
+        Assert.Contains("PLPROP_NICKNAME", result.Message, StringComparison.Ordinal);
+        Assert.Equal(560, sender.PixelX);
+        Assert.Empty(result.Deliveries);
+        Assert.Empty(sinks[8].Packets);
+    }
+
+    [Fact]
     public void ForwardConfirmedLevelAreaPacketFiltersByGmapGroupAndDistance()
     {
         var server = new RuntimeServer();

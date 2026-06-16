@@ -178,3 +178,18 @@ until NPC ownership, duplicate carry checks, `PLO_PLAYERPROPS`, `PLO_NPCDEL2`,
 `PLO_OTHERPLPROPS`, and `m_carryNpcId` mutation are ported from the same file.
 Likewise, `PLPROP_STATUS` remains blocked after byte parsing until the C++
 death/revive/drop/leader side effects and related packet order are ported.
+
+## Live Forwarding Guard
+
+`LiveWorldSessionForwarder.TryApplyAndForwardConfirmedPlayerProps` mirrors the
+same guarded boundary for live-world packet forwarding. It applies confirmed
+updates sequentially, returns `Blocked` with the C++ `PLPROP_*` name when an
+unported side-effect branch is reached, and deliberately emits no
+`PLO_OTHERPLPROPS` forwarding bytes for that packet. Earlier confirmed mutations
+remain applied, matching the sequential shape of `Player::setProps` without
+inventing the blocked branch's forwarding or side effects.
+
+The throwing `ApplyAndForwardConfirmedPlayerProps` entry point remains strict
+for callers that only pass fully ported properties. Production or diagnostic
+callers that may receive parsed-but-unported properties should use the `Try*`
+entry point and surface the blocked result.

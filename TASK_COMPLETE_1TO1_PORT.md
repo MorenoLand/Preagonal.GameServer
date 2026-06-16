@@ -815,6 +815,11 @@ behavior, and movement-loop invocation.
     `PLPROP_*` blocked side-effect messages instead of throwing when a
     confirmed post-login frame reaches a runtime branch such as nickname before
     those side effects are ported.
+  - 2026-06-16: Added the same blocked side-effect boundary to live-world
+    forwarding. `TryApplyAndForwardConfirmedPlayerProps` applies confirmed
+    earlier props in wire order, then returns a blocked `PLPROP_*` result
+    without emitting invented `PLO_OTHERPLPROPS` bytes when a branch such as
+    nickname reaches unported C++ side effects.
 
 Completion criteria:
 

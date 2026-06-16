@@ -263,6 +263,12 @@ Those packet families are not automatically equivalent to movement forwarding.
 - `ApplyAndForwardConfirmedPlayerProps(...)` applies the confirmed incoming
   movement/player-prop subset, builds the confirmed `PLO_OTHERPLPROPS` movement
   packet, and forwards it to level-area recipients.
+- `TryApplyAndForwardConfirmedPlayerProps(...)` uses the same source-confirmed
+  mutation/forwarding path, but returns a `Blocked` result when a parsed
+  property reaches a C++ branch whose bytes are known and whose runtime side
+  effects are not ported yet. Confirmed earlier properties in the same packet
+  remain applied in wire order, and no forwarding packet is emitted for the
+  blocked packet.
 
 Confirmed forwarded player-prop subset:
 
@@ -277,6 +283,10 @@ Confirmed forwarded player-prop subset:
 - `PLPROP_GANI`
 
 Unsupported gameplay packet types are not forwarded through this boundary.
+Parsed-but-unported player properties such as `PLPROP_NICKNAME`,
+`PLPROP_STATUS`, `PLPROP_CARRYNPC`, and GMAP level-switch props remain blocked
+until their full C++ side effects are ported from `PlayerProps.cpp`; this guard
+is only a reporting boundary, not a substitute implementation.
 
 ## Implemented C# Types
 
