@@ -4,10 +4,10 @@ using Xunit;
 
 namespace GServ.Network.Tests;
 
-public sealed class ProductionHostLoopTests
-{
-    [Fact]
-    public void RunOneIterationExecutesSourceConfirmedActionOrderAndCleanup()
+    public sealed class ProductionHostLoopTests
+    {
+        [Fact]
+        public void RunOneIterationExecutesSourceConfirmedActionOrderAndCleanup()
     {
         var clock = new FakeHostClock();
         var runtime = new RecordingProductionHostRuntime();
@@ -33,6 +33,22 @@ public sealed class ProductionHostLoopTests
         for (var i = 0; i < expected.Length; i++)
             Assert.Equal(expected[i], runtime.ActionsLog[i]);
         Assert.Equal(2, runtime.CleanupDeletedPlayersCount);
+    }
+
+    [Fact]
+    public void RunCallsInitializeBeforeLoopAndCleanupWhenInitializeFails()
+    {
+        var clock = new FakeHostClock();
+        var runtime = new RecordingProductionHostRuntime { InitializeResult = false };
+        var loop = new ProductionHostLoop(runtime, clock.Next);
+
+        loop.Run(TimeSpan.Zero);
+
+        Assert.True(runtime.InitializeCalled);
+        Assert.Equal(1, runtime.InitializeCount);
+        Assert.True(runtime.CleanupCalled);
+        Assert.Equal(1, runtime.CleanupCount);
+        Assert.False(loop.IsRunning);
     }
 
     [Fact]

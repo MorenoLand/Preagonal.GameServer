@@ -1293,7 +1293,8 @@ shutdown side effects.
 - `server/src/player/Player.cpp`
 - level/account/server-list timing code
 
-- [ ] Implement production infinite host loop safely.
+- [x] Implement production infinite host loop safely.
+  - 2026-06-16: `ProductionHostLoop.Run` now initializes runtime before entering loop, performs deterministic shutdown cleanup when initialization fails, and preserves source-confirmed action ordering.
 - [ ] Wire player/level/server-list repositories.
 - [ ] Implement `cleanupDeletedPlayers` V8 retention behavior.
 - [ ] Implement AP/singleplayer timed runtime behavior only when prerequisites

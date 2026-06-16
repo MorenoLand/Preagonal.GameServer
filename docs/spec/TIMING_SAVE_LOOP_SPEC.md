@@ -219,6 +219,9 @@ remains blocked until a dedicated websocket compatibility pass.
 
 - `ProductionTimingScheduler`
   - source-confirmed server loop and `doTimedEvents()` periodic job order
+- `ProductionHostLoop`
+  - now calls `IProductionHostRuntime.Initialize()` before entering its loop and
+    applies shutdown cleanup when initialization fails or the loop exits.
 - `PlayerTimedEventState`
   - source-confirmed early `Player::doTimedEvents()` timing gates and save/reset/file-queue actions
 - `ServerListReconnectState`

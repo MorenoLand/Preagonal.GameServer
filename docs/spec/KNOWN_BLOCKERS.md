@@ -157,10 +157,11 @@
 - Production timing boundaries now cover the source-confirmed `Server::doMain`
   one-second gate, 5s/60s/180s/300s periodic server jobs, server-list reconnect
   backoff, `Player::doTimedEvents` idle/no-data/save/reset gates, and
-  `PLO_NEWWORLDTIME` packet bytes. The real infinite host loop, concrete
-  player/level/server-list repository wiring, `cleanupDeletedPlayers` V8
-  retention, AP/singleplayer runtime execution, and production shutdown
-  side effects remain blocked until the surrounding runtime services exist.
+  `PLO_NEWWORLDTIME` packet bytes. `ProductionHostLoop` now initializes and
+  shuts down deterministically. Concrete player/level/server-list repository
+  wiring, `cleanupDeletedPlayers` V8 retention, AP/singleplayer runtime execution,
+  and production shutdown side effects remain blocked until the surrounding runtime
+  services exist.
 - WolfSSL/websocket HTTP upgrade behavior is traced and documented. Frame
   wrapping/unwrapping is covered by `gs2lib` fixture tests, but production
   handshake/session integration and TLS behavior remain blocked pending a

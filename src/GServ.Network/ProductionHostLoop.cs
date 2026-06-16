@@ -109,6 +109,13 @@ public sealed class ProductionHostLoop
     public void Run(TimeSpan iterationDelay, CancellationToken cancellationToken = default)
     {
         _isRunning = true;
+        if (!_runtime.Initialize())
+        {
+            _runtime.Cleanup();
+            _isRunning = false;
+            return;
+        }
+
         try
         {
             while (_isRunning && !cancellationToken.IsCancellationRequested)
