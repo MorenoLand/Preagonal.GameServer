@@ -2175,3 +2175,14 @@ The incoming IP bytes are consumed, but C++ `setProps` discards them. Full
 generic forwarding for this property must use the current
 `getProp(PLPROP_IPADDR)` account-IP state and remains blocked until that
 state-backed forwarding path exists.
+
+Source-confirmed `PLPROP_UDPPORT` update:
+
+```txt
+PLPROP_UDPPORT + GInt(14900)
+```
+
+C++ stores the decoded UDP port in `m_udpport`. If the player is loaded and has
+a valid id, C++ also emits a direct `PLO_OTHERPLPROPS` UDP-port packet to other
+clients, and the generic forwarding tail can apply. Those sends remain blocked
+until production session routing can choose recipients exactly.

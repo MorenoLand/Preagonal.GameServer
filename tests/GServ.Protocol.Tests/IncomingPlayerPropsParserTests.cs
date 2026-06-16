@@ -331,6 +331,23 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedUdpPortAsGInt()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.UdpPort);
+        body.WriteGInt(14900);
+        body.WriteGChar((byte)PlayerPropertyId.X);
+        body.WriteGChar(70);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray());
+
+        Assert.True(result.Success);
+        Assert.Equal([PlayerPropertyId.UdpPort, PlayerPropertyId.X], result.Updates.Select(update => update.PropertyId));
+        Assert.Equal(14900, result.Updates[0].GIntValue);
+        Assert.Equal((byte)70, result.Updates[1].GCharValue);
+    }
+
+    [Fact]
     public void BuildsConfirmedForwardedMovementPropsForPreciseSender()
     {
         var updates = new[]

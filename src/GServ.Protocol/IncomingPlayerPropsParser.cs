@@ -105,6 +105,7 @@ public static class IncomingPlayerPropsParser
                     break;
 
                 case PlayerPropertyId.TextCodePage:
+                case PlayerPropertyId.UdpPort:
                     updates.Add(IncomingPlayerPropertyUpdate.GInt(propertyId, reader.ReadGInt()));
                     break;
 

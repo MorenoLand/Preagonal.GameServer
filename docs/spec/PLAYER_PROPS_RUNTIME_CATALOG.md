@@ -95,7 +95,7 @@ For sender client versions `>= CLVER_2_3`, C++ sends `levelBuff2` before
 | 28 | `PLPROP_DEATHSCOUNT` | `GInt` | Reads and ignores. | No local forwarding. | Implemented as confirmed no-op/read-only parse. |
 | 29 | `PLPROP_ONLINESECS` | `GInt` | Reads and ignores. | No local forwarding. | Implemented as confirmed no-op/read-only parse. |
 | 30 | `PLPROP_IPADDR` | `GInt5` | Reads and ignores. | Generic forwarding from current `getProp(PLPROP_IPADDR)`. | Parser/applier implemented as consume-only no-op. Forwarding remains blocked until it can use current account-IP state, not incoming bytes. |
-| 31 | `PLPROP_UDPPORT` | `GInt` | Stores UDP port. | If loaded and id valid, sends `PLO_OTHERPLPROPS + id + PLPROP_UDPPORT + raw int` to any client except self. Generic tail also applies. | Blocked on UDP/forwarding. |
+| 31 | `PLPROP_UDPPORT` | `GInt` | Stores UDP port. | If loaded and id valid, sends `PLO_OTHERPLPROPS + id + PLPROP_UDPPORT + raw int` to any client except self. Generic tail also applies. | Parser/applier implemented as state mutation. Direct send and generic forwarding remain blocked on production session routing/recipient selection. |
 | 32 | `PLPROP_ALIGNMENT` | `GUChar` | Stores AP capped at `100` in non-V8 path. | Generic forwarding. | Implemented as runtime mutation with C++ clamp. Generic forwarding remains blocked. |
 | 33 | `PLPROP_ADDITFLAGS` | `GUChar` | Stores additional flags. | No local forwarding. | Implemented as scalar mutation. |
 | 34 | `PLPROP_ACCOUNTNAME` | `GCHAR len` + bytes | Reads and ignores. | Generic forwarding from current `getProp(PLPROP_ACCOUNTNAME)`. | Parser/applier implemented as consume-only no-op. Forwarding remains blocked until it can use current account state, not incoming bytes. |

@@ -44,6 +44,7 @@ public sealed class RuntimePlayer
     public byte AdditionalFlags { get; internal set; }
     public byte CarrySprite { get; internal set; }
     public byte HorseBombCount { get; internal set; }
+    public uint UdpPort { get; internal set; }
     public string CurrentLevelName { get; internal set; } = string.Empty;
     public string Gani { get; internal set; } = string.Empty;
     public string BodyImage { get; internal set; } = string.Empty;
@@ -172,6 +173,10 @@ public static class RuntimePlayerPropsApplier
 
                 case GServ.Protocol.PlayerPropertyId.HorseBushes:
                     player.HorseBombCount = update.GCharValue.GetValueOrDefault();
+                    break;
+
+                case GServ.Protocol.PlayerPropertyId.UdpPort:
+                    player.UdpPort = unchecked((uint)update.GIntValue.GetValueOrDefault());
                     break;
 
                 case GServ.Protocol.PlayerPropertyId.CurrentLevel:

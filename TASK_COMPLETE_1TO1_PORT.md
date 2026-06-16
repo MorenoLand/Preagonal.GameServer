@@ -576,6 +576,11 @@ behavior, and movement-loop invocation.
     and the runtime applier ignores it because C++ `setProps` reads and
     discards client-sent IP bytes. Generic forwarding remains blocked until it
     can serialize the current account IP state through `getProp`.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_UDPPORT` state
+    mutation boundary. The parser reads the incoming `GInt`, and the runtime
+    applier stores the current UDP port. The C++ loaded/id-gated
+    `PLO_OTHERPLPROPS` direct send and generic forwarding tail remain blocked
+    until production session routing can emit them without inventing recipients.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -604,6 +609,8 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed blocked/update boundary fixtures for
     `PLPROP_IPADDR`: exact `GInt5` consumption, no invented mutation value, and
     no runtime state change.
+  - 2026-06-16: Added source-confirmed `PLPROP_UDPPORT` fixtures for exact
+    `GInt` parsing and runtime state mutation.
 
 Completion criteria:
 

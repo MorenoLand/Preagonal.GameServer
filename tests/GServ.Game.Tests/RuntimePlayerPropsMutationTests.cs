@@ -104,7 +104,8 @@ public sealed class RuntimePlayerPropsMutationTests
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.AdditionalFlags, 77),
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.Alignment, 120),
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.CarrySprite, 12),
-            IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.HorseBushes, 6)
+            IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.HorseBushes, 6),
+            IncomingPlayerPropertyUpdate.GInt(PlayerPropertyId.UdpPort, 14900)
         };
 
         RuntimePlayerPropsApplier.ApplyConfirmed(player, updates);
@@ -122,6 +123,7 @@ public sealed class RuntimePlayerPropsMutationTests
         Assert.Equal(100, player.Alignment);
         Assert.Equal(12, player.CarrySprite);
         Assert.Equal(6, player.HorseBombCount);
+        Assert.Equal(14900u, player.UdpPort);
         Assert.False(player.MovementUpdated);
         Assert.False(player.TouchTestRequested);
     }
