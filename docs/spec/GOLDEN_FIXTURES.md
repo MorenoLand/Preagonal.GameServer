@@ -274,6 +274,59 @@ sign: x=14 y=15 text="Hello sign"
 The `GR-V1.00` fixture proves the C++ chest-section skip: bytes that would be a
 chest line for newer versions are parsed as the first sign line instead.
 
+## Legacy `.zelda` Level Parser Fixtures
+
+Source:
+
+```txt
+ai_resources/GServer-CPP-ORIGINAL/server/src/level/Level.cpp::loadZelda
+```
+
+Confirmed version headers:
+
+```txt
+Z3-V1.03 -> 12-bit tile codes, baddy verses are not consumed
+Z3-V1.04 -> 12-bit tile codes, baddy verses are consumed
+GR*      -> delegated to loadGraal
+```
+
+The fixture in
+`ZeldaLevelParserTests.ParseAcceptsConfirmedVersionsAndDecodesTwelveBitTileRle`
+encodes:
+
+```txt
+tile 2
+regular repeat count 4, tile 6
+double repeat count 2, tiles 8 and 9
+zero-fill remaining tiles
+```
+
+Expected first nine tiles:
+
+```txt
+[2, 6, 6, 6, 6, 8, 9, 8, 9]
+```
+
+The static-section fixture encodes:
+
+```txt
+links: "target level.zelda 1 2 3 4 5 6\nmissing.zelda ...\n#\n"
+baddy: raw [42, 43, 44] + "see\\hurt\n" + raw sentinel [255,255,255] + "\n"
+sign: GCHAR 14, GCHAR 15, "Hello zelda sign\n\n"
+```
+
+Expected preserved records:
+
+```txt
+link: target level.zelda, 1,2,3,4, 5,6
+baddy: x=42 y=43 type=44 verses=["see","hurt"]
+sign: x=14 y=15 text="Hello zelda sign"
+```
+
+The `Z3-V1.03` fixture proves that baddy verses are not consumed for that
+version: a baddy triple followed immediately by the sentinel yields a baddy with
+an empty verse list and then the sign section begins.
+
 ### GINT Property Example
 
 `PLPROP_RUPEESCOUNT` with value `1234`:

@@ -395,7 +395,13 @@ and all level formats.
     verse preservation, NPC `0xa7` newline conversion, direct chest item bytes,
     signs, and the `GR-V1.00` chest-section skip. Production filesystem/runtime
     wiring remains blocked.
-- [ ] Implement `.zelda` parser from C++ fixtures.
+- [x] Implement `.zelda` parser from C++ fixtures.
+  - 2026-06-16: Added `ZeldaLevelParser` and compatibility fixtures for
+    `Z3-V1.03`, `Z3-V1.04`, the old-client `GR*` fallback to
+    `GraalLevelParser`, 12-bit LSB-first tile RLE, regular and double-repeat
+    control codes, link filtering, v1.04 baddy verse consumption, v1.03
+    no-verse behavior, and signs. Production filesystem/runtime wiring remains
+    blocked.
 - [ ] Implement `.gmap` parser/map adjacency/group behavior.
 - [ ] Implement level cache ownership and invalidation only where confirmed.
 - [ ] Add golden fixtures for all level format signatures and representative

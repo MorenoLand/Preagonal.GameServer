@@ -90,9 +90,9 @@
   `sendLevel`. `Level::findLevel` cache lookup, `loadAbsolute`
   filesystem-index mutation, map ownership attachment, map reload remapping, and
   load failure behavior are documented in `docs/spec/LEVEL_RUNTIME_SPEC.md`, but
-  the production C# runtime implementation remains blocked. Pure `.graal`
-  parsing is implemented for confirmed static payloads, but production `.graal`
-  filesystem/runtime wiring remains blocked. `.zelda`/`.gmap` parsing,
+  the production C# runtime implementation remains blocked. Pure `.graal` and
+  `.zelda` parsing are implemented for confirmed static payloads, but production
+  legacy-format filesystem/runtime wiring remains blocked. `.gmap` parsing,
   write/delete filesystem mutation, and file/resource transfer remain blocked.
 - Pure `.nw` parsing is implemented for confirmed board tiles, links with an
   explicit target resolver, signs, chests with source-confirmed item names, NPC
