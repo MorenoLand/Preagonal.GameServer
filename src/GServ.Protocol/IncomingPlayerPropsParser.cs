@@ -73,6 +73,8 @@ public static class IncomingPlayerPropsParser
                 case PlayerPropertyId.CarrySprite:
                 case PlayerPropertyId.HorseBushes:
                 case PlayerPropertyId.PlayerStatusMessage:
+                case PlayerPropertyId.GmapLevelX:
+                case PlayerPropertyId.GmapLevelY:
                     updates.Add(IncomingPlayerPropertyUpdate.GChar(propertyId, reader.ReadGChar()));
                     break;
 

@@ -588,6 +588,10 @@ behavior, and movement-loop invocation.
     applier stores the player-list status-message index. The C++ loaded/id-gated
     `PLO_OTHERPLPROPS` broadcast remains blocked until production player-list
     recipient routing can match the original exactly.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_GMAPLEVELX/Y` parser
+    boundary. The parser consumes each incoming `GUChar`; runtime `leaveLevel`
+    and `setLevel(cmap->getLevelAt(...), -1)` remain blocked until the C# map
+    runtime can preserve the original `Map::getLevelAt` transition exactly.
   - 2026-06-16: Implemented the source-confirmed modern-client
     `PLPROP_HORSEGIF` state mutation boundary. The parser reads
     `GCHAR len + bytes`, and the runtime applier stores the horse image. The
@@ -773,6 +777,9 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed live `PLPROP_RATING` fixture proving
     discarded inbound bytes are not echoed; forwarding uses runtime ELO/
     deviation state and C++ bit packing.
+  - 2026-06-16: Added source-confirmed `PLPROP_GMAPLEVELX/Y` parser fixture
+    proving exact `GUChar` consumption while keeping live GMAP level switching
+    blocked on source-compatible map transition wiring.
 
 Completion criteria:
 

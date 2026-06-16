@@ -2297,6 +2297,21 @@ a valid id, C++ also emits a direct `PLO_OTHERPLPROPS` UDP-port packet to other
 clients, and the generic forwarding tail can apply. Those sends remain blocked
 until production session routing can choose recipients exactly.
 
+Source-confirmed `PLPROP_GMAPLEVELX/Y` parser boundary:
+
+```txt
+PLPROP_GMAPLEVELX + GCHAR(4)
+PLPROP_GMAPLEVELY + GCHAR(5)
+PLPROP_X + GCHAR(70)
+=> parser updates: GMAPLEVELX=4, GMAPLEVELY=5, X=70
+```
+
+The recovered C++ runtime then calls `Map::getLevelAt`, `leaveLevel`, and
+`setLevel` only when the current level belongs to a GMAP. C# currently covers
+the byte-consumption boundary; live level switching and forwarding remain
+blocked until the runtime map/level transition can preserve that exact C++
+behavior.
+
 Source-confirmed `PLPROP_PSTATUSMSG` update:
 
 ```txt
