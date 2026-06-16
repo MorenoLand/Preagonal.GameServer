@@ -703,6 +703,11 @@ Completion criteria:
     `PLI_UPDATEGANI` request boundaries.
 - [ ] Implement `PLO_NPCWEAPONADD`, script payload, delete, class edit/get
   flows where confirmed.
+  - 2026-06-16: Existing `PLO_NPCWEAPONADD` GS1 wrapper is covered. Added
+    source-confirmed `PLO_NPCWEAPONDEL` and `PLO_RAWDATA + PLO_NPCWEAPONSCRIPT`
+    builders for `UPDATESCRIPT`/`UPDATECLASS` bytecode responses. This remains
+    open for class edit/get mutation boundaries, bytecode header generation, and
+    production repository wiring.
 - [ ] Implement gani checksum/script request behavior.
 - [ ] Add fixtures for newline replacement, tokenization, and bytecode/script
   payloads.

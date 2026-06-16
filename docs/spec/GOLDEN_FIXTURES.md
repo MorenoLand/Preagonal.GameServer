@@ -1534,6 +1534,20 @@ killerAp=1, loserAp=99 => killerAp=0, apCounter=30
 killerAp=90, loserAp=19 => killerAp=90, apCounter=0
 ```
 
+## Weapon/Class Packet Fixtures
+
+`PLO_NPCWEAPONDEL "Tool" + "\n"`:
+
+```txt
+[66, 84, 111, 111, 108, 10]
+```
+
+`PLO_RAWDATA + GINT(3) + "\n" + PLO_NPCWEAPONSCRIPT + "ABC"`:
+
+```txt
+[132, 32, 32, 35, 10, 172, 65, 66, 67]
+```
+
 ## Scripting Bytecode Fixture Boundary
 
 No GS2 bytecode golden fixture is currently considered canonical.

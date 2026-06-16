@@ -68,6 +68,18 @@ public sealed class EntityRuntimePacketTests
     }
 
     [Fact]
+    public void NpcWeaponDeleteAndRawScriptBytesMatchConfirmedCppPackets()
+    {
+        Assert.Equal(
+            [66, 84, 111, 111, 108, 10],
+            EntityPackets.NpcWeaponDelete("Tool"));
+
+        Assert.Equal(
+            [132, 32, 32, 35, 10, 172, 65, 66, 67],
+            EntityPackets.NpcWeaponScriptRawData([65, 66, 67]));
+    }
+
+    [Fact]
     public void NpcDeleteAndNpcPropsUseGIntNpcIds()
     {
         Assert.Equal(new byte[] { 61, 32, 32, 39, 10 }, EntityPackets.NpcDelete(7));

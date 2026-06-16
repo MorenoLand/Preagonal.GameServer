@@ -61,6 +61,23 @@ public static class EntityPackets
         return WithNewline(writer);
     }
 
+    public static byte[] NpcWeaponDelete(string name)
+    {
+        var writer = NewPacket(ServerToPlayerPacketId.NpcWeaponDelete);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(name));
+        return WithNewline(writer);
+    }
+
+    public static byte[] NpcWeaponScriptRawData(ReadOnlySpan<byte> bytecode)
+    {
+        var writer = NewPacket(ServerToPlayerPacketId.RawData);
+        writer.WriteGInt((uint)bytecode.Length);
+        writer.WriteByte((byte)'\n');
+        writer.WriteGChar((byte)ServerToPlayerPacketId.NpcWeaponScript);
+        writer.WriteBytes(bytecode);
+        return writer.ToArray();
+    }
+
     public static byte[] NpcDelete(uint npcId)
     {
         var writer = NewPacket(ServerToPlayerPacketId.NpcDelete);

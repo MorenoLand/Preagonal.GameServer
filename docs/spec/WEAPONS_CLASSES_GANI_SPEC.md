@@ -265,6 +265,9 @@ bytecode
 Implemented:
 
 - selected default/non-default weapon packet wrapper fixtures;
+- `PLO_NPCWEAPONDEL + weaponName + "\n"`;
+- `PLO_RAWDATA + GINT(bytecode.length) + "\n" + PLO_NPCWEAPONSCRIPT +
+  bytecode` for confirmed script/class bytecode response shape;
 - pre-warp login boundary can queue supplied weapon/class packets in the C++
   order;
 - source and compiler blockers are explicit.
