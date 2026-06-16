@@ -62,6 +62,23 @@ public static class LevelInteraction
         return LevelChestOpenResult.NotOpened;
     }
 
+    public static LevelChestOpenResult TryOpenChestAndApplyReward(
+        NwLevelSnapshot level,
+        string levelName,
+        byte x,
+        byte y,
+        ISet<string> openedChests,
+        DurablePlayerInventoryState player)
+    {
+        var result = TryOpenChest(level, levelName, x, y, openedChests);
+        if (!result.Opened)
+            return result;
+
+        var payload = InventoryItemRules.BuildPickupPlayerProps(result.ItemType, player);
+        InventoryItemRules.ApplyPickupPlayerProps(payload, player);
+        return result;
+    }
+
     public static byte[] BuildTouchedSignPackets(
         NwLevelSnapshot level,
         bool serverside,

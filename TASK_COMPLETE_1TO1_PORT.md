@@ -556,7 +556,12 @@ Completion criteria:
   - 2026-06-16: Added the complete 0..24 item catalog to
     `docs/spec/INVENTORY_ITEMS_CHAT_GUILD_SPEC.md`, including property payloads,
     weapon side effects, empty-payload cases, clamps, and invalid-id behavior.
-- [ ] Implement chest reward mutation through confirmed player props.
+- [x] Implement chest reward mutation through confirmed player props.
+  - 2026-06-16: Added `InventoryItemRules.ApplyPickupPlayerProps` for the
+    property payloads produced by `LevelItem::getItemPlayerProp`, plus
+    `LevelInteraction.TryOpenChestAndApplyReward` to mirror the C++
+    `msgPLI_OPENCHEST -> getItemPlayerProp -> setProps` boundary for confirmed
+    durable item state.
 - [ ] Implement item pickup/removal mutation and packets.
 - [ ] Add tests for rupees, bombs, arrows, hearts, weapons, spinattack, and
   invalid item ids where confirmed.

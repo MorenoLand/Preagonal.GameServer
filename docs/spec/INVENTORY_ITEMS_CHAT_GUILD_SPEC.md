@@ -198,14 +198,39 @@ player-dropped items. Confirmed rules:
 - `src/GServ.Game/InventoryItemRules.cs`
   - `DurablePlayerInventoryState`
   - `InventoryItemRules.BuildPickupPlayerProps`
+  - `InventoryItemRules.ApplyPickupPlayerProps`
   - `InventoryItemRules.TryRemoveForPlayerDrop`
+- `src/GServ.Game/LevelInteraction.cs`
+  - `LevelInteraction.TryOpenChestAndApplyReward`
 - `tests/GServ.Game.Tests/InventoryItemRulesTests.cs`
   - golden byte payload tests for confirmed item rules.
 
+## Chest Reward Application
+
+The C++ chest path in `Player::msgPLI_OPENCHEST` calls:
+
+```cpp
+setProps(CString() << LevelItem::getItemPlayerProp(chestItem, this),
+         PLSETPROPS_FORWARD | PLSETPROPS_FORWARDSELF);
+```
+
+The C# port mirrors this boundary for the confirmed durable item state:
+
+1. `LevelInteraction.TryOpenChest` performs the source-confirmed exact chest
+   lookup, unopened key check, opened-key record, and `PLO_LEVELCHEST` ack.
+2. `InventoryItemRules.BuildPickupPlayerProps` builds the same property payload
+   that `LevelItem::getItemPlayerProp` would return.
+3. `InventoryItemRules.ApplyPickupPlayerProps` applies only those confirmed
+   reward payload properties to `DurablePlayerInventoryState`.
+
+This does not implement a new inventory system. It only applies the property
+payloads already confirmed from C++: rupees, bombs, arrows, current/max power,
+glove power, shield power, sword power, and spinattack status.
+
 ## Remaining Source-Confirmed Work
 
-- Full inventory runtime wiring through `setProps`, level item removal, session
-  forwarding, and persistence save timing.
+- Full live inventory runtime wiring through production `setProps`, level item
+  removal, session forwarding, and persistence save timing.
 - Real weapon packets for default and NPC weapons beyond already-existing packet
   builders.
 - Chat/PM word-filter, jail, external-player, NPC-server PM, server-list IRC,

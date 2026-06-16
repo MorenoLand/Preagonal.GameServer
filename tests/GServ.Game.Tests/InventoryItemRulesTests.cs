@@ -62,6 +62,65 @@ public sealed class InventoryItemRulesTests
     }
 
     [Fact]
+    public void ApplyPickupPlayerPropsMutatesConfirmedRewardPropsLikeSetProps()
+    {
+        var state = new DurablePlayerInventoryState
+        {
+            Rupees = 5,
+            Bombs = 10,
+            Arrows = 10,
+            Hitpoints = 2.5f,
+            MaxPower = 5,
+            GlovePower = 1,
+            ShieldPower = 1,
+            SwordPower = 1,
+            Status = 0
+        };
+
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.GoldRupee, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.Bombs, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.Darts, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.Heart, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.Glove2, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.MirrorShield, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.BattleAxe, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.FullHeart, state), state);
+        InventoryItemRules.ApplyPickupPlayerProps(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.SpinAttack, state), state);
+
+        Assert.Equal(105, state.Rupees);
+        Assert.Equal(15, state.Bombs);
+        Assert.Equal(15, state.Arrows);
+        Assert.Equal(6, state.MaxPower);
+        Assert.Equal(6, state.Hitpoints);
+        Assert.Equal(3, state.GlovePower);
+        Assert.Equal(2, state.ShieldPower);
+        Assert.Equal(2, state.SwordPower);
+        Assert.True((state.Status & PlayerStatus.HasSpin) != 0);
+    }
+
+    [Fact]
+    public void TryOpenChestAndApplyRewardRecordsChestAndMutatesState()
+    {
+        var level = new NwLevelSnapshot(
+            "GLEVNW01",
+            [],
+            [],
+            [],
+            [],
+            [new NwLevelChest(10, 11, LevelItemType.RedRupee, 3)]);
+        var opened = new HashSet<string>(StringComparer.Ordinal);
+        var state = new DurablePlayerInventoryState { Rupees = 5 };
+
+        var result = LevelInteraction.TryOpenChestAndApplyReward(level, "start.nw", 10, 11, opened, state);
+
+        Assert.True(result.Opened);
+        Assert.Equal(LevelItemType.RedRupee, result.ItemType);
+        Assert.Equal(35, state.Rupees);
+        Assert.Equal([36, 33, 42, 43, 10], result.Packet);
+        Assert.Contains("10:11:start.nw", opened);
+    }
+
+    [Fact]
     public void RemoveForPlayerDropMatchesCppResourceRequirements()
     {
         var state = new DurablePlayerInventoryState

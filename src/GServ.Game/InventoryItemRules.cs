@@ -147,6 +147,56 @@ public static class InventoryItemRules
         }
     }
 
+    public static void ApplyPickupPlayerProps(ReadOnlySpan<byte> payload, DurablePlayerInventoryState player)
+    {
+        var reader = new GraalBinaryReader(payload);
+        while (reader.BytesLeft > 0)
+        {
+            var propertyId = (PlayerPropertyId)reader.ReadGChar();
+            switch (propertyId)
+            {
+                case PlayerPropertyId.RupeesCount:
+                    player.Rupees = reader.ReadGInt();
+                    break;
+
+                case PlayerPropertyId.BombsCount:
+                    player.Bombs = reader.ReadGChar();
+                    break;
+
+                case PlayerPropertyId.ArrowsCount:
+                    player.Arrows = reader.ReadGChar();
+                    break;
+
+                case PlayerPropertyId.CurrentPower:
+                    player.Hitpoints = reader.ReadGChar() / 2.0f;
+                    break;
+
+                case PlayerPropertyId.GlovePower:
+                    player.GlovePower = reader.ReadGChar();
+                    break;
+
+                case PlayerPropertyId.ShieldPower:
+                    player.ShieldPower = reader.ReadGChar();
+                    break;
+
+                case PlayerPropertyId.SwordPower:
+                    player.SwordPower = reader.ReadGChar();
+                    break;
+
+                case PlayerPropertyId.MaxPower:
+                    player.MaxPower = reader.ReadGChar();
+                    break;
+
+                case PlayerPropertyId.Status:
+                    player.Status = (PlayerStatus)reader.ReadGChar();
+                    break;
+
+                default:
+                    throw new NotSupportedException($"Pickup reward prop {(byte)propertyId} is not produced by confirmed LevelItem::getItemPlayerProp.");
+            }
+        }
+    }
+
     private static byte NextGlovePower(LevelItemType itemType, byte current)
     {
         if (itemType == LevelItemType.Glove2)

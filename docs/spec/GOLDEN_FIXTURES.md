@@ -1601,6 +1601,22 @@ PLO_LEVELCHEST, hasChest=1, x=10, y=11, "\n"
 => [36, 33, 42, 43, 10]
 ```
 
+Chest reward application after that acknowledgement:
+
+```txt
+state.rupees=5
+chest item=redrupee
+LevelItem::getItemPlayerProp -> PLPROP_RUPEESCOUNT + GINT(35)
+```
+
+Expected state after applying the payload:
+
+```txt
+state.rupees=35
+opened chest key contains "10:11:start.nw"
+ack bytes [36, 33, 42, 43, 10]
+```
+
 Static sign encoding for an unknown ASCII character `@`:
 
 ```txt
