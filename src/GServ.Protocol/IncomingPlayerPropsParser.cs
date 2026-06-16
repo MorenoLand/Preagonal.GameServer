@@ -445,6 +445,11 @@ public static class IncomingPlayerPropsForwarding
                         WriteProperty(levelBuff, PlayerPropertyId.IpAddress, writer => writer.WriteGInt5(accountIp));
                     break;
 
+                case PlayerPropertyId.CommunityName:
+                    if (state?.CommunityName is { } communityName)
+                        WriteProperty(levelBuff, PlayerPropertyId.CommunityName, writer => WriteGCharString(writer, communityName));
+                    break;
+
                 case PlayerPropertyId.Colors:
                     WriteProperty(levelBuff, PlayerPropertyId.Colors, writer =>
                     {
@@ -532,4 +537,5 @@ public sealed record IncomingPlayerPropsForwardingState(
     byte CurrentPowerRaw,
     string? CurrentLevelName = null,
     string? AccountName = null,
-    uint? AccountIp = null);
+    uint? AccountIp = null,
+    string? CommunityName = null);

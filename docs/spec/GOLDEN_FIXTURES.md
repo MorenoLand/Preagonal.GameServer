@@ -1588,6 +1588,14 @@ PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_IPADDR + GInt5(1) + "\n"
 bytes: 40 32 39 62 32 32 32 32 33 10
 ```
 
+Live `PLPROP_COMMUNITYNAME` forwarding ignores the consumed client-sent value
+and uses current runtime community-name state. For community name `"Ruan"`:
+
+```txt
+PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_COMMUNITYNAME + GCHAR(4) + "Ruan" + "\n"
+bytes: 40 32 39 114 36 82 117 97 110 10
+```
+
 ## Combat Runtime Fixtures
 
 Inbound `PLI_HURTPLAYER` fixture:
@@ -2254,9 +2262,9 @@ PLPROP_COMMUNITYNAME + GCHAR(8) + "commname"
 ```
 
 The incoming community-name bytes are consumed, but C++ `setProps` discards
-them. Full generic forwarding for this property must use the current
-`getProp(PLPROP_COMMUNITYNAME)` state and remains blocked until that
-state-backed forwarding path exists.
+them. The live state-backed forwarding path uses the current runtime community
+name; isolated stateless forwarding remains blocked because it must not echo
+client-sent community-name bytes.
 
 Source-confirmed `PLPROP_IPADDR` consume-only update:
 

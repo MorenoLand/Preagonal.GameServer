@@ -569,8 +569,9 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Implemented the source-confirmed `PLPROP_COMMUNITYNAME`
     consume-only mutation boundary. The parser consumes `GCHAR len + bytes`,
     and the runtime applier ignores the incoming value because C++ `setProps`
-    only discards those bytes. Generic forwarding remains blocked until it can
-    serialize the current community-name state through `getProp`.
+    only discards those bytes. Live forwarding now serializes the current
+    runtime community-name state through `getProp`-equivalent bytes; stateless
+    forwarding remains blocked.
   - 2026-06-16: Implemented the source-confirmed `PLPROP_IPADDR`
     consume-only mutation boundary. The parser consumes the incoming `GInt5`,
     and the runtime applier ignores it because C++ `setProps` reads and
@@ -683,6 +684,11 @@ behavior, and movement-loop invocation.
     client-sent `GInt5` exactly like C++; the live forwarding path now emits
     `getProp(PLPROP_IPADDR)`-equivalent bytes using runtime state instead of
     echoing untrusted input.
+  - 2026-06-16: Implemented source-confirmed live `PLPROP_COMMUNITYNAME`
+    forwarding from runtime community-name state. The parser still consumes and
+    discards the client-sent string exactly like C++; the live forwarding path
+    now emits `getProp(PLPROP_COMMUNITYNAME)`-equivalent bytes using runtime
+    state instead of echoing untrusted input.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -756,6 +762,9 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed live `PLPROP_IPADDR` fixture proving
     discarded inbound bytes are not echoed; forwarding uses runtime account-IP
     state.
+  - 2026-06-16: Added source-confirmed live `PLPROP_COMMUNITYNAME` fixture
+    proving discarded inbound bytes are not echoed; forwarding uses runtime
+    community-name state.
 
 Completion criteria:
 

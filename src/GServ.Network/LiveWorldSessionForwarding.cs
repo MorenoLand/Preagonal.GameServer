@@ -65,7 +65,8 @@ public static class LiveWorldSessionForwarder
                 (byte)(sender.Hitpoints * 2.0f),
                 CurrentLevelName: BuildCurrentLevelPropValue(sender),
                 AccountName: sender.AccountName,
-                AccountIp: sender.AccountIp));
+                AccountIp: sender.AccountIp,
+                CommunityName: sender.CommunityName));
 
         return ForwardConfirmedLevelAreaPacket(
             server,
