@@ -1211,6 +1211,11 @@ Z3-V1.03 => Zelda
 UNKNOWN! => unknown
 ```
 
+The confirmed signature and representative level packet fixtures are also
+cataloged in `tests/GServ.Game.Tests/LevelGoldenFixtures.cs` and verified by
+`LevelGoldenFixtureCatalogTests`. The catalog intentionally stays in the test
+project because it is compatibility evidence, not runtime behavior.
+
 ## NW Level Parser
 
 `BOARD` tile decoding:

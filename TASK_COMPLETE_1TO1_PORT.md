@@ -415,8 +415,12 @@ and all level formats.
     sequencing, first-map-wins attachment, map reload remapping, and
     missing-map clearing. Production filesystem-backed loading/reload side
     effects remain blocked.
-- [ ] Add golden fixtures for all level format signatures and representative
+- [x] Add golden fixtures for all level format signatures and representative
   packets.
+  - 2026-06-16: Added `LevelGoldenFixtures` and
+    `LevelGoldenFixtureCatalogTests`, locking confirmed extension/header format
+    detection plus representative `.nw` board/layer/link/sign/chest packet
+    bytes against the source-confirmed parsers/builders.
 - [ ] Keep write/delete mutation blocked until source-confirmed.
 
 Completion criteria:
