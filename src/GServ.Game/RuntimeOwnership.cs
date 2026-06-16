@@ -421,23 +421,10 @@ public static class LevelEntryVisibilitySelector
 
 public static class LiveWorldForwardingSelector
 {
-    public static IReadOnlyList<ushort> SelectLevelAreaRecipients(
-        RuntimeServer server,
-        RuntimePlayer sender,
-        IReadOnlySet<ushort>? exclude = null)
-    {
-        if (sender.Level is not { } level)
-            return [];
-
-        return level.Map is null
-            ? SelectWithoutMap(server, level, exclude)
-            : SelectWithMap(server, sender, level.Map, exclude);
-    }
-
-    private static IReadOnlyList<ushort> SelectWithoutMap(
+    public static IReadOnlyList<ushort> SelectOneLevelRecipients(
         RuntimeServer server,
         RuntimeLevel level,
-        IReadOnlySet<ushort>? exclude)
+        IReadOnlySet<ushort>? exclude = null)
     {
         var recipients = new List<ushort>();
         foreach (var playerId in level.PlayerIds)
@@ -451,6 +438,19 @@ public static class LiveWorldForwardingSelector
         }
 
         return recipients;
+    }
+
+    public static IReadOnlyList<ushort> SelectLevelAreaRecipients(
+        RuntimeServer server,
+        RuntimePlayer sender,
+        IReadOnlySet<ushort>? exclude = null)
+    {
+        if (sender.Level is not { } level)
+            return [];
+
+        return level.Map is null
+            ? SelectOneLevelRecipients(server, level, exclude)
+            : SelectWithMap(server, sender, level.Map, exclude);
     }
 
     private static IReadOnlyList<ushort> SelectWithMap(

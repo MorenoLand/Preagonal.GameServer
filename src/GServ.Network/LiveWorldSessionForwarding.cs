@@ -13,6 +13,21 @@ public sealed record LiveWorldForwardingDelivery(ushort PlayerId, byte[] Packet)
 
 public static class LiveWorldSessionForwarder
 {
+    public static IReadOnlyList<LiveWorldForwardingDelivery> ForwardConfirmedOneLevelPacket(
+        RuntimeServer server,
+        RuntimeLevel level,
+        byte[] packet,
+        IReadOnlyDictionary<ushort, ILiveWorldSessionSink> sinks,
+        IReadOnlySet<ushort>? exclude = null)
+    {
+        var recipients = LiveWorldForwardingSelector.SelectOneLevelRecipients(
+            server,
+            level,
+            exclude);
+
+        return Deliver(packet, recipients, sinks);
+    }
+
     public static IReadOnlyList<LiveWorldForwardingDelivery> ForwardConfirmedLevelAreaPacket(
         RuntimeServer server,
         RuntimePlayer sender,

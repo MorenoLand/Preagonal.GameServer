@@ -205,6 +205,9 @@ Those packet families are not automatically equivalent to movement forwarding.
 
 - `ForwardConfirmedLevelAreaPacket(...)` forwards an already-built packet to the
   source-confirmed level-area recipients.
+- `ForwardConfirmedOneLevelPacket(...)` forwards an already-built packet to the
+  source-confirmed `sendPacketToOneLevel` recipients: level membership order,
+  explicit exclude set only, client sessions only, no map/group/distance checks.
 - `ApplyAndForwardConfirmedPlayerProps(...)` applies the confirmed incoming
   movement/player-prop subset, builds the confirmed `PLO_OTHERPLPROPS` movement
   packet, and forwards it to level-area recipients.
@@ -242,6 +245,8 @@ Tests cover:
 - level list append/remove/leader behavior
 - no-map level-area forwarding in level membership order
 - map/group/distance filtering
+- one-level forwarding in level membership order, with explicit exclusions,
+  non-client filtering, and no map-area filtering
 - confirmed movement prop mutation and forwarded `PLO_OTHERPLPROPS` bytes
 
 ## Remaining Blockers
@@ -249,7 +254,8 @@ Tests cover:
 - Real socket/file-queue integration for live sessions.
 - C++ `std::unordered_map` iteration order golden tests for map-area forwarding.
 - Optional `sendIf` predicates beyond the confirmed client check.
-- `sendPacketToAll`, `sendPacketToOneLevel`, and type-specific forwarding.
+- `sendPacketToAll`, `sendPacketToLevelOnlyGmapArea`, predicate-split
+  projectile forwarding, and type-specific forwarding.
 - Full gameplay packet dispatch.
 - Server-list delete side effects during deferred cleanup.
 - V8 NPC login/logout script hooks.

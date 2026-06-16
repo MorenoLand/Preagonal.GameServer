@@ -454,7 +454,13 @@ confirmed packet families.
     `sendPacketToLevelArea` level/player overloads,
     `sendPacketToLevelOnlyGmapArea`, `sendPacketToOneLevel`, hidden-client
     boundaries, confirmed call sites, and unordered-map iteration risk.
-- [ ] Implement live session sink integration for confirmed packet families.
+- [x] Implement live session sink integration for confirmed packet families.
+  - 2026-06-16: Extended the existing live session sink boundary with
+    `ForwardConfirmedOneLevelPacket`, matching C++
+    `Server::sendPacketToOneLevel`: level membership order, explicit exclude
+    set only, client sessions only, and no map/group/distance filtering. The
+    broader predicate-split projectile and type-specific forwarding families
+    remain blocked for later source-confirmed slices.
 - [ ] Add tests for same-level, nearby map, hidden client, non-client, and
   deletion cleanup behavior.
 - [ ] Add compatibility note for any unordered-map iteration that cannot be

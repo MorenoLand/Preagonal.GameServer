@@ -102,6 +102,42 @@ public sealed class LiveWorldSessionForwardingTests
         Assert.Empty(sinks[9].Packets);
     }
 
+    [Fact]
+    public void ForwardConfirmedOneLevelPacketUsesLevelMembershipOrderAndIgnoresMapArea()
+    {
+        var server = new RuntimeServer();
+        var map = new RuntimeMap("world.gmap", RuntimeMapType.Gmap, IsGroupMap: true);
+        var level = new RuntimeLevel("inside.nw") { Map = map };
+        var sender = Add(server, 7, RuntimePlayerKind.Client, level);
+        sender.Group = "red";
+        sender.MapX = 4;
+        sender.MapY = 4;
+
+        var sameLevelFarAway = Add(server, 8, RuntimePlayerKind.Client, level);
+        sameLevelFarAway.Group = "blue";
+        sameLevelFarAway.MapX = 20;
+        sameLevelFarAway.MapY = 20;
+
+        Add(server, 9, RuntimePlayerKind.RemoteControl, level);
+        Add(server, 10, RuntimePlayerKind.Client, level);
+        Add(server, 11, RuntimePlayerKind.Client, new RuntimeLevel("other.nw") { Map = map });
+        var sinks = CreateSinks(7, 8, 9, 10, 11);
+
+        var deliveries = LiveWorldSessionForwarder.ForwardConfirmedOneLevelPacket(
+            server,
+            level,
+            [80, 81],
+            AsSinks(sinks),
+            new HashSet<ushort> { sender.Id, 10 });
+
+        var delivery = Assert.Single(deliveries);
+        Assert.Equal(8, delivery.PlayerId);
+        Assert.Equal([80, 81], sinks[8].Packets.Single());
+        Assert.Empty(sinks[9].Packets);
+        Assert.Empty(sinks[10].Packets);
+        Assert.Empty(sinks[11].Packets);
+    }
+
     private static RuntimePlayer Add(RuntimeServer server, ushort id, RuntimePlayerKind kind, RuntimeLevel level)
     {
         var player = new RuntimePlayer(id, $"pc:{id}", kind);
