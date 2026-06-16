@@ -1548,6 +1548,26 @@ killerAp=90, loserAp=19 => killerAp=90, apCounter=0
 [132, 32, 32, 35, 10, 172, 65, 66, 67]
 ```
 
+`PLI_UPDATEGANI + GINT5(0x01020304) + "walk"` parses as:
+
+```txt
+checksum = 0x01020304
+gani = "walk"
+ganiFile = "walk.gani"
+```
+
+`PLO_RAWDATA + GINT(8) + "\n" + PLO_GANISCRIPT + GCHAR(4) + "walk" + "ABC"`:
+
+```txt
+[132, 32, 32, 40, 10, 166, 36, 119, 97, 108, 107, 65, 66, 67]
+```
+
+`PLO_LOADGANI + GCHAR(4) + "walk" + "\"SETBACKTO idle\"" + "\n"`:
+
+```txt
+[227, 36, 119, 97, 108, 107, 34, 83, 69, 84, 66, 65, 67, 75, 84, 79, 32, 105, 100, 108, 101, 34, 10]
+```
+
 ## Scripting Bytecode Fixture Boundary
 
 No GS2 bytecode golden fixture is currently considered canonical.

@@ -709,7 +709,13 @@ Completion criteria:
     builders for `UPDATESCRIPT`/`UPDATECLASS` bytecode responses. This remains
     open for class edit/get mutation boundaries, bytecode header generation, and
     production repository wiring.
-- [ ] Implement gani checksum/script request behavior.
+- [x] Implement gani checksum/script request behavior.
+  - 2026-06-16: Added source-confirmed `PLI_UPDATEGANI` parser,
+    CRC32 mismatch decision, `PLO_RAWDATA + PLO_GANISCRIPT` bytecode wrapper,
+    and `PLO_LOADGANI`/formerly documented `PLO_UNKNOWN195` setback packet
+    builder. Production animation-manager repository wiring and real compiled
+    bytecode generation remain blocked until scripting/resource prerequisites
+    are ready.
 - [ ] Add fixtures for newline replacement, tokenization, and bytecode/script
   payloads.
 

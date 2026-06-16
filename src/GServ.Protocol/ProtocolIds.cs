@@ -69,6 +69,7 @@ public enum PlayerToServerPacketId : byte
     SendText = 154,
     RcLargeFileStart = 155,
     RcLargeFileEnd = 156,
+    UpdateGani = 157,
     RcFolderDelete = 160,
     RcUnknown162 = 162,
     SetEncryptionKey = 252,
@@ -155,6 +156,7 @@ public enum ServerToPlayerPacketId : byte
     UpdatePackageDone = 106,
     BoardLayer = 107,
     NpcBytecode = 131,
+    GaniScript = 134,
     NpcWeaponScript = 140,
     NpcDelete2 = 150,
     Say2 = 153,
@@ -177,6 +179,7 @@ public enum ServerToPlayerPacketId : byte
     ServerListConnected = 190,
     NcWeaponGet = 192,
     ClearWeapons = 194,
+    LoadGani = 195,
     SetEncryptionKey = 252,
     Bundle = 253
 }

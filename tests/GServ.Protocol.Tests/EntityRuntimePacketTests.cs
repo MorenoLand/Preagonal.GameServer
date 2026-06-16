@@ -19,7 +19,15 @@ public sealed class EntityRuntimePacketTests
         Assert.Equal(33, (int)ServerToPlayerPacketId.NpcWeaponAdd);
         Assert.Equal(43, (int)ServerToPlayerPacketId.DefaultWeapon);
         Assert.Equal(131, (int)ServerToPlayerPacketId.NpcBytecode);
+        Assert.Equal(134, (int)ServerToPlayerPacketId.GaniScript);
+        Assert.Equal(195, (int)ServerToPlayerPacketId.LoadGani);
         Assert.Equal(150, (int)ServerToPlayerPacketId.NpcDelete2);
+    }
+
+    [Fact]
+    public void UpdateGaniPacketIdMatchesGs2libIEnums()
+    {
+        Assert.Equal(157, (int)PlayerToServerPacketId.UpdateGani);
     }
 
     [Fact]
@@ -77,6 +85,50 @@ public sealed class EntityRuntimePacketTests
         Assert.Equal(
             [132, 32, 32, 35, 10, 172, 65, 66, 67],
             EntityPackets.NpcWeaponScriptRawData([65, 66, 67]));
+    }
+
+    [Fact]
+    public void UpdateGaniParserReadsChecksumAndRemainingGaniName()
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)PlayerToServerPacketId.UpdateGani);
+        writer.WriteGInt5(0x01020304);
+        writer.WriteBytes(Encoding.ASCII.GetBytes("walk"));
+
+        var request = EntityPackets.ParseUpdateGani(writer.ToArray());
+
+        Assert.Equal(0x01020304u, request.Checksum);
+        Assert.Equal("walk", request.Gani);
+        Assert.Equal("walk.gani", request.GaniFile);
+    }
+
+    [Fact]
+    public void GaniScriptRawDataMatchesGameAniBytecodePacketShape()
+    {
+        Assert.Equal(
+            [132, 32, 32, 40, 10, 166, 36, 119, 97, 108, 107, 65, 66, 67],
+            EntityPackets.GaniScriptRawData("walk.gani", [65, 66, 67]));
+
+        Assert.Equal(
+            [132, 32, 32, 40, 10, 166, 36, 119, 97, 108, 107, 65, 66, 67],
+            EntityPackets.GaniScriptRawData("walk", [65, 66, 67]));
+    }
+
+    [Fact]
+    public void LoadGaniSetBackToMatchesPlayerScriptsPacketShape()
+    {
+        Assert.Equal(
+            [227, 36, 119, 97, 108, 107, 34, 83, 69, 84, 66, 65, 67, 75, 84, 79, 32, 105, 100, 108, 101, 34, 10],
+            EntityPackets.LoadGaniSetBackTo("walk", "idle"));
+    }
+
+    [Fact]
+    public void GaniScriptIsSentOnlyWhenClientChecksumDiffers()
+    {
+        var bytecode = Encoding.ASCII.GetBytes("ABC");
+
+        Assert.False(EntityPackets.ShouldSendGaniScript(bytecode, Crc32.Compute(bytecode)));
+        Assert.True(EntityPackets.ShouldSendGaniScript(bytecode, 0));
     }
 
     [Fact]

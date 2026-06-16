@@ -260,6 +260,23 @@ bytecode
 - always sends `PLO_UNKNOWN195 + GCHAR(gani.length) + gani +
   "\"SETBACKTO " + setback + "\""`.
 
+`GameAni::getBytecodePacket()`:
+
+- strips a trailing `.gani` suffix from the animation filename;
+- returns an empty packet if the stripped gani name is empty or bytecode is
+  empty;
+- otherwise sends:
+
+```txt
+PLO_RAWDATA
+GINT(bytecode.length + gani.length + 1)
+"\n"
+PLO_GANISCRIPT
+GCHAR(gani.length)
+gani
+bytecode
+```
+
 ## Current C# Status
 
 Implemented:
@@ -268,6 +285,12 @@ Implemented:
 - `PLO_NPCWEAPONDEL + weaponName + "\n"`;
 - `PLO_RAWDATA + GINT(bytecode.length) + "\n" + PLO_NPCWEAPONSCRIPT +
   bytecode` for confirmed script/class bytecode response shape;
+- `PLI_UPDATEGANI` parser for `GUInt5 checksum + trailing gani name`;
+- GANI CRC mismatch decision using the source-confirmed CRC32 primitive;
+- `PLO_RAWDATA + PLO_GANISCRIPT` bytecode response wrapper from
+  `GameAni::getBytecodePacket()`;
+- `PLO_LOADGANI + GCHAR(gani.length) + gani + "\"SETBACKTO " + setback +
+  "\""` response packet;
 - pre-warp login boundary can queue supplied weapon/class packets in the C++
   order;
 - source and compiler blockers are explicit.
@@ -279,4 +302,5 @@ Blocked:
 - exact GS2 bytecode compiler commit and bytecode golden outputs;
 - live weapon/class mutation commands;
 - dynamic `time(0)` packet fixture strategy;
-- `PLI_UPDATEGANI` animation manager, CRC, and `PLO_UNKNOWN195` bytes.
+- production `PLI_UPDATEGANI` animation manager/repository wiring and real
+  compiled bytecode generation.

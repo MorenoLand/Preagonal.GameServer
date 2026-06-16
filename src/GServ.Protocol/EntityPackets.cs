@@ -78,6 +78,47 @@ public static class EntityPackets
         return writer.ToArray();
     }
 
+    public static UpdateGaniRequest ParseUpdateGani(ReadOnlySpan<byte> packet)
+    {
+        var reader = new GraalBinaryReader(packet);
+        var opcode = (PlayerToServerPacketId)reader.ReadGChar();
+        if (opcode != PlayerToServerPacketId.UpdateGani)
+            throw new InvalidDataException($"Expected {nameof(PlayerToServerPacketId.UpdateGani)} packet.");
+
+        var checksum = reader.ReadGInt5();
+        var gani = Encoding.ASCII.GetString(reader.ReadBytes(reader.BytesLeft));
+        return new UpdateGaniRequest(checksum, gani);
+    }
+
+    public static bool ShouldSendGaniScript(ReadOnlySpan<byte> bytecode, uint clientChecksum) =>
+        Crc32.Compute(bytecode) != clientChecksum;
+
+    public static byte[] GaniScriptRawData(string ganiName, ReadOnlySpan<byte> bytecode)
+    {
+        var gani = StripGaniExtension(ganiName);
+        if (gani.Length == 0 || bytecode.Length == 0)
+            return [];
+
+        var writer = NewPacket(ServerToPlayerPacketId.RawData);
+        writer.WriteGInt((uint)(bytecode.Length + Encoding.ASCII.GetByteCount(gani) + 1));
+        writer.WriteByte((byte)'\n');
+        writer.WriteGChar((byte)ServerToPlayerPacketId.GaniScript);
+        WriteGCharString(writer, gani);
+        writer.WriteBytes(bytecode);
+        return writer.ToArray();
+    }
+
+    public static byte[] LoadGaniSetBackTo(string gani, string setBackTo)
+    {
+        var writer = NewPacket(ServerToPlayerPacketId.LoadGani);
+        WriteGCharString(writer, gani);
+        writer.WriteByte((byte)'"');
+        writer.WriteBytes(Encoding.ASCII.GetBytes("SETBACKTO "));
+        writer.WriteBytes(Encoding.ASCII.GetBytes(setBackTo));
+        writer.WriteByte((byte)'"');
+        return WithNewline(writer);
+    }
+
     public static byte[] NpcDelete(uint npcId)
     {
         var writer = NewPacket(ServerToPlayerPacketId.NpcDelete);
@@ -115,9 +156,19 @@ public static class EntityPackets
         writer.WriteBytes(bytes);
     }
 
+    private static string StripGaniExtension(string ganiName) =>
+        ganiName.EndsWith(".gani", StringComparison.Ordinal)
+            ? ganiName[..^5]
+            : ganiName;
+
     private static byte[] WithNewline(GraalBinaryWriter writer)
     {
         writer.WriteByte((byte)'\n');
         return writer.ToArray();
     }
+}
+
+public sealed record UpdateGaniRequest(uint Checksum, string Gani)
+{
+    public string GaniFile => Gani + ".gani";
 }
