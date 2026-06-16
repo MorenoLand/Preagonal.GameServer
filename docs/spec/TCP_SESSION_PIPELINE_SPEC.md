@@ -111,11 +111,14 @@ yet.
   packet were applied.
 - Unsupported post-login packet ids still stop before gameplay/runtime
   dispatch.
-- Inbound gen4 and gen5 bzip2 frame payloads are explicitly blocked.
+- Inbound gen4 bzip2 frame payloads are explicitly blocked. Inbound gen5
+  bzip2 frame payloads are implemented at the protocol decoder boundary from
+  the source-confirmed fixture.
 - Inbound `PLI_BUNDLE` expansion is not wired into the shell because the
   authoritative C++ `Player.cpp` snapshot does not bind `TPLFunc[PLI_BUNDLE]`.
-- Outbound bzip2 socket framing for gen4 and gen5 payloads over `0x2000` bytes
-  is still blocked.
+- Outbound gen4 bzip2 socket framing is still blocked. Outbound gen5 bzip2
+  socket framing is implemented at the protocol queue boundary but is not yet
+  certified through full production level/file transfer flows.
 - Websocket wrapping is not implemented.
 - Touch/link traversal, reconnect cleanup, and live multi-session forwarding
   are not implemented.

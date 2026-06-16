@@ -108,13 +108,14 @@ paths:
 - socket-level gen5 zlib framing for payloads `56..0x2000`
 - gen5 uncompressed compression type byte `0x02`
 - gen5 zlib compression type byte `0x04`
+- gen5 bzip2 compression type byte `0x06`
 - gen5 big-endian socket length prefix equal to `encryptedLength + 1`
 - gen5 iterator-XOR encryption using the recovered `CEncryption` behavior
-- explicit unsupported exceptions for gen4 and gen5 bzip2 payloads until bzip2
-  implementation is added from fixtures
+- source-confirmed gen5 bzip2 payload framing for payloads over `0x2000`
 
-Production bzip2 flush behavior remains blocked. Zlib socket bytes are now
-covered by the isolated `tools/gs2lib-fixtures` harness and C# golden tests.
+Production gen4 bzip2 flush behavior remains blocked. Gen5 uncompressed, zlib,
+and bzip2 socket bytes are now covered by the isolated
+`tools/gs2lib-fixtures` harness and C# golden tests.
 
 ## Current Pass Status
 
@@ -129,9 +130,12 @@ require unproven compression output:
 - gen5 payloads from 56 through `0x2000` bytes use zlib, compression type
   `0x04`, gen5 iterator-XOR encryption with zlib limit `0x04`, and the same
   length framing.
+- gen5 payloads over `0x2000` bytes use bzip2, compression type `0x06`, bzip2
+  block size `1`, gen5 iterator-XOR encryption with bzip2 limit `0x04`, and
+  the same length framing.
 - partial socket writes leave remaining framed bytes buffered for the next
   flush, matching the `oBuffer` / `sendData` retry model in `CFileQueue`.
-- unsupported compressed branches throw before consuming the pending diagnostic
+- unsupported gen4 bzip2 still throws before consuming the pending diagnostic
   queue bytes, so future compression implementation can resume from the same
   payload.
 
@@ -141,15 +145,11 @@ post-dynamic runtime packets in the same order C++ calls `Player::sendPacket`.
 
 The dev-only TCP shell now uses this boundary for its confirmed small/medium
 login and pre-runtime level response. Client3/RC2 sessions with a login key are
-sent through gen5 socket framing; web sessions use gen1 passthrough. The shell
-keeps the diagnostic `.nw` path on the source-confirmed current-modtime branch
-so it does not emit board payloads that would require the blocked gen5 bzip2
-path.
+sent through gen5 socket framing; web sessions use gen1 passthrough.
 
 Still blocked:
 
 - gen4 bzip2 + encryption socket-level flush bytes
-- gen5 bzip2 socket-level flush bytes for payloads over `0x2000` bytes
 - websocket wrapping
 - production file transfer through `PLO_FILE`
 - level resource transfer beyond pre-serialized board/layer and runtime payloads

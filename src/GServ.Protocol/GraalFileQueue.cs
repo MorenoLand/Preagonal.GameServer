@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using ICSharpCode.SharpZipLib.BZip2;
 
 namespace GServ.Protocol;
 
@@ -175,9 +176,8 @@ public sealed class GraalFileQueue
             case EncryptionGeneration.Gen5:
                 var payload = _outputBuffer.ToArray();
                 if (payload.Length > 0x2000)
-                    throw new NotSupportedException("Gen5 bzip2 socket flush is blocked until bzip2 bytes are implemented from gs2lib fixtures.");
-
-                if (payload.Length > 55)
+                    AddGen5Bzip2SocketPayload(payload);
+                else if (payload.Length > 55)
                     AddGen5ZlibSocketPayload(payload);
                 else
                     AddGen5UncompressedSocketPayload(payload);
@@ -238,6 +238,20 @@ public sealed class GraalFileQueue
         _socketOutputBuffer.AddRange(encrypted);
     }
 
+    private void AddGen5Bzip2SocketPayload(byte[] payload)
+    {
+        var compressed = Bzip2Compress(payload);
+        if (compressed.Length > 0xFFFC)
+            return;
+
+        _outboundCodec.LimitFromCompressionType(CompressionType.Bz2);
+        var encrypted = _outboundCodec.Encrypt(compressed);
+        var framedLength = encrypted.Length + 1;
+        AddBigEndianLength(framedLength);
+        _socketOutputBuffer.Add((byte)CompressionType.Bz2);
+        _socketOutputBuffer.AddRange(encrypted);
+    }
+
     private void AddBigEndianLength(int length)
     {
         _socketOutputBuffer.Add((byte)(length >> 8));
@@ -249,6 +263,14 @@ public sealed class GraalFileQueue
         using var output = new MemoryStream();
         using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, leaveOpen: true))
             zlib.Write(payload);
+        return output.ToArray();
+    }
+
+    private static byte[] Bzip2Compress(byte[] payload)
+    {
+        using var output = new MemoryStream();
+        using (var bzip2 = new BZip2OutputStream(output, blockSize: 1) { IsStreamOwner = false })
+            bzip2.Write(payload, 0, payload.Length);
         return output.ToArray();
     }
 

@@ -126,8 +126,9 @@ output:
 34 CD C7 A0
 ```
 
-The bzip2 fixture is documented but not implemented in C# yet because the port
-does not currently have a source-confirmed bzip2 codec implementation strategy.
+The bzip2 fixture is implemented in C# with SharpZipLib using block size `1`,
+matching the recovered `CString::bzcompress` call to
+`BZ2_bzBuffToBuffCompress(..., 1, 0, 30)`.
 
 ## Inbound Decode Fixtures
 
@@ -157,6 +158,17 @@ framePayload: 04 60 84 9A 9A 5C D3 31 82 58 46 1C 13 5A
 decoded: ASCII("a" repeated 55 + "\n")
 ```
 
+```txt
+name: inbound-gen5-bz2-8193a-newline
+gen: ENCRYPT_GEN_5
+framePayload:
+06 5A 42 B9 E7 49 99 18 A5 0B 43 D4 4B 64
+99 98 E2 12 E1 00 80 10 00 04 20 00 00 08 20 00
+30 CD 34 0A A3 1F 0A 0B 00 61 77 24 53 85 09 07
+34 CD C7 A0
+decoded: ASCII("a" repeated 8192 + "\n")
+```
+
 ## C# Match Status
 
 Implemented and covered by tests:
@@ -165,14 +177,15 @@ Implemented and covered by tests:
 - gen3 zlib socket flush
 - gen5 uncompressed socket flush for payloads `<= 55`
 - gen5 zlib socket flush for payloads `56..0x2000`
+- gen5 bzip2 socket flush for payloads `> 0x2000`
 - inbound gen2 zlib frame decode
 - inbound gen5 uncompressed frame decode
 - inbound gen5 zlib frame decode
+- inbound gen5 bzip2 frame decode
 
 Still blocked:
 
 - gen4 bzip2 + encryption
-- gen5 bzip2 payloads `> 0x2000`
 - websocket wrapping
 - full dev TCP shell integration for login/level payloads that cross into
   bzip2-sized sends; the current dev shell uses confirmed gen5 zlib framing

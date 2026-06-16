@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using ICSharpCode.SharpZipLib.BZip2;
 
 namespace GServ.Protocol;
 
@@ -65,7 +66,7 @@ public sealed class InboundPacketDecoder
         {
             CompressionType.Uncompressed => decrypted,
             CompressionType.Zlib => ZlibDecompress(decrypted),
-            CompressionType.Bz2 => throw new NotSupportedException("Inbound gen5 bzip2 decrypt/decompress is not implemented yet."),
+            CompressionType.Bz2 => Bzip2Decompress(decrypted),
             _ => throw new NotSupportedException($"Inbound gen5 compression type 0x{framePayload[0]:X2} is not source-confirmed.")
         };
     }
@@ -76,6 +77,15 @@ public sealed class InboundPacketDecoder
         using var zlib = new ZLibStream(input, CompressionMode.Decompress);
         using var output = new MemoryStream();
         zlib.CopyTo(output);
+        return output.ToArray();
+    }
+
+    private static byte[] Bzip2Decompress(ReadOnlySpan<byte> payload)
+    {
+        using var input = new MemoryStream(payload.ToArray());
+        using var bzip2 = new BZip2InputStream(input);
+        using var output = new MemoryStream();
+        bzip2.CopyTo(output);
         return output.ToArray();
     }
 

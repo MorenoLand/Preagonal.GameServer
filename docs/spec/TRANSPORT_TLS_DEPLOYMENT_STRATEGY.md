@@ -105,4 +105,4 @@ Implement TLS/WolfSSL-equivalent behavior or document deployment compatibility s
 ```
 
 It does not implement WebSocket frame wrap/unwrap behavior and does not unblock
-gen4/gen5 bzip2 transport branches.
+gen4 bzip2 transport branches.

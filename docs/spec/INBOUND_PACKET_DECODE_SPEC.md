@@ -91,11 +91,13 @@ Implemented:
 - gen3 zlib frame decode plus per-packet gen3 decrypt after newline splitting
 - gen5 uncompressed frame decode
 - gen5 zlib frame decode
+- gen5 bzip2 frame decode from the source-confirmed
+  `inbound-gen5-bz2-8193a-newline` fixture
 - gen5 invalid compression type behavior: `CEncryption::limitFromType` leaves
   the prior encryption limit unchanged, C++ logs
   `Client gave incorrect packet compression type`, and continues without
   decompression; C# returns the decrypted payload plus a warning
-- explicit blocked exceptions for gen4 and gen5 bzip2
+- explicit blocked exception for gen4 bzip2
 - newline splitting into inner packets without the trailing newline
 - `ClientPacketStreamFramer` statefully preserves the confirmed `PLI_RAWDATA`
   next-packet length transition across decoded payload calls
@@ -109,7 +111,6 @@ runtime dispatch.
 ## Blockers
 
 - gen4 bzip2 inbound decode
-- gen5 bzip2 inbound decode
 - inbound `PLI_BUNDLE` expansion in the dev shell remains blocked because this
   C++ snapshot does not assign a handler for `PLI_BUNDLE`
 - production socket buffering, multi-session forwarding, and gameplay handlers

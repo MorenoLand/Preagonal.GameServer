@@ -61,10 +61,11 @@
   `std::unordered_map` flag order guarantees, live socket-host integration, and
   the exact C `rand()`/`time(0)` guest candidate stream remain blocked.
 - `CFileQueue` queue selection, gen1/gen6 socket passthrough, gen2/gen3 zlib
-  framing, gen5 uncompressed socket framing for payloads up to 55 bytes, and
-  gen5 zlib framing for payloads through `0x2000` bytes are implemented.
-  Gen4 bzip2/encryption framing, gen5 bzip2 payload framing, and websocket
-  wrapping remain blocked.
+  framing, gen5 uncompressed socket framing for payloads up to 55 bytes, gen5
+  zlib framing for payloads through `0x2000` bytes, gen5 bzip2 outbound
+  framing for payloads over `0x2000` bytes, and inbound gen5 bzip2 decode are
+  implemented. Gen4 bzip2/encryption framing and websocket wrapping remain
+  blocked.
 - A dev-only TCP/session shell exists for length-prefixed TCP input and a
   filesystem-backed `.nw` `sendLevel` boundary. It is not production-compatible:
   it uses explicit fake auth, stops on unsupported post-login frames before

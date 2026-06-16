@@ -1220,8 +1220,17 @@ Completion criteria:
 - C++ websocket/WolfSSL integration files
 
 - [ ] Implement gen4 bzip2/encryption framing if fixture-confirmed.
-- [ ] Implement gen5 bzip2 payload framing if fixture-confirmed.
-- [ ] Implement inbound bzip2 branches if fixture-confirmed.
+- [x] Implement gen5 bzip2 payload framing if fixture-confirmed.
+  - 2026-06-16: Implemented source-confirmed outbound gen5 bzip2 socket
+    framing for payloads over `0x2000` bytes using the recovered
+    `CFileQueue` threshold, compression type `0x06`, bzip2 block size `1`,
+    gen5 iterator-XOR encryption, and the exact
+    `gen5-bz2-8193a-newline` fixture captured from `gs2lib`.
+- [x] Implement inbound bzip2 branches if fixture-confirmed.
+  - 2026-06-16: Implemented the fixture-confirmed inbound gen5 bzip2 decode
+    path using the same source-confirmed `gen5-bz2-8193a-newline` payload
+    captured from `gs2lib`. Gen4 inbound bzip2 remains blocked because this
+    repository has no dedicated gen4 fixture yet.
 - [ ] Implement websocket frame wrap/unwrap behavior.
 - [x] Implement TLS/WolfSSL-equivalent behavior or document deployment
   compatibility strategy.

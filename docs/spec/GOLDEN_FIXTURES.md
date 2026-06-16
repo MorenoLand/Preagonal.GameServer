@@ -674,8 +674,7 @@ first send max 3 => [0, 5, 2]
 next send => [121, 122, 178, 220]
 ```
 
-Gen5 zlib payloads are now covered below. Gen5 bzip2 payloads remain blocked in
-C# until a bzip2 implementation strategy is added from the captured fixture.
+Gen5 zlib and gen5 bzip2 outbound payloads are now covered below.
 
 ## CFileQueue zlib Socket Flush
 
@@ -708,7 +707,7 @@ Gen2 and gen3 both use the same zlib-only `CFileQueue::sendCompress` branch.
 [0, 14, 4, 96, 132, 154, 154, 92, 211, 49, 130, 88, 70, 28, 19, 90]
 ```
 
-Gen5 bzip2 threshold fixture, documented but not implemented in C#:
+Gen5 bzip2 threshold fixture, implemented in C#:
 
 ```txt
 input: ASCII("a" repeated 8192 + "\n"), total length 8193
