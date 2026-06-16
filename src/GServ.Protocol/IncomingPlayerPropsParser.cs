@@ -431,6 +431,10 @@ public static class IncomingPlayerPropsForwarding
                     WriteProperty(levelBuff, PlayerPropertyId.Alignment, writer => writer.WriteGChar(Math.Min(update.GCharValue.GetValueOrDefault(), (byte)100)));
                     break;
 
+                case PlayerPropertyId.UdpPort:
+                    WriteProperty(levelBuff, PlayerPropertyId.UdpPort, writer => writer.WriteGInt(unchecked((uint)update.GIntValue.GetValueOrDefault())));
+                    break;
+
                 case PlayerPropertyId.Colors:
                     WriteProperty(levelBuff, PlayerPropertyId.Colors, writer =>
                     {

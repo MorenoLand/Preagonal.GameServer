@@ -1564,6 +1564,14 @@ PLO_OTHERPLPROPS + GSHORT(7)
 bytes: 40 32 39 51 44 64 132 10
 ```
 
+Forwarded `PLPROP_UDPPORT` generic tail uses the C++ `GInt` payload for the
+stored port. For port `14900`:
+
+```txt
+PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_UDPPORT + GINT(14900) + "\n"
+bytes: 40 32 39 63 32 148 84 10
+```
+
 ## Combat Runtime Fixtures
 
 Inbound `PLI_HURTPLAYER` fixture:

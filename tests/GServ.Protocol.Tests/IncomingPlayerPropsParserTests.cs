@@ -670,6 +670,21 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ForwardsConfirmedUdpPortUsingGenericSendLocalTail()
+    {
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: 0,
+            [IncomingPlayerPropertyUpdate.GInt(PlayerPropertyId.UdpPort, 14900)],
+            senderSupportsPreciseMovement: true,
+            appendNewline: true);
+
+        Assert.Equal([40, 32, 39, 63, 32, 148, 84, 10], packet);
+    }
+
+    [Fact]
     public void ForwardsConfirmedGaniAttributesWithOriginalStringPayload()
     {
         var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(

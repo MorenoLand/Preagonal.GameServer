@@ -665,6 +665,11 @@ behavior, and movement-loop invocation.
     current runtime level is singleplayer, matching `getProp(PLPROP_CURLEVEL)`.
     GMAP map-name forwarding remains blocked until the live GMAP state path is
     fixture-confirmed.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_UDPPORT` generic
+    local forwarding tail. The parser/runtime already stored the incoming
+    `GInt`; the forwarding builder now emits `PLPROP_UDPPORT + GInt(port)` like
+    `getProp(PLPROP_UDPPORT)`. The loaded/id-gated direct broadcast remains
+    blocked on production session recipient routing.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -730,6 +735,8 @@ behavior, and movement-loop invocation.
     the AP-below-40 healing refusal and post-mutation forwarded HP byte.
   - 2026-06-16: Added source-confirmed live `PLPROP_CURLEVEL` fixture covering
     the singleplayer `.singleplayer` suffix emitted by `getProp`.
+  - 2026-06-16: Added source-confirmed `PLPROP_UDPPORT` generic forwarding
+    fixture for `GInt(14900)` payload bytes.
 
 Completion criteria:
 
