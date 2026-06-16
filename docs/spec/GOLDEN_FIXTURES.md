@@ -455,6 +455,13 @@ payload `"bow1"` mutates to runtime image `"bow1.gif"`:
 [42, 46, 98, 111, 119, 49]
 ```
 
+The old-client bow-image path also uses `CString::readChars(sp - 10)`, so a
+terminal truncated image still appends `.gif` when extensionless:
+
+```txt
+PLPROP_GANI + GCHAR(14) + "bo" => bowPower 10, bowImage "bo.gif"
+```
+
 Forwarded `PLO_OTHERPLPROPS` for player id `7`, old-client bow power `4`:
 
 ```txt

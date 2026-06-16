@@ -671,6 +671,10 @@ behavior, and movement-loop invocation.
     payload coverage, matching `CString::readChars` clamping the requested gani
     string length to bytes remaining in the packet while keeping `"spin"`
     `PLO_HITOBJECTS` side effects blocked.
+  - 2026-06-16: Added source-confirmed old-client `PLPROP_GANI` bow-image
+    truncated terminal payload coverage. The parser clamps `readChars(sp - 10)`
+    to bytes remaining, then still appends `.gif` for extensionless old-client
+    bow images.
   - 2026-06-16: Added source-confirmed generic local forwarding for the safe
     `__sendLocal` scalar subset `PLPROP_CARRYSPRITE` and `PLPROP_ALIGNMENT`.
     Forwarding uses `getProp`-equivalent payloads and preserves the C++

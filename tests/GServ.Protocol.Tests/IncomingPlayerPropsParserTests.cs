@@ -1113,6 +1113,23 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void OldClientGaniParsesTruncatedBowImageAndAddsGifWhenExtensionless()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.Gani);
+        body.WriteGChar(14);
+        body.WriteBytes("bo"u8);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray(), ClientVersionId.Client1411);
+
+        Assert.True(result.Success);
+        var update = Assert.Single(result.Updates);
+        Assert.Equal(PlayerPropertyId.Gani, update.PropertyId);
+        Assert.Equal((byte)10, update.GCharValue);
+        Assert.Equal("bo.gif", update.StringValue);
+    }
+
+    [Fact]
     public void OldClientGaniForwardsBowPowerPayload()
     {
         var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
