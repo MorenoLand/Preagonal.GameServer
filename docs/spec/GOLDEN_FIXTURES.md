@@ -2123,3 +2123,11 @@ PLPROP_EFFECTCOLORS + GCHAR(1) + GInt4(0x01020304)
 Both forms parse successfully and produce no forwarded `PLO_OTHERPLPROPS`
 payload because `__sendLocal[23]` is false and the recovered branch does not
 mutate visible runtime state.
+
+Source-confirmed `PLPROP_BODYIMG` generic forwarding from `Player::setProps`,
+player id `7`, body image `body.png`, newline appended by `sendPacket`:
+
+```txt
+PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_BODYIMG + GCHAR(8) + "body.png" + "\n"
+[40, 32, 39, 67, 40, 98, 111, 100, 121, 46, 112, 110, 103, 10]
+```

@@ -539,6 +539,10 @@ behavior, and movement-loop invocation.
     consume-only branch. The parser reads `GCHAR len` and consumes `GInt4`
     only when `len > 0`, records no invented state, and emits no forwarding
     bytes because `__sendLocal[23]` is false.
+  - 2026-06-16: Implemented `PLPROP_BODYIMG` as a direct visual-state subset.
+    The parser reads `GCHAR len + bytes`, the runtime applier mirrors
+    `Account::setBodyImage` by truncating to 223 bytes/chars, and forwarding
+    emits the current body image through the C++ generic local prop payload.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to

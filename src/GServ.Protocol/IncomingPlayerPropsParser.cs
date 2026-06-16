@@ -79,6 +79,7 @@ public static class IncomingPlayerPropsParser
 
                 case PlayerPropertyId.CurrentLevel:
                 case PlayerPropertyId.Gani:
+                case PlayerPropertyId.BodyImage:
                 case PlayerPropertyId.PlayerLanguage:
                 case PlayerPropertyId.OsType:
                     updates.Add(IncomingPlayerPropertyUpdate.String(propertyId, ReadGCharString(reader)));
@@ -214,6 +215,10 @@ public static class IncomingPlayerPropsForwarding
 
                 case PlayerPropertyId.Gani:
                     WriteProperty(levelBuff, PlayerPropertyId.Gani, writer => WriteGCharString(writer, update.StringValue ?? string.Empty));
+                    break;
+
+                case PlayerPropertyId.BodyImage:
+                    WriteProperty(levelBuff, PlayerPropertyId.BodyImage, writer => WriteGCharString(writer, update.StringValue ?? string.Empty));
                     break;
 
                 case PlayerPropertyId.ApCounter:

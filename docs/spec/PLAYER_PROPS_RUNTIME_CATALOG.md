@@ -99,7 +99,7 @@ For sender client versions `>= CLVER_2_3`, C++ sends `levelBuff2` before
 | 32 | `PLPROP_ALIGNMENT` | `GUChar` | Stores AP capped at `100` in non-V8 path. | Generic forwarding. | Implemented as runtime mutation with C++ clamp. Generic forwarding remains blocked. |
 | 33 | `PLPROP_ADDITFLAGS` | `GUChar` | Stores additional flags. | No local forwarding. | Implemented as scalar mutation. |
 | 34 | `PLPROP_ACCOUNTNAME` | `GCHAR len` + bytes | Reads and ignores. | Generic forwarding. | Safe parse/no-op candidate with forwarding fixture. |
-| 35 | `PLPROP_BODYIMG` | `GCHAR len` + bytes | Calls `setBodyImage`. | Generic forwarding. | Blocked. |
+| 35 | `PLPROP_BODYIMG` | `GCHAR len` + bytes | Calls `setBodyImage`, which stores `newImage.subString(0, 223)`. | Generic forwarding. | Implemented as runtime mutation and generic local forwarding using the current body image string. |
 | 36 | `PLPROP_RATING` | `GInt` | Reads into `len`; ELO mutation is commented out. | Generic forwarding. | Safe no-op candidate with forwarding fixture. |
 | 37-41 | `PLPROP_GATTRIB1..5` | `GCHAR len` + bytes | Stores `ganiAttributes[0..4]`. | Generic forwarding. | Implemented as runtime mutation and generic local forwarding using the original string payload. |
 | 42 | `PLPROP_ATTACHNPC` | `GUChar object_type` + `GUInt npcID` | Stores attached NPC id. Object type is read but only NPC is supported. | Explicitly appends attach prop to `levelBuff`; generic local tail is false for id 42. | Blocked on NPC semantics. |

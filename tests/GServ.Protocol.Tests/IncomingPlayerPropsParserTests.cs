@@ -191,6 +191,22 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedBodyImageProp()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.BodyImage);
+        body.WriteGChar(8);
+        body.WriteBytes("body.png"u8);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray());
+
+        Assert.True(result.Success);
+        var update = Assert.Single(result.Updates);
+        Assert.Equal(PlayerPropertyId.BodyImage, update.PropertyId);
+        Assert.Equal("body.png", update.StringValue);
+    }
+
+    [Fact]
     public void ParsesConfirmedColorPropAsFiveGChars()
     {
         var body = new GraalBinaryWriter();
@@ -352,5 +368,20 @@ public sealed class IncomingPlayerPropsParserTests
             appendNewline: true);
 
         Assert.Equal([40, 32, 39, 45, 33, 34, 35, 36, 37, 10], packet);
+    }
+
+    [Fact]
+    public void ForwardsConfirmedBodyImageWithCurrentStringPayload()
+    {
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: 0,
+            [IncomingPlayerPropertyUpdate.String(PlayerPropertyId.BodyImage, "body.png")],
+            senderSupportsPreciseMovement: true,
+            appendNewline: true);
+
+        Assert.Equal([40, 32, 39, 67, 40, 98, 111, 100, 121, 46, 112, 110, 103, 10], packet);
     }
 }

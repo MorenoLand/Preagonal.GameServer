@@ -46,6 +46,7 @@ public sealed class RuntimePlayer
     public byte HorseBombCount { get; internal set; }
     public string CurrentLevelName { get; internal set; } = string.Empty;
     public string Gani { get; internal set; } = string.Empty;
+    public string BodyImage { get; internal set; } = string.Empty;
     public string Language { get; internal set; } = string.Empty;
     public string Os { get; internal set; } = string.Empty;
     public uint TextCodePage { get; internal set; }
@@ -181,6 +182,10 @@ public static class RuntimePlayerPropsApplier
                     player.Gani = update.StringValue ?? string.Empty;
                     break;
 
+                case GServ.Protocol.PlayerPropertyId.BodyImage:
+                    player.BodyImage = LimitString(update.StringValue ?? string.Empty, 223);
+                    break;
+
                 case GServ.Protocol.PlayerPropertyId.Colors:
                     ApplyColors(player, update.BytesValue ?? []);
                     break;
@@ -244,6 +249,9 @@ public static class RuntimePlayerPropsApplier
         for (var i = 0; i < 5 && i < colors.Count; i++)
             player.SetColor(i, colors[i]);
     }
+
+    private static string LimitString(string value, int length) =>
+        value.Length <= length ? value : value[..length];
 
     private static int DecodePreciseCoordinate(ushort encoded)
     {
