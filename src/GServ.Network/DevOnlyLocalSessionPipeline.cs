@@ -216,7 +216,19 @@ public sealed class DevOnlyLocalSessionPipeline(
             return false;
 
         var parsed = IncomingPlayerPropsParser.Parse(packet[1..]);
-        RuntimePlayerPropsApplier.ApplyConfirmed(runtimePlayer, parsed.Updates);
+        foreach (var update in parsed.Updates)
+        {
+            try
+            {
+                RuntimePlayerPropsApplier.ApplyConfirmed(runtimePlayer, [update]);
+            }
+            catch (NotSupportedException ex)
+            {
+                log.Add($"{CppNameOf(update.PropertyId)} was parsed with source-confirmed bytes, but its runtime side effects are not ported yet: {ex.Message}");
+                return true;
+            }
+        }
+
         if (!parsed.Success)
         {
             log.Add($"Decoded PLI_PLAYERPROPS stopped at unconfirmed property {(byte)parsed.UnsupportedPropertyId!.Value}; no gameplay side effects were run.");
@@ -229,6 +241,17 @@ public sealed class DevOnlyLocalSessionPipeline(
             $"sprite={runtimePlayer.Sprite}, level={runtimePlayer.CurrentLevelName}, gani={runtimePlayer.Gani}.");
         return true;
     }
+
+    private static string CppNameOf(PlayerPropertyId propertyId) =>
+        propertyId switch
+        {
+            PlayerPropertyId.Nickname => "PLPROP_NICKNAME",
+            PlayerPropertyId.CarryNpc => "PLPROP_CARRYNPC",
+            PlayerPropertyId.GmapLevelX => "PLPROP_GMAPLEVELX",
+            PlayerPropertyId.GmapLevelY => "PLPROP_GMAPLEVELY",
+            PlayerPropertyId.Status => "PLPROP_STATUS",
+            _ => $"PLPROP_{(byte)propertyId}"
+        };
 
     private static DevOnlyLocalSessionResult Finish(
         ClientSessionSkeleton session,

@@ -12,7 +12,8 @@ frames in sequence, run the confirmed login/account/world-entry boundaries with
 dev-only auth, load a `.nw` file, send confirmed pre-runtime level packets
 through `CFileQueue.FlushSocket`, decode confirmed post-login inbound
 uncompressed/zlib frames, accept `PLI_PLAYERPROPS` for the confirmed
-movement/property subset, and stop before runtime world simulation.
+movement/property subset, report parsed-but-unported player-prop side effects
+with explicit `PLPROP_*` logs, and stop before runtime world simulation.
 
 ## Run Command
 
@@ -38,8 +39,11 @@ Expected limitations:
   paths
 - uses the source-confirmed "level modtime already current" branch during the
   diagnostic `.nw` boundary to avoid blocked bzip2 board payloads
-- applies only decoded `PLI_PLAYERPROPS` local state for X/Y/Z, precise
-  X2/Y2/Z2, sprite, level name, and gani
+- applies only decoded `PLI_PLAYERPROPS` local state for confirmed safe
+  movement/player-property updates
+- stops clearly on source-confirmed parsed props whose runtime side effects are
+  not ported yet, such as nickname, carried NPC, status death/revive, or GMAP
+  level switching
 - decodes confirmed inbound gen5 uncompressed/zlib post-login frames using the
   login key
 - stops before touch/link traversal, NPCs, scripts, file transfer, combat, and

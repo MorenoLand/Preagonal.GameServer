@@ -51,6 +51,9 @@ Implemented:
     C++ log-and-continue branch
   - accepts decoded post-login `PLI_PLAYERPROPS` packets for the confirmed
     movement/player-prop subset and applies local runtime state mutation only
+  - logs and stops cleanly when a decoded player prop has source-confirmed
+    bytes but unported runtime side effects, such as `PLPROP_NICKNAME`,
+    instead of throwing inside the diagnostic session path
 - `DevOnlyLocalTcpServer`
   - accepts one TCP client at a time
   - reads length-prefixed frames in a continuous per-connection loop
@@ -103,6 +106,9 @@ yet.
 - The TCP shell processes multiple frames for one connection and can decode
   confirmed gen5 post-login client frames before applying `PLI_PLAYERPROPS`
   movement/player-prop updates.
+- Parsed-but-unported player-prop side effects now stop with an explicit
+  `PLPROP_*` diagnostic log after any earlier confirmed props in the same
+  packet were applied.
 - Unsupported post-login packet ids still stop before gameplay/runtime
   dispatch.
 - Inbound gen4 and gen5 bzip2 frame payloads are explicitly blocked.

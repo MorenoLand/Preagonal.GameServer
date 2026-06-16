@@ -810,6 +810,11 @@ behavior, and movement-loop invocation.
     string parsing and production blocked-dispatch behavior. Word-filter,
     `setNick`, global forwarding, self echo, and persistence effects remain
     blocked.
+  - 2026-06-16: Added dev-only local pipeline coverage for parsed-but-unported
+    player-prop side effects. The diagnostic shell now logs explicit
+    `PLPROP_*` blocked side-effect messages instead of throwing when a
+    confirmed post-login frame reaches a runtime branch such as nickname before
+    those side effects are ported.
 
 Completion criteria:
 

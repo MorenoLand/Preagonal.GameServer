@@ -176,6 +176,31 @@ public sealed class DevOnlyLocalSessionPipelineTests
         Assert.Contains(movement.Log, line => line.Contains("y=568", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void ConnectionStopsClearlyOnParsedButUnportedPlayerPropSideEffect()
+    {
+        using var temp = new TemporaryDirectory();
+        var world = Directory.CreateDirectory(Path.Combine(temp.Path, "world"));
+        File.WriteAllText(Path.Combine(world.FullName, "start.nw"), "GLEVNW01\n");
+
+        var fileSystem = new IndexedServerFileSystem(temp.Path);
+        fileSystem.AddDirectory("world", "*.nw");
+        var pipeline = new DevOnlyLocalSessionPipeline(
+            new DevOnlyLocalServerOptions(EnableDevOnlyAuth: true, LevelName: "start.nw"),
+            new NwLevelFileLoader(fileSystem));
+        var connection = pipeline.CreateConnection();
+
+        var login = connection.ProcessLengthPrefixedInput(LengthFrame(Client3LoginPacket()));
+        var movement = connection.ProcessLengthPrefixedInput(Gen5SocketFrame(
+            key: 42,
+            PlayerPropsPacketWithNicknameAfterX()));
+
+        Assert.True(login.Accepted);
+        Assert.True(movement.Accepted);
+        Assert.Contains(movement.Log, line => line.Contains("PLPROP_NICKNAME", StringComparison.Ordinal));
+        Assert.Contains(movement.Log, line => line.Contains("runtime side effects are not ported", StringComparison.Ordinal));
+    }
+
     private static byte[] Client3LoginPacket()
     {
         var packet = new GraalBinaryWriter();
@@ -212,6 +237,19 @@ public sealed class DevOnlyLocalSessionPipelineTests
         packet.WriteGChar(firstValue);
         packet.WriteGChar((byte)second);
         packet.WriteGChar(secondValue);
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] PlayerPropsPacketWithNicknameAfterX()
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.PlayerProps);
+        packet.WriteGChar((byte)PlayerPropertyId.X);
+        packet.WriteGChar(70);
+        packet.WriteGChar((byte)PlayerPropertyId.Nickname);
+        packet.WriteGChar(4);
+        packet.WriteBytes("Ruan"u8);
         packet.WriteByte((byte)'\n');
         return packet.ToArray();
     }
