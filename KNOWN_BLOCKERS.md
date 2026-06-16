@@ -27,7 +27,13 @@
   before gameplay/runtime dispatch, and selects the current-modtime level branch
   so small/medium responses can use confirmed gen5 zlib `FlushSocket` framing
   without entering blocked bzip2 board payload output.
-- Production account loading has a pure `GRACC001` parser, but full service behavior is blocked on exact filesystem/default-account save behavior and guest RNG.
+- Production account loading has a pure `GRACC001` parser plus source-confirmed
+  default-account fallback, start overrides, save-format serialization,
+  case-preserved filename selection, disk write attempt reporting, and
+  default-account add-file signalling. Live login repository wiring, full
+  filesystem resync behavior, exact unusual `CString(float)` save formatting,
+  `std::unordered_map` flag order guarantees, and guest random `pc:` identity
+  generation remain blocked.
 - Isolated warp packet builders are implemented. A source-confirmed
   `setLevel` pre-runtime boundary now handles missing levels, `PLO_PLAYERWARP`,
   `PLO_PLAYERWARP2`, and the modern non-zero-modtime no-warp-packet branch.

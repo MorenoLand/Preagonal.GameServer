@@ -19,16 +19,16 @@
 
 ## Required Work
 
-- [ ] Re-trace every account file field, parse order, missing field behavior, defaults, save order, and side effects.
-- [ ] Update `docs/spec/ACCOUNT_PERSISTENCE_SPEC.md` and `docs/spec/ACCOUNT_LOADING_SPEC.md`.
-- [ ] Add test fixtures for `GRACC001` and any other confirmed account format markers.
-- [ ] Add failing tests for parse, round-trip save, missing file, default account load, banned/staff/admin fields, and guest account behavior where confirmed.
-- [ ] Implement account repository behavior only for source-confirmed filesystem semantics.
+- [x] Re-trace every account file field, parse order, missing field behavior, defaults, save order, and side effects.
+- [x] Update `docs/spec/ACCOUNT_PERSISTENCE_SPEC.md` and `docs/spec/ACCOUNT_LOADING_SPEC.md`.
+- [x] Add test fixtures for `GRACC001` and any other confirmed account format markers.
+- [x] Add failing tests for parse, round-trip save, missing file, default account load, banned/staff/admin fields, and guest account behavior where confirmed.
+- [x] Implement account repository behavior only for source-confirmed filesystem semantics.
 - [ ] Wire account DTOs into the existing pre-world login boundary without inventing gameplay defaults.
-- [ ] Run `dotnet build GServharp.sln`.
-- [ ] Run `dotnet test GServharp.sln`.
-- [ ] Confirm `git status --short ai_resources` is empty.
-- [ ] Commit with message `Implement account persistence boundary`.
+- [x] Run `dotnet build GServharp.sln`.
+- [x] Run `dotnet test GServharp.sln`.
+- [x] Confirm `git status --short ai_resources` is empty.
+- [x] Commit with message `Implement account persistence boundary`.
 
 ## Compatibility Constraints
 
@@ -39,3 +39,12 @@
 
 - Source-confirmed account files can be loaded and saved with compatibility tests.
 - Login boundary uses real account data where confirmed.
+
+## Completion Notes
+
+- `AccountFileSerializer` and `AccountSaveService` now cover the
+  source-confirmed account save text format and filesystem side effects.
+- The existing pre-world login boundary already consumes typed account data, but
+  production live wiring from `AccountLoadService`/`AccountSaveService` into that
+  boundary remains intentionally unchecked because it needs a dedicated
+  repository/session pass to avoid inventing account validation behavior.

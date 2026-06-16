@@ -414,6 +414,59 @@ result: RequiresGuestIdentityGeneration=true
 The exact random `pc:` guest identity is not a golden fixture yet because it
 depends on `srand(time(0))`, C `rand()`, and connected-player uniqueness checks.
 
+## Account Save Fixtures
+
+These fixtures assert source-confirmed `Account::saveAccount` text and
+side-effect behavior.
+
+Representative account save text uses CRLF line endings and begins:
+
+```txt
+GRACC001\r\n
+NAME pc:Ruan\r\n
+NICK Ruan\r\n
+COMMUNITYNAME pc:Ruan\r\n
+LEVEL start.nw\r\n
+X 30\r\n
+Y 30.5\r\n
+Z 1.5\r\n
+```
+
+Confirmed full-order fixture is locked by
+`tests/GServ.Persistence.Tests/AccountFileSerializerTests.cs`.
+
+Load-only account save:
+
+```txt
+input: LOADONLY 1
+result: Account::saveAccount returns false
+result: no write attempted
+```
+
+Existing case-preserved filename:
+
+```txt
+account name: pc:Ruan
+fileExistsAs("pc:Ruan.txt") => "PC-Ruan.TXT"
+write path: C:\gserver\accounts\PC-Ruan.TXT
+```
+
+Disk write failure after serialization:
+
+```txt
+input: non-load-only account
+save(...) => false
+result: Account::saveAccount still returns true after logging
+```
+
+Default-account creation side effect:
+
+```txt
+loadedFromDefault=true, LOADONLY 0
+save path: <serverPath>\accounts\NewAccount.txt
+addFile: accounts/NewAccount.txt
+```
+
 ## Warp Packet Bodies
 
 These are packet bodies before `Player::sendPacket` newline append and before

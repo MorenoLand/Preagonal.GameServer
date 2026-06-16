@@ -53,7 +53,10 @@ When the account file is missing and `defaultaccount.txt` loaded successfully:
    account file and adds `accounts/<pAccount>.txt` to the accounts filesystem.
 
 This write-on-first-login behavior is client-visible indirectly because it
-controls subsequent logins and persistence. It is not implemented in C# yet.
+controls subsequent logins and persistence. The C# persistence boundary now
+exposes the source-confirmed save/add-file side effect through
+`AccountSaveService.SaveCreatedDefaultAccount`; production login code still needs
+to decide when to invoke it from the account repository pipeline.
 
 ## Guest Behavior
 
@@ -76,6 +79,18 @@ It refuses to save when `m_isLoadOnly` is true. Attribute, chest, weapon, flag,
 folder-right, and account-setting sections are appended after core character
 fields.
 
+See `docs/spec/ACCOUNT_PERSISTENCE_SPEC.md` for the full source-confirmed save
+order. The important compatibility details are:
+
+- `COMMUNITYNAME` is saved as the current account name.
+- Non-empty `ATTR1..ATTR30` values are emitted in numeric order.
+- Chests, weapons, and folder rights are emitted in vector/list order.
+- Flags come from C++ `std::unordered_map` iteration and must not be assumed to
+  have a globally stable order.
+- `saveAccount` returns `false` only for load-only accounts; after a write
+  attempt, it returns `true` even if the disk write failed and merely logs the
+  failure.
+
 ## C# Boundary
 
 The C# implementation now includes:
@@ -83,6 +98,10 @@ The C# implementation now includes:
 - a pure `AccountFileParser` for confirmed `GRACC001` content
 - an `AccountLoadService` boundary that mirrors the confirmed first part of
   `Account::loadAccount`
+- an `AccountFileSerializer` for source-confirmed `Account::saveAccount` text
+  output
+- an `AccountSaveService` boundary for case-preserved filename selection,
+  source-confirmed write attempts, and default-account add-file signaling
 - `IAccountFileSystem` and `IAccountLoadSettings` abstractions so production
   path lookup/settings can be added without inventing account persistence
 
@@ -116,8 +135,9 @@ Confirmed resolver behavior:
 - When loaded from default and the parsed account is not `LOADONLY`, return a
   source-confirmed request to save the newly created account and add
   `accounts/<pAccount>.txt` to the account filesystem.
-- Do not perform the real disk write yet. The exact `saveAccount` output/order is
-  traced, but production persistence writes are still a separate milestone.
+- Real disk writes are now represented by `AccountSaveService` and tested behind
+  `IAccountPersistenceFileSystem`. Production login/session wiring still needs a
+  repository pass before this side effect is invoked for live accounts.
 - For `guest`, force `IsLoadOnly = true` and mark guest identity generation as
   required. The random `pc:` name selection itself remains blocked on the
   connected-player repository and C++ RNG timing behavior.
@@ -131,6 +151,8 @@ Confirmed resolver behavior:
   9999999`, six-character truncation, and connected-player uniqueness checks.
   C# must not invent this until the player repository and RNG compatibility
   boundary are designed.
-- Production account loading now exposes the default-account save/add side
-  effect request, but real `saveAccount` disk output is not wired to production
-  storage yet.
+- Production account loading and saving now expose the default-account save/add
+  side effect, but the live login pipeline still needs repository wiring before
+  it can create accounts during production authentication.
+- Exact `CString(float)` formatting for unusual float values remains open. Tests
+  currently lock unambiguous values such as `30`, `30.5`, and `4.5`.

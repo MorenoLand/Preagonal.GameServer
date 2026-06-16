@@ -21,9 +21,11 @@
 - Account file parsing for confirmed `GRACC001` fields/defaults is implemented.
   The C# account loading boundary now also performs source-confirmed
   case-insensitive lookup, default-account fallback, startlevel/startx/starty
-  overrides, and save/add side-effect signalling. Real `saveAccount` disk writes,
-  full filesystem resync behavior, and guest random `pc:` identity generation
-  remain blocked.
+  overrides, save-format serialization, case-preserved filename selection, disk
+  write attempt reporting, and default-account add-file signalling. Live login
+  repository wiring, full filesystem resync behavior, exact unusual
+  `CString(float)` save formatting, `std::unordered_map` flag order guarantees,
+  and guest random `pc:` identity generation remain blocked.
 - `CFileQueue` queue selection, gen1/gen6 socket passthrough, gen2/gen3 zlib
   framing, gen5 uncompressed socket framing for payloads up to 55 bytes, and
   gen5 zlib framing for payloads through `0x2000` bytes are implemented.
