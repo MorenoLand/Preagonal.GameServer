@@ -174,7 +174,7 @@ production socket/session dispatch where safe.
     post-login frames, logs dispatch statuses, stops assigned-but-unimplemented
     packet ids as blocked, and only returns outbound bytes for the confirmed
     `msgPLI_NULL` invalid-packet disconnect path.
-- [ ] Add tests for socket frame dispatch, disconnect behavior, queue flush
+- [x] Add tests for socket frame dispatch, disconnect behavior, queue flush
   timing, and unsupported packet handling.
   - 2026-06-16: Added production TCP frame/connection tests plus post-login
     dispatcher/frame-handler tests for confirmed movement dispatch,
@@ -182,8 +182,17 @@ production socket/session dispatch where safe.
     Existing `GraalFileQueue` tests cover confirmed queue flush branches and
     partial-send buffering. Leave unchecked until this is reviewed against the
     full requested coverage list.
-- [ ] Update `docs/spec/TCP_SESSION_PIPELINE_SPEC.md`,
+  - 2026-06-16: Added loopback production TCP tests proving the production
+    listener can drive confirmed post-login `PLI_PLAYERPROPS` dispatch and can
+    write the source-confirmed invalid-packet disconnect bytes before returning
+    `HandlerStopped`. Reviewed existing `FileQueueCompatibilityTests` for
+    confirmed queue-flush and partial-send coverage.
+- [x] Update `docs/spec/TCP_SESSION_PIPELINE_SPEC.md`,
   `docs/spec/KNOWN_BLOCKERS.md`, and `KNOWN_BLOCKERS.md`.
+  - 2026-06-16: Updated the TCP/session docs, production socket spec,
+    post-login dispatch spec, and blockers to reflect the production
+    listener/receive-buffer/post-login-dispatch boundary and the remaining
+    production auth/session-loop blockers.
 
 Completion criteria:
 

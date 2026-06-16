@@ -113,3 +113,20 @@ yet.
 - Websocket wrapping is not implemented.
 - Touch/link traversal, reconnect cleanup, and live multi-session forwarding
   are not implemented.
+
+## Phase 1 Test Coverage
+
+Current compatibility tests cover:
+
+- production receive-buffer partial header, partial payload, and multiple-frame
+  extraction
+- loopback `ProductionTcpServer` accept, `TCP_NODELAY` session dispatch,
+  client disconnect, handler outbound writes, and handler-requested stop
+- loopback post-login `PLI_PLAYERPROPS` movement dispatch through the
+  production TCP skeleton
+- source-confirmed invalid-packet disconnect bytes after the sixth unassigned
+  packet id
+- assigned-but-unimplemented packet ids returning/logging blocked status
+- confirmed `GraalFileQueue.FlushSocket` queue flush branches for gen1, gen2,
+  gen3, gen5 uncompressed, gen5 zlib, bzip2-blocked preservation, and
+  partial-send buffering

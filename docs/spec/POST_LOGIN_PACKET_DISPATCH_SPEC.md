@@ -88,3 +88,16 @@ post-login sessions:
 - Gen4/gen5 bzip2 and websocket branches.
 - Live movement forwarding, touch tests, level links, NPC events, combat, and
   any other gameplay side effects.
+
+## Test Coverage
+
+Confirmed tests cover:
+
+- decoded `PLI_PLAYERPROPS` applying the supported movement subset
+- assigned-but-unimplemented packets returning blocked status without counting
+  as invalid
+- unassigned packets following the `msgPLI_NULL` counter
+- sixth unassigned packet returning exact invalid-packet disconnect bytes
+- post-login frame handler decode/framing/dispatch integration
+- production TCP loopback dispatch and disconnect-byte writes through the
+  handler boundary
