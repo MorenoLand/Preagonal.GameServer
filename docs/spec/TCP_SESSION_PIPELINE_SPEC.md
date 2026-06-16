@@ -92,9 +92,10 @@ yet.
 
 - A production listener/session loop is still missing. The recovered C++ shape
   is documented in `docs/spec/PRODUCTION_SOCKET_SESSION_SPEC.md`. The C# port
-  now has `ProductionSocketReceiveBuffer` for the source-confirmed raw
-  two-byte length frame buffering portion, but it is not wired into a
-  production listener yet.
+  now has `ProductionTcpServer` plus `ProductionSocketReceiveBuffer` for the
+  source-confirmed accept-one TCP skeleton and raw two-byte length frame
+  buffering portion. Multi-session scheduling, deferred cleanup, and production
+  auth/gameplay dispatch are still missing.
 - The TCP shell processes multiple frames for one connection and can decode
   confirmed gen5 post-login client frames before applying `PLI_PLAYERPROPS`
   movement/player-prop updates.

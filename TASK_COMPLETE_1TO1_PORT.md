@@ -152,13 +152,15 @@ production socket/session dispatch where safe.
 
 - [x] Trace C++ socket accept/read/write lifecycle and document it in
   `docs/spec/PRODUCTION_SOCKET_SESSION_SPEC.md`.
-- [ ] Implement a production TCP listener skeleton only for confirmed framing
+- [x] Implement a production TCP listener skeleton only for confirmed framing
   and lifecycle behavior.
   - 2026-06-16: Added `ProductionSocketReceiveBuffer` for source-confirmed
     arbitrary TCP chunk buffering and raw two-byte big-endian frame extraction.
-    Still blocked/not done: production accept loop, session registry,
-    receive-before-send scheduling, deferred deletion cleanup, and real
-    production auth dispatch.
+  - 2026-06-16: Added accept-one `ProductionTcpServer` skeleton with
+    TCP_NODELAY, player id `2` start, `0x8000` read chunks, frame dispatch, and
+    handler-provided outbound writes. Still blocked/not done: multi-session
+    socket-manager scheduling, deferred deletion cleanup, and real production
+    auth dispatch.
 - [ ] Integrate confirmed post-login decoded packet dispatch without gameplay
   invention.
 - [ ] Keep unsupported packet ids logged/blocked, not faked.

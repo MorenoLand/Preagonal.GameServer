@@ -339,6 +339,26 @@ Recommended production shape:
 
 ## Implemented C# Production Foundation
 
+`ProductionTcpServer` implements the current source-confirmed listener skeleton:
+
+- binds a `TcpListener` to a configured address/port
+- accepts a TCP client
+- disables Nagle on the accepted `TcpClient`, matching C++ `TCP_NODELAY`
+- assigns the first dynamic player id as `2`, matching `PLAYERID_INIT`
+- creates one logical `ProductionSocketSessionContext` per accepted socket
+- reads arbitrary chunks up to `0x8000` bytes, matching C++ `CSocket::getData`
+  buffer size
+- feeds chunks through `ProductionSocketReceiveBuffer`
+- dispatches complete frame payloads, without the two-byte socket header, to
+  `IProductionSocketFrameHandler`
+- writes handler-provided outbound bytes to the socket
+- returns `ClientDisconnected` when the client closes the socket
+- returns `HandlerStopped` when the handler asks to stop the session
+
+This is not the full production socket manager yet. It is a safe skeleton for
+confirmed accept/framing/lifecycle behavior and intentionally keeps packet
+decode/auth/gameplay behind explicit handler boundaries.
+
 `ProductionSocketReceiveBuffer` implements the source-confirmed frame buffering
 part of `Player::doMain`:
 
@@ -357,10 +377,10 @@ Those behaviors remain in `InboundPacketDecoder`,
 
 ## Current C# Gaps For Phase 1
 
-- No production listener exists yet.
+- The first production listener skeleton exists, but only as an accept-one
+  boundary for confirmed framing/lifecycle tests.
 - No production multi-session socket manager equivalent exists yet.
-- The production receive buffer exists, but it is not wired into a production
-  listener/session loop yet.
+- The production receive buffer is wired into the listener skeleton.
 - Dev-only TCP currently reads exactly one full frame at a time from
   `NetworkStream`; C++ buffers arbitrary chunks and may receive partial headers,
   partial payloads, or multiple frames at once.
