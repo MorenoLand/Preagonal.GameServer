@@ -82,7 +82,12 @@
   level-area/player-prop packets to session sinks. List-server delete side
   effects, scripting hooks, real socket/file-queue integration,
   `std::unordered_map` map-area iteration golden compatibility, and arbitrary
-  gameplay packet forwarding remain blocked.
+  gameplay packet forwarding remain blocked. The C++ forwarding matrix and
+  hidden-client boundaries are documented in
+  `docs/spec/LIVE_WORLD_SESSION_FORWARDING_SPEC.md`, but C# still needs
+  dedicated implementation for `sendPacketToOneLevel`,
+  `sendPacketToLevelOnlyGmapArea`, predicate-split projectile forwarding, and
+  call-site-specific hidden-client behavior.
 - Level file format detection is implemented for confirmed extension and
   signature selection. A source-confirmed read-only indexed filesystem boundary,
   `loadAllFolders`/`loadFolderConfig` bucket setup, and filesystem-backed `.nw`

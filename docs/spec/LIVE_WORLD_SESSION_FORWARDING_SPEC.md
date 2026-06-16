@@ -92,6 +92,113 @@ level membership order. Map ordering follows the current C# runtime server
 collection order; exact C++ `std::unordered_map` iteration order remains a
 compatibility risk until container behavior is golden-tested.
 
+## C++ Forwarding Function Matrix
+
+The recovered C++ exposes several related packet-routing functions. They are
+similar, but not interchangeable.
+
+`Server::sendPacketToAll(packet, exclude)`:
+
+- iterates `m_playerList`
+- skips excluded ids
+- skips only NPC-server players
+- sends to clients, RC, NC, control clients, and other non-NPC-server sessions
+
+`Server::sendPacketToLevelArea(packet, weak_ptr<Level>, exclude, sendIf)`:
+
+- locks the level and returns if expired
+- no map: iterates `level->getPlayers()` in deque order
+- map: iterates `m_playerList`
+- requires `other->isClient()`
+- applies the optional `sendIf(Player*)` predicate when supplied
+- with map, requires the same map object
+- does not apply group-map group filtering in the level overload
+- sends when `abs(otherMapX - sourceMapX) < 2` and
+  `abs(otherMapY - sourceMapY) < 2`
+
+`Server::sendPacketToLevelArea(packet, weak_ptr<Player>, exclude, sendIf)`:
+
+- locks the player and current level, returning if either is missing
+- no map: iterates `level->getPlayers()` in deque order
+- map: iterates `m_playerList`
+- requires `other->isClient()`
+- applies the optional predicate
+- requires the same map object
+- if the map is a group map, requires matching `player->getGroup()`
+- sends only inside the strict `< 2` tile-map coordinate window
+
+`Server::sendPacketToLevelOnlyGmapArea(...)`:
+
+- has both level and player overloads
+- treats no-map and BIGMAP levels like ordinary same-level forwarding
+- only uses map-area iteration for non-BIGMAP maps
+- preserves the same optional predicate and client checks
+- player overload applies group-map group filtering
+
+`Server::sendPacketToOneLevel(packet, level, exclude)`:
+
+- locks the level and returns if expired
+- iterates only `level->getPlayers()` in deque order
+- skips excluded ids
+- requires `player->isClient()`
+- does not inspect maps, groups, distance, or predicates
+
+## Hidden-Client Rules
+
+Hidden clients are identified by:
+
+```cpp
+bool Player::isHiddenClient() const { return (m_type & PLTYPE_NONITERABLE) != 0; }
+```
+
+The forwarding helpers above do not explicitly call `isHiddenClient()`. They
+filter with `isClient()`, exclusion sets, optional predicates, map identity,
+group, and distance.
+
+Hidden-client behavior is confirmed at separate visibility/list boundaries:
+
+- `Player::getLevel()` returns an empty level pointer for hidden clients.
+- `Player::setLevel` checks `getLevel()` in several player-list visibility
+  paths, so hidden clients disappear from those comparisons through the empty
+  level result.
+- V8 `server.players` skips `isHiddenClient()` players explicitly.
+
+Compatibility implication: do not add a blanket hidden-client filter to
+`sendPacketToLevelArea` or `sendPacketToOneLevel` unless a specific C++ call
+site proves it. Hidden-client exclusion must be modeled at the same boundary as
+the original C++ call site.
+
+## Confirmed Call Sites
+
+`PlayerProps.cpp::setProps` forwards local property updates with:
+
+```cpp
+PLO_OTHERPLPROPS
+GSHORT playerId
+levelBuff/levelBuff2 ordered by sender precise-movement support
+```
+
+through `sendPacketToLevelArea(packet, shared_from_this(), { m_id })`.
+
+Projectile forwarding uses the optional predicate to split client versions:
+
+- `PLO_SHOOT` to clients with `version < CLVER_5_07`
+- `PLO_SHOOT2` to clients with `version >= CLVER_5_07`
+
+`Player::leaveLevel` first broadcasts the leaving player's
+`PLPROP_JOINLEAVELVL = 0` through `sendPacketToLevelArea`, then separately
+iterates `m_server->getPlayerList()` to send same-level existing-player props
+back to the leaving player. That second loop uses `player->getLevel() !=
+getLevel()` and therefore inherits the hidden-client `getLevel()` behavior.
+
+`Player::msgPLI_SHOWIMG` forwards `PLO_SHOWIMG` through the player overload of
+`sendPacketToLevelArea`, excluding the sender.
+
+Many gameplay packets use `sendPacketToOneLevel` instead of map-area routing:
+board modify, bombs, horses, arrows, firespy, carried throws, item add/delete,
+baddy props, explosions, trigger actions, and similar single-level events.
+Those packet families are not automatically equivalent to movement forwarding.
+
 ## Confirmed Packet Delivery Boundary
 
 `LiveWorldSessionForwarder` is intentionally narrow:

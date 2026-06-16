@@ -447,8 +447,13 @@ confirmed packet families.
 - `server/src/level/Level.cpp`
 - `server/include/level/Level.h`
 
-- [ ] Document `sendPacketToLevelArea`, map area iteration, hidden-client rules,
+- [x] Document `sendPacketToLevelArea`, map area iteration, hidden-client rules,
   and player-list forwarding.
+  - 2026-06-16: Expanded `docs/spec/LIVE_WORLD_SESSION_FORWARDING_SPEC.md`
+    with the C++ forwarding function matrix for `sendPacketToAll`,
+    `sendPacketToLevelArea` level/player overloads,
+    `sendPacketToLevelOnlyGmapArea`, `sendPacketToOneLevel`, hidden-client
+    boundaries, confirmed call sites, and unordered-map iteration risk.
 - [ ] Implement live session sink integration for confirmed packet families.
 - [ ] Add tests for same-level, nearby map, hidden client, non-client, and
   deletion cleanup behavior.

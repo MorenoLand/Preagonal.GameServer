@@ -87,7 +87,11 @@
   packets to session sinks. It does not implement list-server delete side
   effects, scripting hooks, real socket/file-queue integration,
   `std::unordered_map` map-area iteration golden compatibility, or arbitrary
-  gameplay packet forwarding.
+  gameplay packet forwarding. The C++ forwarding matrix and hidden-client
+  boundaries are documented in `LIVE_WORLD_SESSION_FORWARDING_SPEC.md`, but
+  C# still needs dedicated implementation for `sendPacketToOneLevel`,
+  `sendPacketToLevelOnlyGmapArea`, predicate-split projectile forwarding, and
+  call-site-specific hidden-client behavior.
 - Level format detection is implemented for the exact C++ extension checks and
   eight-byte signatures. A read-only indexed filesystem boundary,
   source-confirmed `loadAllFolders`/`loadFolderConfig` bucket setup, and
