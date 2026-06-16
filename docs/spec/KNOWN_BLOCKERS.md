@@ -117,3 +117,8 @@
   drops, persistence writes, hit validation, sparring-zone warp integration, and
   script/NPC side effects remain blocked until their surrounding runtime
   behavior is ported.
+- Inventory/shop/social/quest work is implemented only for confirmed level item
+  pickup payloads, player-drop removal rules, weapon pickup state side effects,
+  and explicit guards for untraced durable systems. Full inventory runtime
+  wiring, shops, trade, party, quests/missions, chat/PM/social, guild filesystem
+  mutation, profile behavior, and script/content-driven systems remain blocked.
