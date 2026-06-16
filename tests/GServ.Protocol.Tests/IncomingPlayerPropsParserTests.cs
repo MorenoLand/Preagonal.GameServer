@@ -634,6 +634,21 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ForwardsConfirmedMaxPowerAsCurrentPowerLikeNonV8CppBranch()
+    {
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: 0,
+            [IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.MaxPower, 15)],
+            senderSupportsPreciseMovement: true,
+            appendNewline: true);
+
+        Assert.Equal([40, 32, 39, 34, 62, 10], packet);
+    }
+
+    [Fact]
     public void ForwardsConfirmedLocalScalarPropsUsingCppSendLocalTable()
     {
         var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(

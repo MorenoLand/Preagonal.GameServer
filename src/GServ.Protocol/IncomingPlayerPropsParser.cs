@@ -365,6 +365,10 @@ public static class IncomingPlayerPropsForwarding
                     WriteProperty(levelBuff, PlayerPropertyId.Z2, writer => WriteSignedCoordinate(writer, pixelZ));
                     break;
 
+                case PlayerPropertyId.MaxPower:
+                    WriteProperty(levelBuff, PlayerPropertyId.CurrentPower, writer => writer.WriteGChar((byte)(update.GCharValue.GetValueOrDefault() * 2)));
+                    break;
+
                 case PlayerPropertyId.Sprite:
                     WriteProperty(levelBuff, PlayerPropertyId.Sprite, writer => writer.WriteGChar(update.GCharValue.GetValueOrDefault()));
                     break;

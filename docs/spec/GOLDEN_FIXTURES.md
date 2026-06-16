@@ -1514,6 +1514,15 @@ carrySprite=12
 horseBombCount=6
 ```
 
+Non-V8 forwarded `PLPROP_MAXPOWER` mirrors the C++ special branch: setting max
+power to `15` also sets current power to max and appends only
+`PLPROP_CURPOWER + GCHAR(30)` to the level buffer:
+
+```txt
+PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_CURPOWER + GCHAR(30) + "\n"
+bytes: 40 32 39 34 62 10
+```
+
 Forwarded `PLPROP_APCOUNTER` uses C++ `getProp` semantics, so stored `123`
 emits `GSHORT(124)`:
 

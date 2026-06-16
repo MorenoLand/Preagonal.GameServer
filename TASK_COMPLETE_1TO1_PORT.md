@@ -648,6 +648,12 @@ behavior, and movement-loop invocation.
     alignment clamp to `100`. `PLPROP_MAGICPOINTS`, `PLPROP_ADDITFLAGS`, and
     `PLPROP_HORSEBUSHES` remain mutation-only because their `__sendLocal`
     entries are false in the recovered C++ table.
+  - 2026-06-16: Implemented the source-confirmed non-V8
+    `PLPROP_MAXPOWER` forwarding side packet. Like C++, setting max power also
+    sets current power to max and appends `PLPROP_CURPOWER` with
+    `GCHAR(maxPower * 2)` to the level forwarding buffer. The self buffer and
+    V8-only max-power forwarding branch remain blocked until production
+    self-recipient/V8 behavior is in scope.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -707,6 +713,8 @@ behavior, and movement-loop invocation.
     the scalar `__sendLocal` table subset: carry sprite and clamped alignment
     are forwarded, while magic points, additional flags, and horse bushes are
     not forwarded.
+  - 2026-06-16: Added source-confirmed non-V8 `PLPROP_MAXPOWER` forwarding
+    fixture showing the emitted `PLPROP_CURPOWER + GCHAR(maxPower * 2)` bytes.
 
 Completion criteria:
 
