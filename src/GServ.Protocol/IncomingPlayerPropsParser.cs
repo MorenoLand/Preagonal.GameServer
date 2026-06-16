@@ -70,6 +70,7 @@ public static class IncomingPlayerPropsParser
                 case PlayerPropertyId.AdditionalFlags:
                 case PlayerPropertyId.CarrySprite:
                 case PlayerPropertyId.HorseBushes:
+                case PlayerPropertyId.PlayerStatusMessage:
                     updates.Add(IncomingPlayerPropertyUpdate.GChar(propertyId, reader.ReadGChar()));
                     break;
 

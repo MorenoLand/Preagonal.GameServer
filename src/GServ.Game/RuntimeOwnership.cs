@@ -45,6 +45,7 @@ public sealed class RuntimePlayer
     public byte CarrySprite { get; internal set; }
     public byte HorseBombCount { get; internal set; }
     public uint UdpPort { get; internal set; }
+    public byte StatusMessage { get; internal set; }
     public string CurrentLevelName { get; internal set; } = string.Empty;
     public string Gani { get; internal set; } = string.Empty;
     public string BodyImage { get; internal set; } = string.Empty;
@@ -173,6 +174,10 @@ public static class RuntimePlayerPropsApplier
 
                 case GServ.Protocol.PlayerPropertyId.HorseBushes:
                     player.HorseBombCount = update.GCharValue.GetValueOrDefault();
+                    break;
+
+                case GServ.Protocol.PlayerPropertyId.PlayerStatusMessage:
+                    player.StatusMessage = update.GCharValue.GetValueOrDefault();
                     break;
 
                 case GServ.Protocol.PlayerPropertyId.UdpPort:

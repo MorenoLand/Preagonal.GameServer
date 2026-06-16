@@ -2186,3 +2186,15 @@ C++ stores the decoded UDP port in `m_udpport`. If the player is loaded and has
 a valid id, C++ also emits a direct `PLO_OTHERPLPROPS` UDP-port packet to other
 clients, and the generic forwarding tail can apply. Those sends remain blocked
 until production session routing can choose recipients exactly.
+
+Source-confirmed `PLPROP_PSTATUSMSG` update:
+
+```txt
+PLPROP_PSTATUSMSG + GCHAR(4)
+```
+
+C++ stores the decoded player-list status-message index in `m_statusMsg`. If
+the player is loaded and has a valid id, C++ broadcasts
+`PLO_OTHERPLPROPS + id + PLPROP_PSTATUSMSG + GCHAR(status)` to all except self.
+That broadcast remains blocked until production player-list routing can choose
+recipients exactly.

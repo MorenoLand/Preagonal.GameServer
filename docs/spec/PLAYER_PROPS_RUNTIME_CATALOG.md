@@ -110,7 +110,7 @@ For sender client versions `>= CLVER_2_3`, C++ sends `levelBuff2` before
 | 50 | `PLPROP_JOINLEAVELVL` | none in active branch | Commented-out unknown branch; active code has no read/mutation. | No local forwarding. | Implemented as confirmed no-byte/no-op branch. |
 | 51 | `PLPROP_PCONNECTED` | none | No-op. | No local forwarding. | Implemented as confirmed no-byte/no-op branch. |
 | 52 | `PLPROP_PLANGUAGE` | `GCHAR len` + bytes | Stores language string. | No local forwarding in `__sendLocal`. | Implemented as local runtime mutation. |
-| 53 | `PLPROP_PSTATUSMSG` | `GUChar` | Stores player-list status message. | If loaded and id valid, sends `PLO_OTHERPLPROPS + id + PLPROP_PSTATUSMSG + GCHAR status` to all except self. | Blocked on player-list forwarding. |
+| 53 | `PLPROP_PSTATUSMSG` | `GUChar` | Stores player-list status message. | If loaded and id valid, sends `PLO_OTHERPLPROPS + id + PLPROP_PSTATUSMSG + GCHAR status` to all except self. | Parser/applier implemented as state mutation. Direct broadcast remains blocked on production player-list recipient routing. |
 | 54-74 | `PLPROP_GATTRIB10..30` | `GCHAR len` + bytes | Stores `ganiAttributes[9..29]`. | Generic forwarding. | Implemented as runtime mutation and generic local forwarding using the original string payload. |
 | 75 | `PLPROP_OSTYPE` | `GCHAR len` + bytes | Stores OS string. | No local forwarding. | Implemented as local runtime mutation. |
 | 76 | `PLPROP_TEXTCODEPAGE` | `GInt` | Stores environment code page. | No local forwarding. | Implemented as local runtime mutation. |

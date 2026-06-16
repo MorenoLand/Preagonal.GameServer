@@ -142,6 +142,8 @@ public sealed class IncomingPlayerPropsParserTests
         body.WriteGChar(12);
         body.WriteGChar((byte)PlayerPropertyId.HorseBushes);
         body.WriteGChar(6);
+        body.WriteGChar((byte)PlayerPropertyId.PlayerStatusMessage);
+        body.WriteGChar(4);
 
         var result = IncomingPlayerPropsParser.Parse(body.ToArray());
 
@@ -159,6 +161,7 @@ public sealed class IncomingPlayerPropsParserTests
         Assert.Contains(result.Updates, update => update.PropertyId == PlayerPropertyId.Alignment && update.GCharValue == 120);
         Assert.Contains(result.Updates, update => update.PropertyId == PlayerPropertyId.CarrySprite && update.GCharValue == 12);
         Assert.Contains(result.Updates, update => update.PropertyId == PlayerPropertyId.HorseBushes && update.GCharValue == 6);
+        Assert.Contains(result.Updates, update => update.PropertyId == PlayerPropertyId.PlayerStatusMessage && update.GCharValue == 4);
     }
 
     [Fact]

@@ -581,6 +581,11 @@ behavior, and movement-loop invocation.
     applier stores the current UDP port. The C++ loaded/id-gated
     `PLO_OTHERPLPROPS` direct send and generic forwarding tail remain blocked
     until production session routing can emit them without inventing recipients.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_PSTATUSMSG` state
+    mutation boundary. The parser reads the incoming `GUChar`, and the runtime
+    applier stores the player-list status-message index. The C++ loaded/id-gated
+    `PLO_OTHERPLPROPS` broadcast remains blocked until production player-list
+    recipient routing can match the original exactly.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -611,6 +616,8 @@ behavior, and movement-loop invocation.
     no runtime state change.
   - 2026-06-16: Added source-confirmed `PLPROP_UDPPORT` fixtures for exact
     `GInt` parsing and runtime state mutation.
+  - 2026-06-16: Added source-confirmed `PLPROP_PSTATUSMSG` fixtures for exact
+    `GUChar` parsing and runtime state mutation.
 
 Completion criteria:
 
