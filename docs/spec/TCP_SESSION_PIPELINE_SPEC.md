@@ -10,6 +10,8 @@ Authoritative sources:
 See also `docs/spec/PRODUCTION_SOCKET_SESSION_SPEC.md` for the recovered
 production listener/session lifecycle. This file documents the currently
 implemented dev-only diagnostic pipeline and shared decode/queue boundaries.
+See `docs/spec/POST_LOGIN_PACKET_DISPATCH_SPEC.md` for the reusable decoded
+post-login dispatcher boundary.
 
 ## Confirmed C++ Receive Behavior
 
@@ -94,7 +96,9 @@ yet.
   is documented in `docs/spec/PRODUCTION_SOCKET_SESSION_SPEC.md`. The C# port
   now has `ProductionTcpServer` plus `ProductionSocketReceiveBuffer` for the
   source-confirmed accept-one TCP skeleton and raw two-byte length frame
-  buffering portion. Multi-session scheduling, deferred cleanup, and production
+  buffering portion, plus `ProductionPostLoginPacketDispatcher` and
+  `ProductionPostLoginFrameHandler` for the first decoded post-login dispatch
+  boundary. Multi-session scheduling, deferred cleanup, and production
   auth/gameplay dispatch are still missing.
 - The TCP shell processes multiple frames for one connection and can decode
   confirmed gen5 post-login client frames before applying `PLI_PLAYERPROPS`

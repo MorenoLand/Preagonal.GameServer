@@ -161,11 +161,27 @@ production socket/session dispatch where safe.
     handler-provided outbound writes. Still blocked/not done: multi-session
     socket-manager scheduling, deferred deletion cleanup, and real production
     auth dispatch.
-- [ ] Integrate confirmed post-login decoded packet dispatch without gameplay
+- [x] Integrate confirmed post-login decoded packet dispatch without gameplay
   invention.
-- [ ] Keep unsupported packet ids logged/blocked, not faked.
+  - 2026-06-16: Added `ProductionPostLoginPacketDispatcher` for already-decoded
+    post-login inner packet bytes. It handles only the confirmed
+    `PLI_PLAYERPROPS` movement/property subset, blocks assigned-but-unimplemented
+    C++ `TPLFunc` ids, and models `msgPLI_NULL` invalid-packet counting with the
+    source-confirmed sixth-packet disconnect message. It is not yet wired into a
+    production auth/session loop.
+- [x] Keep unsupported packet ids logged/blocked, not faked.
+  - 2026-06-16: Added `ProductionPostLoginFrameHandler`, which decodes
+    post-login frames, logs dispatch statuses, stops assigned-but-unimplemented
+    packet ids as blocked, and only returns outbound bytes for the confirmed
+    `msgPLI_NULL` invalid-packet disconnect path.
 - [ ] Add tests for socket frame dispatch, disconnect behavior, queue flush
   timing, and unsupported packet handling.
+  - 2026-06-16: Added production TCP frame/connection tests plus post-login
+    dispatcher/frame-handler tests for confirmed movement dispatch,
+    assigned-but-unimplemented blocked packets, and invalid-packet disconnect.
+    Existing `GraalFileQueue` tests cover confirmed queue flush branches and
+    partial-send buffering. Leave unchecked until this is reviewed against the
+    full requested coverage list.
 - [ ] Update `docs/spec/TCP_SESSION_PIPELINE_SPEC.md`,
   `docs/spec/KNOWN_BLOCKERS.md`, and `KNOWN_BLOCKERS.md`.
 

@@ -11,8 +11,10 @@
   `docs/spec/PRODUCTION_SOCKET_SESSION_SPEC.md`, and the C# port has an
   accept-one `ProductionTcpServer` skeleton plus `ProductionSocketReceiveBuffer`
   for confirmed TCP chunk buffering and raw two-byte length-prefixed frame
-  extraction. Multi-session scheduling, deferred deletion cleanup, and
-  production auth/gameplay dispatch are not implemented yet.
+  extraction. It also has decoded post-login dispatcher/frame-handler
+  boundaries for the confirmed `PLI_PLAYERPROPS` subset plus C++ `msgPLI_NULL`
+  invalid-packet counting. Multi-session scheduling, deferred deletion cleanup,
+  production auth wiring, and gameplay dispatch are not implemented yet.
 - Production auth now has source-confirmed list-server packet body builders for
   registration, HQ settings, allowed-version text, and `SVO_VERIACC2`, plus a
   gateway boundary that queues auth requests without fake validation. Real

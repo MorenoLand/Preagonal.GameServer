@@ -375,6 +375,27 @@ decompress, split newline packets, apply `PLI_RAWDATA`, or dispatch packet ids.
 Those behaviors remain in `InboundPacketDecoder`,
 `ClientPacketStreamFramer`, and later production session-dispatch work.
 
+`ProductionPostLoginPacketDispatcher` implements the first decoded post-login
+dispatch boundary:
+
+- accepts already-decoded inner packet bytes
+- handles only the source-confirmed `PLI_PLAYERPROPS` movement/property subset
+- returns blocked results for C++ `TPLFunc` ids that are assigned but not
+  implemented in C# yet
+- models `msgPLI_NULL` invalid-packet counting for unassigned ids
+- returns the exact invalid-packet disconnect message after the sixth
+  unassigned packet
+
+It is not wired into a production auth/session loop yet.
+
+`ProductionPostLoginFrameHandler` adapts that dispatcher to
+`IProductionSocketFrameHandler` for already-authenticated post-login sessions.
+It decodes a socket frame, preserves the existing `PLI_RAWDATA` stream-framing
+state through `ClientPacketStreamFramer`, logs dispatch statuses, continues for
+handled packets, blocks assigned-but-unimplemented packet ids, and returns the
+source-confirmed invalid-packet disconnect bytes when `msgPLI_NULL` exceeds
+five invalid packets.
+
 ## Current C# Gaps For Phase 1
 
 - The first production listener skeleton exists, but only as an accept-one
@@ -384,7 +405,10 @@ Those behaviors remain in `InboundPacketDecoder`,
 - Dev-only TCP currently reads exactly one full frame at a time from
   `NetworkStream`; C++ buffers arbitrary chunks and may receive partial headers,
   partial payloads, or multiple frames at once.
-- Production unsupported packet handling has not yet modeled C++ `msgPLI_NULL`
-  invalid-packet counting/disconnect.
+- Production unsupported packet handling now has a reusable
+  `ProductionPostLoginPacketDispatcher` and
+  `ProductionPostLoginFrameHandler` model for `msgPLI_NULL` invalid-packet
+  counting/disconnect, but it is not wired into a production auth/session loop
+  yet.
 - Production deferred deletion and cleanup are not wired.
 - Websocket/TLS remain blocked.
