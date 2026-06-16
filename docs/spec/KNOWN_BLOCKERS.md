@@ -102,6 +102,12 @@
 - WolfSSL/websocket HTTP upgrade behavior is traced and documented, but frame
   wrapping/unwrapping and TLS integration remain blocked pending a dedicated
   byte-level compatibility pass.
+- Client certification is not complete. A passive byte-exact comparison harness
+  exists for future C++ vs C# packet captures, and the compatibility matrix is
+  documented, but no closed-source client run was performed. Certification
+  remains blocked on a runnable original C++ server copy outside `ai_resources`,
+  matched test content/config, selected client binary/version, raw capture
+  tooling, and complete runtime/gameplay/admin parity.
 - RC/NC/admin is implemented only as a confirmed boundary: rights constants,
   RC/NC login gate decision text, selected RC/NC packet builders, protected
   file download checks, folder-right parsing, and server-list ping/request-list
