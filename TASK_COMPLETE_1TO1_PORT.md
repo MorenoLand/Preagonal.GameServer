@@ -755,6 +755,9 @@ behavior, and movement-loop invocation.
     separate and must not be copied into player movement.
 - [ ] Add golden tests for property order, forwarding version differences,
   blocked updates, and malformed values.
+  - 2026-06-16: Added source-confirmed precise coordinate serialization
+    fixture for `PLPROP_X2/Y2/Z2`, covering C++ `Player::getProp` low-bit
+    sign encoding for negative pixel coordinates.
   - 2026-06-16: Added source-confirmed blocked/update boundary fixtures for
     `PLPROP_ACCOUNTNAME`: exact inbound byte consumption, no invented mutation
     value, and no runtime account-name change. Broader malformed-value fixtures

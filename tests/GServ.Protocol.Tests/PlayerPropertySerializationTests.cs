@@ -148,6 +148,25 @@ public sealed class PlayerPropertySerializationTests
     }
 
     [Fact]
+    public void PreciseCoordinatePropsUseCppLowBitSignEncoding()
+    {
+        var source = BaseSource() with { X = -560, Y = 560, Z = -39 };
+
+        var bytes = PlayerPropertySerializer.SerializeConfirmedLoginSubset(
+            source,
+            [PlayerPropertyId.X2, PlayerPropertyId.Y2, PlayerPropertyId.Z2]);
+
+        Assert.Equal(
+            new byte[]
+            {
+                110, 40, 129,
+                111, 40, 128,
+                112, 32, 111
+            },
+            bytes);
+    }
+
+    [Fact]
     public void PlayerPropsPacketWrapsConfirmedSubsetWithPloPlayerpropsAndNewline()
     {
         var source = BaseSource();

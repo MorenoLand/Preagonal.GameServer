@@ -52,7 +52,8 @@ For legacy movement fields:
 - `PLPROP_X2`, `PLPROP_Y2`, and `PLPROP_Z2` each read one `GUShort`; the low
   bit is the sign flag and the remaining bits are the pixel coordinate shifted
   right by one. C++ mirrors each precise prop to the legacy prop for older
-  clients.
+  clients. `Player::getProp` writes the same shape: `abs(pixel) << 1`, then
+  sets low bit `0x0001` when the stored pixel coordinate is negative.
 
 Forwarding behavior confirmed from the end of `setProps`:
 

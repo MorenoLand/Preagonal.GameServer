@@ -1845,6 +1845,14 @@ PLPROP_Y2 GSHORT(1121) => pixelY=-560
 PLPROP_Z2 GSHORT(79) => pixelZ=-39
 ```
 
+Confirmed precise movement serialization from `Player::getProp`:
+
+```txt
+X=-560 => PLPROP_X2 GSHORT(1121) => bytes 110 40 129
+Y=560  => PLPROP_Y2 GSHORT(1120) => bytes 111 40 128
+Z=-39  => PLPROP_Z2 GSHORT(79)   => bytes 112 32 111
+```
+
 ## Movement Links Chests Boundary
 
 `Level::getLink` inclusive tile bounds:
