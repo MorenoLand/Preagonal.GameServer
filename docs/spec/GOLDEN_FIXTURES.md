@@ -536,6 +536,38 @@ PLO_PLAYERWARP, x=30.5, y=31.25, level="start.nw", "\n"
 => [46, 93, 94, 115, 116, 97, 114, 116, 46, 110, 119, 10]
 ```
 
+Same-level `warp("start.nw", 30.5, 31.25)` position update:
+
+```txt
+PLO_PLAYERPROPS
+PLPROP_X GCHAR(61)
+PLPROP_Y GCHAR(62)
+"\n"
+
+=> [41, 47, 93, 48, 94, 10]
+```
+
+Missing target fallback to previous level:
+
+```txt
+PLO_WARPFAILED "missing.nw" "\n"
+PLO_PLAYERWARP oldX=30.5 oldY=31.25 "start.nw" "\n"
+
+=> [47, 109, 105, 115, 115, 105, 110, 103, 46, 110, 119, 10,
+    46, 93, 94, 115, 116, 97, 114, 116, 46, 110, 119, 10]
+```
+
+Missing target fallback to default unstick level:
+
+```txt
+PLO_WARPFAILED "missing.nw" "\n"
+PLO_PLAYERWARP x=30.0 y=35.0 "onlinestartlocal.nw" "\n"
+
+=> [47, 109, 105, 115, 115, 105, 110, 103, 46, 110, 119, 10,
+    46, 92, 102, 111, 110, 108, 105, 110, 101, 115, 116, 97,
+    114, 116, 108, 111, 99, 97, 108, 46, 110, 119, 10]
+```
+
 ## Modern sendLevel Static Payload Boundary
 
 These fixtures include `Player::sendPacket` newline behavior.

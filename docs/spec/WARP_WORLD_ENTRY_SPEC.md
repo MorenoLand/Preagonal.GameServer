@@ -27,13 +27,17 @@ Confirmed sequence:
    (`onlinestartlocal.nw`, `30.0`, `35.0`).
 2. Resolve target level with `Level::findLevel`.
 3. If already in the same level, only update `PLPROP_X` and `PLPROP_Y` through
-   `setProps(..., PLSETPROPS_FORWARD | PLSETPROPS_FORWARDSELF)` and return.
+   `setProps(..., PLSETPROPS_FORWARD | PLSETPROPS_FORWARDSELF)` and return
+   `true`.
 4. Call `leaveLevel()`.
 5. Reset and possibly set `m_pmap` from target level.
 6. Set player X/Y to requested values.
 7. Call `setLevel(pLevelName, modTime)`.
 8. On failure, try previous level; if that fails, try unstickme level; if that
    fails, return false.
+9. Return the original target `setLevel` result, even if the previous or
+   unstick fallback reached another level. This source-confirmed oddity is now
+   preserved by the C# `PlayerWarpBoundaryResult.CppReturnValue`.
 
 ## Player::setLevel First Packets
 
@@ -81,8 +85,21 @@ warp packet bodies:
 - `PLO_PLAYERWARP2 + GCHAR(x*2) + GCHAR(y*2) + GCHAR(z*2+50) + GCHAR(mapX) + GCHAR(mapY) + mapName`
 - `PLO_LEVELNAME + levelName`
 
-The C# network project now includes `WarpWorldEntryBoundary.BeginSetLevel`,
-which models only the source-confirmed beginning of `Player::setLevel`:
+The C# network project now includes `WarpWorldEntryBoundary.BeginWarp`, which
+models the source-confirmed beginning of `Player::warp` without entering live
+level ownership:
+
+- detect same-level warp and queue the resulting self `PLO_PLAYERPROPS` X/Y
+  update bytes
+- pre-resolve the unstick level with defaults matching C++
+- attempt target `setLevel`
+- on failure, attempt previous level with old X/Y and `modTime=0`
+- on failure, attempt unstick level with configured/default X/Y and `modTime=0`
+- preserve C++'s original return value separately from whether a fallback
+  reached `ReadyForLevelRuntime`
+
+`WarpWorldEntryBoundary.BeginSetLevel` models the source-confirmed beginning of
+`Player::setLevel`:
 
 - require the session to be in `ReadyForLevelWarp`
 - resolve the target level through `ILevelLookup.FindLevel(levelName)`
@@ -96,9 +113,9 @@ which models only the source-confirmed beginning of `Player::setLevel`:
 - transition to `ReadyForLevelRuntime`, which maps to the point immediately
   before the C++ call to `sendLevel(...)` or `sendLevel141(...)`
 
-No C# full `warp`, fallback-to-current-level, fallback-to-unstickme,
-singleplayer clone, group-map clone, `sendLevel`, or `sendLevel141` runtime
-implementation is added.
+No C# singleplayer clone, group-map clone, sparring-zone AP mutation, live
+level-area forwarding, old `sendLevel141`, or gameplay runtime implementation is
+added.
 
 ## Confirmed First Packet Candidates
 
@@ -117,15 +134,15 @@ data bytes remain deferred until level packet fixtures are introduced.
 ## Current Pass Status
 
 The C# server can now cross `ReadyForLevelWarp` only through the
-source-confirmed `setLevel` pre-runtime boundary and then stops at
+source-confirmed `warp`/`setLevel` pre-runtime boundary and then stops at
 `ReadyForLevelRuntime`.
 
 Still not implemented:
 
-- same-level warp `setProps(PLPROP_X, PLPROP_Y)` branch
-- `warp` fallback to previous level
-- `warp` fallback to `unstickmelevel`
 - singleplayer and group-map clone behavior
+- live level-area forwarding from same-level `setProps`
+- sparring-zone AP mutation after successful `setLevel`
 - old-client `sendLevel141`
-- level file parsing and board/layer/link/sign construction from real state
-- dynamic level board changes/chests/horses/baddies/NPC/player-list runtime packets
+- production level cache ownership and map attachment
+- production dynamic level board changes/chests/horses/baddies/NPC/player-list
+  runtime packets

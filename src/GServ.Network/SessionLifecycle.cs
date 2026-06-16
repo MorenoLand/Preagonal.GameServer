@@ -8,6 +8,7 @@ public enum SessionLifecycle
     ServerListAuthAcceptedPreWorld,
     ReadyForWorldEntry,
     ReadyForLevelWarp,
+    SameLevelWarpPositionUpdated,
     ReadyForLevelRuntime,
     LevelPayloadSent,
     DynamicLevelPayloadSent,

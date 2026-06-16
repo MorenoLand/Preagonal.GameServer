@@ -35,14 +35,15 @@
   `std::unordered_map` flag order guarantees, and guest random `pc:` identity
   generation remain blocked.
 - Isolated warp packet builders are implemented. A source-confirmed
-  `setLevel` pre-runtime boundary now handles missing levels, `PLO_PLAYERWARP`,
+  `warp`/`setLevel` pre-runtime boundary now handles same-level X/Y updates,
+  missing levels, previous-level fallback, unstick fallback, `PLO_PLAYERWARP`,
   `PLO_PLAYERWARP2`, and the modern non-zero-modtime no-warp-packet branch.
   Modern `sendLevel` is implemented through confirmed dynamic packet wrappers:
   board changes, chests, horses, baddies, GMAP correction, ghost icon, leader,
   new world time, active level, opaque NPC packet bytes, and nearby
-  `PLO_OTHERPLPROPS` visibility sync from snapshots. Full `warp(...)`,
-  fallback to previous/unstick levels, singleplayer/group-map cloning, old
-  `sendLevel141`, production horse/baddy/NPC state construction, and live
+  `PLO_OTHERPLPROPS` visibility sync from snapshots. Singleplayer/group-map
+  cloning, live level-area forwarding from `setProps`, sparring-zone AP mutation,
+  old `sendLevel141`, production horse/baddy/NPC state construction, and live
   multi-session player-list forwarding remain blocked because they enter
   level/map/NPC/player-list runtime.
 - Minimal level/player ownership is implemented only for confirmed id

@@ -24,6 +24,19 @@ public sealed record LevelWarpRequest(
     ClientVersionId ClientVersion,
     long ModTime);
 
+public sealed record PlayerWarpState(
+    LevelEntrySnapshot? CurrentLevel,
+    float CurrentX,
+    float CurrentY);
+
+public sealed record PlayerWarpSettings(
+    string UnstickLevelName,
+    float UnstickX,
+    float UnstickY)
+{
+    public static PlayerWarpSettings Default { get; } = new("onlinestartlocal.nw", 30.0f, 35.0f);
+}
+
 public interface ILevelLookup
 {
     LevelEntrySnapshot? FindLevel(string levelName);
@@ -40,8 +53,101 @@ public sealed record LevelEntryBoundaryResult(
     LevelEntryStopPoint StopPoint,
     LevelEntrySnapshot? Level);
 
+public enum PlayerWarpStopPoint
+{
+    SameLevelPositionUpdated,
+    TargetReadyForSendLevelRuntime,
+    FallbackPreviousReadyForSendLevelRuntime,
+    FallbackUnstickReadyForSendLevelRuntime,
+    Failed
+}
+
+public sealed record PlayerWarpBoundaryResult(
+    bool CppReturnValue,
+    bool ReachedSendLevelRuntime,
+    PlayerWarpStopPoint StopPoint,
+    LevelEntrySnapshot? Level);
+
 public static class WarpWorldEntryBoundary
 {
+    public static PlayerWarpBoundaryResult BeginWarp(
+        ClientSessionSkeleton session,
+        ILevelLookup levelLookup,
+        PlayerWarpState state,
+        LevelWarpRequest request,
+        PlayerWarpSettings settings)
+    {
+        if (session.Lifecycle != SessionLifecycle.ReadyForLevelWarp)
+            throw new InvalidOperationException("warp boundary requires ReadyForLevelWarp.");
+
+        var targetLevel = levelLookup.FindLevel(request.LevelName);
+        if (IsSameLevel(state.CurrentLevel, targetLevel))
+        {
+            session.QueuePacket(SameLevelPositionProps(request.X, request.Y));
+            session.MarkSameLevelWarpPositionUpdated();
+            return new PlayerWarpBoundaryResult(
+                true,
+                false,
+                PlayerWarpStopPoint.SameLevelPositionUpdated,
+                targetLevel);
+        }
+
+        var unstickLevel = levelLookup.FindLevel(settings.UnstickLevelName);
+        var targetResult = BeginSetLevel(session, levelLookup, request);
+        if (targetResult.Accepted)
+        {
+            return new PlayerWarpBoundaryResult(
+                true,
+                true,
+                PlayerWarpStopPoint.TargetReadyForSendLevelRuntime,
+                targetResult.Level);
+        }
+
+        if (state.CurrentLevel is not null)
+        {
+            var previousResult = BeginSetLevel(
+                session,
+                levelLookup,
+                request with
+                {
+                    LevelName = state.CurrentLevel.LevelName,
+                    X = state.CurrentX,
+                    Y = state.CurrentY,
+                    ModTime = 0
+                });
+            if (previousResult.Accepted)
+            {
+                return new PlayerWarpBoundaryResult(
+                    false,
+                    true,
+                    PlayerWarpStopPoint.FallbackPreviousReadyForSendLevelRuntime,
+                    previousResult.Level);
+            }
+        }
+
+        if (unstickLevel is null)
+            return new PlayerWarpBoundaryResult(false, false, PlayerWarpStopPoint.Failed, null);
+
+        var unstickResult = BeginSetLevel(
+            session,
+            levelLookup,
+            request with
+            {
+                LevelName = unstickLevel.LevelName,
+                X = settings.UnstickX,
+                Y = settings.UnstickY,
+                ModTime = 0
+            });
+
+        return unstickResult.Accepted
+            ? new PlayerWarpBoundaryResult(
+                false,
+                true,
+                PlayerWarpStopPoint.FallbackUnstickReadyForSendLevelRuntime,
+                unstickResult.Level)
+            : new PlayerWarpBoundaryResult(false, false, PlayerWarpStopPoint.Failed, null);
+    }
+
     public static LevelEntryBoundaryResult BeginSetLevel(
         ClientSessionSkeleton session,
         ILevelLookup levelLookup,
@@ -68,6 +174,26 @@ public static class WarpWorldEntryBoundary
 
         session.MarkReadyForLevelRuntime();
         return new LevelEntryBoundaryResult(true, LevelEntryStopPoint.BeforeSendLevelRuntime, level);
+    }
+
+    private static bool IsSameLevel(LevelEntrySnapshot? currentLevel, LevelEntrySnapshot? targetLevel)
+    {
+        if (currentLevel is null || targetLevel is null)
+            return false;
+
+        return string.Equals(currentLevel.LevelName, targetLevel.LevelName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static byte[] SameLevelPositionProps(float x, float y)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToPlayerPacketId.PlayerProps);
+        writer.WriteGChar((byte)PlayerPropertyId.X);
+        writer.WriteGChar((byte)(x * 2));
+        writer.WriteGChar((byte)PlayerPropertyId.Y);
+        writer.WriteGChar((byte)(y * 2));
+        writer.WriteByte((byte)'\n');
+        return writer.ToArray();
     }
 
     private static byte[] AppendNewline(byte[] packet)

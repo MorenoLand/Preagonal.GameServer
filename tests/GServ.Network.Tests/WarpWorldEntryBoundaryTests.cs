@@ -7,6 +7,81 @@ namespace GServ.Network.Tests;
 public sealed class WarpWorldEntryBoundaryTests
 {
     [Fact]
+    public void BeginWarpQueuesSameLevelPositionPropsAndDoesNotEnterSendLevelRuntime()
+    {
+        var session = ReadyForLevelWarpSession();
+        var levels = new MemoryLevelLookup();
+        levels.Add(new LevelEntrySnapshot("start.nw"));
+
+        var result = WarpWorldEntryBoundary.BeginWarp(
+            session,
+            levels,
+            new PlayerWarpState(new LevelEntrySnapshot("start.nw"), CurrentX: 30.0f, CurrentY: 30.5f),
+            new LevelWarpRequest("start.nw", X: 30.5f, Y: 31.25f, Z: 0, ClientVersionId.Client21, ModTime: 0),
+            PlayerWarpSettings.Default);
+
+        Assert.True(result.CppReturnValue);
+        Assert.False(result.ReachedSendLevelRuntime);
+        Assert.Equal(PlayerWarpStopPoint.SameLevelPositionUpdated, result.StopPoint);
+        Assert.Equal(SessionLifecycle.SameLevelWarpPositionUpdated, session.Lifecycle);
+        Assert.Equal(new byte[] { 41, 47, 93, 48, 94, 10 }, session.TakeOutboundBytes());
+    }
+
+    [Fact]
+    public void BeginWarpFallsBackToPreviousLevelAfterMissingTargetButPreservesCppReturnFalse()
+    {
+        var session = ReadyForLevelWarpSession();
+        var levels = new MemoryLevelLookup();
+        levels.Add(new LevelEntrySnapshot("start.nw"));
+        levels.Add(new LevelEntrySnapshot("onlinestartlocal.nw"));
+
+        var result = WarpWorldEntryBoundary.BeginWarp(
+            session,
+            levels,
+            new PlayerWarpState(new LevelEntrySnapshot("start.nw"), CurrentX: 30.5f, CurrentY: 31.25f),
+            new LevelWarpRequest("missing.nw", X: 40.0f, Y: 41.0f, Z: 0, ClientVersionId.Client21, ModTime: 0),
+            PlayerWarpSettings.Default);
+
+        Assert.False(result.CppReturnValue);
+        Assert.True(result.ReachedSendLevelRuntime);
+        Assert.Equal(PlayerWarpStopPoint.FallbackPreviousReadyForSendLevelRuntime, result.StopPoint);
+        Assert.Equal(SessionLifecycle.ReadyForLevelRuntime, session.Lifecycle);
+        Assert.Equal(
+            new byte[]
+            {
+                47, (byte)'m', (byte)'i', (byte)'s', (byte)'s', (byte)'i', (byte)'n', (byte)'g', (byte)'.', (byte)'n', (byte)'w', 10,
+                46, 93, 94, (byte)'s', (byte)'t', (byte)'a', (byte)'r', (byte)'t', (byte)'.', (byte)'n', (byte)'w', 10
+            },
+            session.TakeOutboundBytes());
+    }
+
+    [Fact]
+    public void BeginWarpFallsBackToUnstickLevelWhenPreviousLevelCannotBeRestored()
+    {
+        var session = ReadyForLevelWarpSession();
+        var levels = new MemoryLevelLookup();
+        levels.Add(new LevelEntrySnapshot("onlinestartlocal.nw"));
+
+        var result = WarpWorldEntryBoundary.BeginWarp(
+            session,
+            levels,
+            new PlayerWarpState(null, CurrentX: 30.5f, CurrentY: 31.25f),
+            new LevelWarpRequest("missing.nw", X: 40.0f, Y: 41.0f, Z: 0, ClientVersionId.Client21, ModTime: 0),
+            PlayerWarpSettings.Default);
+
+        Assert.False(result.CppReturnValue);
+        Assert.True(result.ReachedSendLevelRuntime);
+        Assert.Equal(PlayerWarpStopPoint.FallbackUnstickReadyForSendLevelRuntime, result.StopPoint);
+        Assert.Equal(
+            new byte[]
+            {
+                47, (byte)'m', (byte)'i', (byte)'s', (byte)'s', (byte)'i', (byte)'n', (byte)'g', (byte)'.', (byte)'n', (byte)'w', 10,
+                46, 92, 102, (byte)'o', (byte)'n', (byte)'l', (byte)'i', (byte)'n', (byte)'e', (byte)'s', (byte)'t', (byte)'a', (byte)'r', (byte)'t', (byte)'l', (byte)'o', (byte)'c', (byte)'a', (byte)'l', (byte)'.', (byte)'n', (byte)'w', 10
+            },
+            session.TakeOutboundBytes());
+    }
+
+    [Fact]
     public void BeginSetLevelQueuesWarpFailedWhenLevelLookupFails()
     {
         var session = ReadyForLevelWarpSession();

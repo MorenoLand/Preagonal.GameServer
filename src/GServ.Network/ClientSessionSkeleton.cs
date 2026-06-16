@@ -98,6 +98,11 @@ public sealed class ClientSessionSkeleton
         Lifecycle = SessionLifecycle.ReadyForLevelRuntime;
     }
 
+    internal void MarkSameLevelWarpPositionUpdated()
+    {
+        Lifecycle = SessionLifecycle.SameLevelWarpPositionUpdated;
+    }
+
     internal void MarkLevelPayloadSent()
     {
         Lifecycle = SessionLifecycle.LevelPayloadSent;
