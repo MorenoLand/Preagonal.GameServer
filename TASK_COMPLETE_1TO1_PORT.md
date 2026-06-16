@@ -794,6 +794,10 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed `PLPROP_HEADGIF` leading-newline
     fixture. The parser preserves a newline at byte zero because the recovered
     C++ only truncates custom head image strings when `find("\n") > 0`.
+  - 2026-06-16: Added source-confirmed `PLPROP_HEADGIF` custom-image
+    truncated terminal payload coverage, matching `CString::readChars`
+    clamping `len - 100` to bytes remaining before newline and old-client
+    extension handling.
   - 2026-06-16: Added source-confirmed `PLPROP_SWORDPOWER` and
     `PLPROP_SHIELDPOWER` fixtures for custom image parsing, old-client `.gif`
     suffixes, default-image settings clamps, the old shield no-change bug,

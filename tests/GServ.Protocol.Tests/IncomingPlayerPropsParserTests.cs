@@ -622,6 +622,22 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedCustomHeadImageByClampingDeclaredLengthToRemainingBytes()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.HeadGif);
+        body.WriteGChar(108);
+        body.WriteBytes("head"u8);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray(), ClientVersionId.Client21);
+
+        Assert.True(result.Success);
+        var update = Assert.Single(result.Updates);
+        Assert.Equal(PlayerPropertyId.HeadGif, update.PropertyId);
+        Assert.Equal("head", update.StringValue);
+    }
+
+    [Fact]
     public void ParsesConfirmedHeadImageNoChangeLengthWithoutInventingValue()
     {
         var body = new GraalBinaryWriter();

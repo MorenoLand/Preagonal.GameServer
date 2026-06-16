@@ -2469,6 +2469,10 @@ modern custom head with embedded newline at byte zero keeps the newline because
 the recovered C++ only truncates when `find("\n") > 0`:
 PLPROP_HEADGIF + GCHAR(105) + "\nhead" => "\nhead"
 
+modern custom head with declared custom length longer than terminal payload
+uses `CString::readChars` clamping to the packet bytes remaining:
+PLPROP_HEADGIF + GCHAR(108) + "head" => "head"
+
 old-client extensionless custom head:
 PLPROP_HEADGIF + GCHAR(104) + "head" => "head.gif"
 
