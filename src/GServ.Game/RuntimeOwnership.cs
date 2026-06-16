@@ -110,6 +110,15 @@ public static class RuntimePlayerPropsApplier
                     MarkMovement(player);
                     break;
 
+                case GServ.Protocol.PlayerPropertyId.Id:
+                case GServ.Protocol.PlayerPropertyId.KillsCount:
+                case GServ.Protocol.PlayerPropertyId.DeathsCount:
+                case GServ.Protocol.PlayerPropertyId.OnlineSeconds:
+                case GServ.Protocol.PlayerPropertyId.JoinLeaveLevel:
+                case GServ.Protocol.PlayerPropertyId.PlayerConnected:
+                case GServ.Protocol.PlayerPropertyId.Unknown81:
+                    break;
+
                 default:
                     throw new NotSupportedException($"Runtime mutation for player prop {(byte)update.PropertyId} is not source-confirmed.");
             }

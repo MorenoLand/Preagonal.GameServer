@@ -1425,6 +1425,33 @@ x=560
 y=568
 ```
 
+Decoded post-login read-only/no-op `PLI_PLAYERPROPS` body:
+
+```txt
+PLPROP_ID GSHORT(7)
+PLPROP_KILLSCOUNT GINT(111)
+PLPROP_DEATHSCOUNT GINT(222)
+PLPROP_ONLINESECS GINT(333)
+PLPROP_JOINLEAVELVL
+PLPROP_PCONNECTED
+PLPROP_UNKNOWN81 GCHAR(3)
+PLPROP_X GCHAR(70)
+```
+
+Expected parsed property order:
+
+```txt
+ID, KILLSCOUNT, DEATHSCOUNT, ONLINESECS, JOINLEAVELVL, PCONNECTED,
+UNKNOWN81, X
+```
+
+Forwarding only read-only/no-op updates with no local-forwarded props emits
+only the `PLO_OTHERPLPROPS` wrapper for player id `7` plus newline:
+
+```txt
+28 20 27 0a
+```
+
 Gen5 socket-framed post-login `PLI_PLAYERPROPS` movement frame with key `42`:
 
 ```txt

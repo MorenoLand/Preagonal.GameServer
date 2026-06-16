@@ -30,6 +30,9 @@ public sealed record IncomingPlayerPropertyUpdate(
 
     public static IncomingPlayerPropertyUpdate String(PlayerPropertyId propertyId, string value) =>
         new(propertyId, StringValue: value);
+
+    public static IncomingPlayerPropertyUpdate NoValue(PlayerPropertyId propertyId) =>
+        new(propertyId);
 }
 
 public static class IncomingPlayerPropsParser
@@ -60,6 +63,28 @@ public static class IncomingPlayerPropsParser
                 case PlayerPropertyId.Y2:
                 case PlayerPropertyId.Z2:
                     updates.Add(IncomingPlayerPropertyUpdate.GShort(propertyId, reader.ReadGShort()));
+                    break;
+
+                case PlayerPropertyId.Id:
+                    reader.ReadGShort();
+                    updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
+                    break;
+
+                case PlayerPropertyId.KillsCount:
+                case PlayerPropertyId.DeathsCount:
+                case PlayerPropertyId.OnlineSeconds:
+                    reader.ReadGInt();
+                    updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
+                    break;
+
+                case PlayerPropertyId.JoinLeaveLevel:
+                case PlayerPropertyId.PlayerConnected:
+                    updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
+                    break;
+
+                case PlayerPropertyId.Unknown81:
+                    reader.ReadGChar();
+                    updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
                     break;
 
                 default:

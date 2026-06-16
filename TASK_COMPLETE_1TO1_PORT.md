@@ -504,6 +504,12 @@ behavior, and movement-loop invocation.
     unsupported/default-invalid in the recovered source.
 - [ ] Implement source-confirmed property parsing/mutation/forwarding in small
   tested subsets.
+  - 2026-06-16: Implemented the first safe no-op/read-only subset from
+    `Player::setProps`: `PLPROP_ID`, `PLPROP_KILLSCOUNT`,
+    `PLPROP_DEATHSCOUNT`, `PLPROP_ONLINESECS`, `PLPROP_JOINLEAVELVL`,
+    `PLPROP_PCONNECTED`, and `PLPROP_UNKNOWN81`. The parser consumes the exact
+    C++ byte shapes, the runtime applier ignores them, and forwarding emits no
+    invented local props.
 - [ ] Wire live `testSign` invocation through confirmed movement branches.
 - [ ] Keep NPC touch script events blocked until scripting runtime exists.
 - [ ] Confirm whether automatic player movement-to-link warp exists; implement

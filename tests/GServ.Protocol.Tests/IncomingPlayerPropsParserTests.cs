@@ -72,6 +72,48 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedReadOnlyAndNoBytePropsWithoutInventingValues()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.Id);
+        body.WriteGShort(7);
+        body.WriteGChar((byte)PlayerPropertyId.KillsCount);
+        body.WriteGInt(111);
+        body.WriteGChar((byte)PlayerPropertyId.DeathsCount);
+        body.WriteGInt(222);
+        body.WriteGChar((byte)PlayerPropertyId.OnlineSeconds);
+        body.WriteGInt(333);
+        body.WriteGChar((byte)PlayerPropertyId.JoinLeaveLevel);
+        body.WriteGChar((byte)PlayerPropertyId.PlayerConnected);
+        body.WriteGChar((byte)PlayerPropertyId.Unknown81);
+        body.WriteGChar(3);
+        body.WriteGChar((byte)PlayerPropertyId.X);
+        body.WriteGChar(70);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray());
+
+        Assert.True(result.Success);
+        Assert.Equal(
+            [
+                PlayerPropertyId.Id,
+                PlayerPropertyId.KillsCount,
+                PlayerPropertyId.DeathsCount,
+                PlayerPropertyId.OnlineSeconds,
+                PlayerPropertyId.JoinLeaveLevel,
+                PlayerPropertyId.PlayerConnected,
+                PlayerPropertyId.Unknown81,
+                PlayerPropertyId.X
+            ],
+            result.Updates.Select(update => update.PropertyId));
+        Assert.All(result.Updates.Take(7), update =>
+        {
+            Assert.Null(update.GCharValue);
+            Assert.Null(update.GShortValue);
+            Assert.Null(update.StringValue);
+        });
+    }
+
+    [Fact]
     public void BuildsConfirmedForwardedMovementPropsForPreciseSender()
     {
         var updates = new[]
@@ -100,5 +142,28 @@ public sealed class IncomingPlayerPropsParserTests
                 10
             },
             packet);
+    }
+
+    [Fact]
+    public void DoesNotForwardConfirmedReadOnlyNoLocalProps()
+    {
+        var updates = new[]
+        {
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.KillsCount),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.DeathsCount),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.OnlineSeconds),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.Unknown81)
+        };
+
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: 0,
+            updates,
+            senderSupportsPreciseMovement: true,
+            appendNewline: true);
+
+        Assert.Equal([40, 32, 39, 10], packet);
     }
 }

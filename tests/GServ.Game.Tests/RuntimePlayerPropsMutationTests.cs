@@ -51,4 +51,28 @@ public sealed class RuntimePlayerPropsMutationTests
         Assert.True(player.MovementUpdated);
         Assert.True(player.TouchTestRequested);
     }
+
+    [Fact]
+    public void IgnoresConfirmedReadOnlyAndNoByteProps()
+    {
+        var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
+        var updates = new[]
+        {
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.Id),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.KillsCount),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.DeathsCount),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.OnlineSeconds),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.JoinLeaveLevel),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.PlayerConnected),
+            IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.Unknown81)
+        };
+
+        RuntimePlayerPropsApplier.ApplyConfirmed(player, updates);
+
+        Assert.Equal(0, player.PixelX);
+        Assert.Equal(0, player.PixelY);
+        Assert.Equal(0, player.PixelZ);
+        Assert.False(player.MovementUpdated);
+        Assert.False(player.TouchTestRequested);
+    }
 }

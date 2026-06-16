@@ -73,11 +73,15 @@ Implemented C# boundary:
 
 - `IncomingPlayerPropsParser` parses confirmed decoded `PLI_PLAYERPROPS` bodies
   for `X`, `Y`, `Z`, `Sprite`, `CurrentLevel`, `Gani`, `X2`, `Y2`, and `Z2`.
+  It also consumes the confirmed read-only/no-op branches `ID`, `KILLSCOUNT`,
+  `DEATHSCOUNT`, `ONLINESECS`, `JOINLEAVELVL`, `PCONNECTED`, and `UNKNOWN81`
+  without inventing mutation or forwarding behavior.
 - The parser stops at the first unconfirmed property, matching the C++
   `default: return` shape in `setProps`, and exposes the unsupported property
   id instead of guessing its size.
 - `RuntimePlayerPropsApplier.ApplyConfirmed` mutates only local runtime state:
-  pixel X/Y/Z, sprite, current level name, gani, and movement/touch flags.
+  pixel X/Y/Z, sprite, current level name, gani, and movement/touch flags. The
+  confirmed read-only/no-op branches are accepted and ignored.
 - `IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket` builds the
   confirmed `PLO_OTHERPLPROPS` movement forwarding bytes for the supported
   subset, including legacy/precise mirror props and sender-version ordering.
