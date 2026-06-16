@@ -611,7 +611,13 @@ Completion criteria:
     `PLI_BADDYPROPS`, `PLI_BADDYHURT`, `PLI_BADDYADD`, mode timeout behavior,
     `BDMODE_DIE -> BDMODE_DEAD`, respawn timing, baddy item drops, and blocked
     RNG/session-routing areas.
-- [ ] Document player hurt, AP thresholds, death/revive, sparring-zone behavior.
+- [x] Document player hurt, AP thresholds, death/revive, sparring-zone behavior.
+  - 2026-06-16: Expanded `docs/spec/BADDY_COMBAT_SPEC.md` with
+    `msgPLI_HURTPLAYER`, `PLPROP_CURPOWER` AP healing gate, timed AP increase,
+    `PLPROP_STATUS` death/revive side effects, `dropItemsOnDeath`,
+    sparring-zone rating update, and non-spar AP/kills behavior. Implementation
+    remains blocked where C++ depends on live session routing, level leader
+    mutation, exact C RNG/drop behavior, or rating-flow fixtures.
 - [ ] Implement combat packet parsers/builders and deterministic formulas.
 - [ ] Implement drops only after exact C++ RNG/timing behavior is confirmed.
 - [ ] Add golden tests for packet bytes and gameplay rule outputs.

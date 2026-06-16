@@ -208,3 +208,166 @@ Blocked:
 - `dropItem` because exact C `rand()` compatibility/capture is not established;
 - leader-exclusion recipient selection for baddy timeout events;
 - out-of-bounds `type == 10` behavior decision.
+
+## Player Hurt Packet
+
+`Player::msgPLI_HURTPLAYER` parses:
+
+```txt
+GUShort victimPlayerId
+GChar hurtDx
+GChar hurtDy
+GUChar power
+GUInt npcId
+```
+
+The handler:
+
+1. looks up `victimPlayerId` as `PLTYPE_ANYCLIENT`;
+2. ignores missing victims;
+3. ignores the hit if the victim's `PLPROP_STATUS` has `PLSTATUS_PAUSED`;
+4. sends only to the victim:
+
+```txt
+PLO_HURTPLAYER
+GSHORT attackerPlayerId
+GCHAR hurtDx
+GCHAR hurtDy
+GCHAR power
+GINT npcId
+```
+
+No damage calculation is performed in this handler. Client-side state changes
+come back through player property/status packets.
+
+## Current Power And AP Gate
+
+`Player::setProps` handles `PLPROP_CURPOWER` by reading `GUChar / 2.0`.
+
+If player AP is below `40` and the incoming value would heal above current
+hitpoints, the branch breaks without calling `setPower`. Otherwise C++
+clips through `Account::setPower`, which clamps to `0..m_maxHitpoints`.
+
+This is implemented in C# for direct runtime property mutation.
+
+## AP Timer Increase
+
+`Player::doTimedEvents` increases AP when:
+
+- `apsystem` setting is true;
+- player has a current level;
+- player is not paused;
+- level is not a sparring zone.
+
+It decrements `m_apCounter`, then when `m_apCounter <= 0`:
+
+1. increments AP by `1` if AP is below `100`;
+2. calls `setProps(PLPROP_ALIGNMENT + AP, FORWARD | FORWARDSELF)`;
+3. resets `m_apCounter` from settings:
+   - AP `< 20`: `aptime0`, default `30`;
+   - AP `< 40`: `aptime1`, default `90`;
+   - AP `< 60`: `aptime2`, default `300`;
+   - AP `< 80`: `aptime3`, default `600`;
+   - otherwise: `aptime4`, default `1200`.
+
+The C# helper currently covers deterministic tick math, but production timed
+session wiring remains blocked.
+
+## Death And Revive Status
+
+`PLPROP_STATUS` reads one `GUChar` into `m_status`.
+
+When transitioning from dead to alive:
+
+- restored power is:
+  - AP `< 20`: `3`;
+  - AP `< 40`: `5`;
+  - otherwise: `m_maxHitpoints`;
+- restored power is clipped to `0.5..m_maxHitpoints`;
+- C++ appends `PLPROP_CURPOWER` to self and level buffers;
+- if the player is the level leader, C++ sends `PLO_ISLEADER` to self.
+
+When transitioning from alive to dead:
+
+- if the level is not a sparring zone:
+  - increments death count;
+  - calls `dropItemsOnDeath()`;
+- if the player is level leader and more players are present:
+  - removes and re-adds the player id to move it behind the others;
+  - sends `PLO_ISLEADER` to the new leader.
+
+The full `PLPROP_STATUS` runtime branch is intentionally not implemented yet in
+C# because it requires drop RNG, live level leader mutation, level-area
+forwarding, and exact side-packet ordering.
+
+## Death Item Drops
+
+`Player::dropItemsOnDeath` runs only when `dropitemsdead` is true, default true.
+
+Settings:
+
+- `mindeathgralats`, default `1`;
+- `maxdeathgralats`, default `50`.
+
+Confirmed sequence:
+
+1. If `maxdeathgralats > 0`, choose `drop_gralats = rand() % maxdeathgralats`.
+2. The C++ source calls `clip(drop_gralats, mindeathgralats, maxdeathgralats)`
+   without assigning the return value. Unless `clip` mutates by reference, this
+   call may have no effect and must be verified before porting.
+3. Cap `drop_gralats` to current gralats.
+4. Choose `drop_arrows = rand() % 4` and `drop_bombs = rand() % 4`.
+5. If `drop_arrows * 5` or `drop_bombs * 5` exceeds inventory, reduce to
+   `arrows / 5` or `bombs / 5`.
+6. Subtract gralats, arrows, and bombs.
+7. Send self `PLO_PLAYERPROPS` with rupees, arrows, and bombs.
+8. Spawn dropped gralats by repeatedly choosing:
+   - `100` gralats -> item `19`;
+   - `30` gralats -> item `2`;
+   - `5` gralats -> item `1`;
+   - `1` gralat -> item `0`.
+9. Spawn arrow item `4` once per dropped arrow pack.
+10. Spawn bomb item `3` once per dropped bomb pack.
+11. Each spawned item uses:
+
+```txt
+x = getX() + 1.5 + (rand() % 8) - 2.0
+y = getY() + 2.0 + (rand() % 8) - 2.0
+PLI_ITEMADD + GCHAR(x * 2) + GCHAR(y * 2) + GCHAR(item)
+```
+
+C++ then consumes the packet id byte so `msgPLI_ITEMADD` can process the packet,
+and sends `PLO_ITEMADD` with the item payload back to the dying player. Exact
+drop implementation remains blocked on C `rand()` compatibility and a decision
+about the suspicious unused `clip` return.
+
+## Sparring Claim / Rating And AP Loss
+
+`Player::msgPLI_CLAIMPKER` reads a `GUShort` killer id and ignores missing
+killers or self-kill claims.
+
+In sparring zones:
+
+- reads both players' ratings from `PLPROP_RATING`;
+- skips rating update when loser and killer have the same remote IP;
+- uses the Glicko-style formulas in `Player.cpp`;
+- clips ratings to `0..4000`;
+- clips deviations to `50..350`;
+- updates changed ratings through `setProps(PLPROP_RATING + GINT(0),
+  FORWARD | FORWARDSELF)`;
+- sets `m_lastSparTime` for both players.
+
+Outside sparring zones:
+
+- if `dontchangekills` is false, increments killer kills by one;
+- if `apsystem` is true and loser AP is at least `20`, killer AP is reduced:
+
+```txt
+oAp -= (((oAp / 20) + 1) * (loserAp / 20))
+if oAp < 0, oAp = 0
+apCounter = aptime bucket for new oAp
+killer.setProps(PLPROP_ALIGNMENT + oAp, FORWARD | FORWARDSELF)
+```
+
+Rating formulas and AP-loss side effects are not fully wired into production C#
+session flow yet.
