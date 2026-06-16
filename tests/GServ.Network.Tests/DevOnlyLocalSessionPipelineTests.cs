@@ -145,7 +145,7 @@ public sealed class DevOnlyLocalSessionPipelineTests
     }
 
     [Fact]
-    public void ConnectionAppliesDecodedPlayerPropsFrameAfterLoginBoundary()
+    public void ConnectionDecodesGen5PlayerPropsFrameAfterLoginBoundary()
     {
         using var temp = new TemporaryDirectory();
         var world = Directory.CreateDirectory(Path.Combine(temp.Path, "world"));
@@ -159,7 +159,9 @@ public sealed class DevOnlyLocalSessionPipelineTests
         var connection = pipeline.CreateConnection();
 
         var login = connection.ProcessLengthPrefixedInput(LengthFrame(Client3LoginPacket()));
-        var movement = connection.ProcessLengthPrefixedInput(LengthFrame(PlayerPropsPacket(
+        var movement = connection.ProcessLengthPrefixedInput(Gen5SocketFrame(
+            key: 42,
+            PlayerPropsPacket(
             PlayerPropertyId.X,
             70,
             PlayerPropertyId.Y,
@@ -168,6 +170,7 @@ public sealed class DevOnlyLocalSessionPipelineTests
         Assert.True(login.Accepted);
         Assert.True(movement.Accepted);
         Assert.DoesNotContain(movement.Log, line => line.Contains("Unsupported post-login frame", StringComparison.Ordinal));
+        Assert.Contains(movement.Log, line => line.Contains("Decoded inbound gen5 frame into 1 packet", StringComparison.Ordinal));
         Assert.Contains(movement.Log, line => line.Contains("Applied decoded PLI_PLAYERPROPS", StringComparison.Ordinal));
         Assert.Contains(movement.Log, line => line.Contains("x=560", StringComparison.Ordinal));
         Assert.Contains(movement.Log, line => line.Contains("y=568", StringComparison.Ordinal));
@@ -209,7 +212,16 @@ public sealed class DevOnlyLocalSessionPipelineTests
         packet.WriteGChar(firstValue);
         packet.WriteGChar((byte)second);
         packet.WriteGChar(secondValue);
+        packet.WriteByte((byte)'\n');
         return packet.ToArray();
+    }
+
+    private static byte[] Gen5SocketFrame(byte key, byte[] decodedPayload)
+    {
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen5, key);
+        queue.AddPacket(decodedPayload);
+        return queue.FlushSocket();
     }
 
     private sealed class TemporaryDirectory : IDisposable

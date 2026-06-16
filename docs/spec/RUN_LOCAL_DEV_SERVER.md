@@ -10,9 +10,9 @@ and now has read-only filesystem-backed `.nw` loading into the static
 `sendLevel` boundary. The shell can accept a TCP client, read length-prefixed
 frames in sequence, run the confirmed login/account/world-entry boundaries with
 dev-only auth, load a `.nw` file, send confirmed pre-runtime level packets
-through `CFileQueue.FlushSocket`, accept decoded `PLI_PLAYERPROPS` frames for
-the confirmed movement/property subset, and stop before runtime world
-simulation.
+through `CFileQueue.FlushSocket`, decode confirmed post-login inbound
+uncompressed/zlib frames, accept `PLI_PLAYERPROPS` for the confirmed
+movement/property subset, and stop before runtime world simulation.
 
 ## Run Command
 
@@ -35,6 +35,8 @@ Expected limitations:
   diagnostic `.nw` boundary to avoid blocked bzip2 board payloads
 - applies only decoded `PLI_PLAYERPROPS` local state for X/Y/Z, precise
   X2/Y2/Z2, sprite, level name, and gani
+- decodes confirmed inbound gen5 uncompressed/zlib post-login frames using the
+  login key
 - stops before touch/link traversal, NPCs, scripts, file transfer, combat, and
   live world runtime
 - stops clearly on unsupported post-login frames before gameplay/runtime packet
@@ -65,6 +67,6 @@ dotnet run --project src/GServ/GServ.csproj -- --dev-only-local --dev-root <root
 ```
 
 A meaningful playable session is still not expected because full board payload
-bzip2 framing, production auth/server-list behavior, encrypted post-login
-client-frame decoding, live movement forwarding, NPCs, scripts, file transfer,
-and live world runtime are not implemented.
+bzip2 framing, production auth/server-list behavior, inbound bzip2 branches,
+live movement forwarding, NPCs, scripts, file transfer, and live world runtime
+are not implemented.

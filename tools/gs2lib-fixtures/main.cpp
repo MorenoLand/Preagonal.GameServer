@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "CFileQueue.h"
+#include "CEncryption.h"
 #include "CSocket.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -129,6 +130,23 @@ namespace
         return std::vector<std::uint8_t>(text.begin(), text.end());
     }
 
+    CString toCString(const std::vector<std::uint8_t>& bytes)
+    {
+        CString output;
+        for (auto byte : bytes)
+            output.writeChar(static_cast<char>(byte));
+        return output;
+    }
+
+    std::vector<std::uint8_t> toVector(const CString& text)
+    {
+        std::vector<std::uint8_t> output;
+        output.reserve(text.length());
+        for (int i = 0; i < text.length(); ++i)
+            output.push_back(static_cast<std::uint8_t>(text[i]));
+        return output;
+    }
+
     std::vector<std::uint8_t> runFixture(unsigned int gen, unsigned char key, const std::string& payload)
     {
         auto pair = makeSocketPair();
@@ -153,6 +171,61 @@ namespace
             << "|output=" << toHex(output)
             << "\n";
     }
+
+    std::vector<std::uint8_t> decodeInbound(unsigned int gen, unsigned char key, std::vector<std::uint8_t> framePayload)
+    {
+        CString packet = toCString(framePayload);
+        CEncryption codec;
+        codec.setGen(gen);
+        codec.reset(key);
+
+        switch (gen)
+        {
+            case ENCRYPT_GEN_1:
+            case ENCRYPT_GEN_6:
+                break;
+
+            case ENCRYPT_GEN_2:
+            case ENCRYPT_GEN_3:
+                packet.zuncompressI();
+                break;
+
+            case ENCRYPT_GEN_4:
+                codec.limitFromType(COMPRESS_BZ2);
+                codec.decrypt(packet);
+                packet.bzuncompressI();
+                break;
+
+            default:
+            {
+                int compressionType = packet.readChar();
+                packet.removeI(0, 1);
+                codec.limitFromType(static_cast<std::uint8_t>(compressionType));
+                codec.decrypt(packet);
+                if (compressionType == COMPRESS_ZLIB)
+                    packet.zuncompressI();
+                else if (compressionType == COMPRESS_BZ2)
+                    packet.bzuncompressI();
+                break;
+            }
+        }
+
+        return toVector(packet);
+    }
+
+    void emitInboundFixture(const std::string& name, unsigned int gen, unsigned char key, const std::string& payload)
+    {
+        auto socketOutput = runFixture(gen, key, payload);
+        std::vector<std::uint8_t> framePayload(socketOutput.begin() + 2, socketOutput.end());
+        auto decoded = decodeInbound(gen, key, framePayload);
+        std::cout
+            << "inbound-" << name
+            << "|gen=" << gen
+            << "|key=" << static_cast<int>(key)
+            << "|framePayload=" << toHex(framePayload)
+            << "|decoded=" << toHex(decoded)
+            << "\n";
+    }
 }
 
 int main()
@@ -167,6 +240,9 @@ int main()
         emitFixture("gen5-threshold-55a-newline", ENCRYPT_GEN_5, 0, std::string(54, 'a') + "\n");
         emitFixture("gen5-zlib-56a-newline", ENCRYPT_GEN_5, 0, std::string(55, 'a') + "\n");
         emitFixture("gen5-bz2-8193a-newline", ENCRYPT_GEN_5, 0, std::string(8192, 'a') + "\n");
+        emitInboundFixture("gen2-short-abc-newline", ENCRYPT_GEN_2, 0, "abc\n");
+        emitInboundFixture("gen5-short-abc-newline", ENCRYPT_GEN_5, 0, "abc\n");
+        emitInboundFixture("gen5-zlib-56a-newline", ENCRYPT_GEN_5, 0, std::string(55, 'a') + "\n");
     }
     catch (const std::exception& ex)
     {
@@ -176,4 +252,3 @@ int main()
 
     return 0;
 }
-

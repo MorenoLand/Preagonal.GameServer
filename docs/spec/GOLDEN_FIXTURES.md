@@ -978,6 +978,45 @@ x=560
 y=568
 ```
 
+Gen5 socket-framed post-login `PLI_PLAYERPROPS` movement frame with key `42`:
+
+```txt
+decoded payload:
+[34, 47, 102, 48, 103, 10]
+
+socket frame:
+GSHORT(7)
+COMPRESS_UNCOMPRESSED
+encrypted payload
+
+dev-only result:
+log contains "Decoded inbound gen5 frame into 1 packet(s)."
+log contains "Applied decoded PLI_PLAYERPROPS"
+```
+
+Inbound decode fixtures from `tools/gs2lib-fixtures`:
+
+```txt
+gen2 framePayload:
+[120, 156, 75, 76, 74, 230, 2, 0, 3, 126, 1, 49]
+decoded:
+[97, 98, 99, 10]
+```
+
+```txt
+gen5 uncompressed framePayload:
+[2, 121, 122, 178, 220]
+decoded:
+[97, 98, 99, 10]
+```
+
+```txt
+gen5 zlib framePayload:
+[4, 96, 132, 154, 154, 92, 211, 49, 130, 88, 70, 28, 19, 90]
+decoded:
+ASCII("a" repeated 55 + "\n")
+```
+
 Confirmed precise-movement forwarding packet for `playerId=7`,
 `pixelX=560`, `pixelY=560`, sender version `>= CLVER_2_3`:
 

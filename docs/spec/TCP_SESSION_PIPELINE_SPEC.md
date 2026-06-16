@@ -35,7 +35,9 @@ Implemented:
   - enters `PlayerSendLoginContinuation`, `PostLoginWorldEntryBoundary`,
     `WarpWorldEntryBoundary`, `NwLevelFileLoader`, and `SendLevelBoundary`
   - stops at `DynamicLevelPayloadSent` before live world simulation
-  - accepts decoded post-login `PLI_PLAYERPROPS` frames for the confirmed
+  - decodes post-login inbound frames for confirmed gen1/gen2/gen3/gen5
+    uncompressed/zlib branches
+  - accepts decoded post-login `PLI_PLAYERPROPS` packets for the confirmed
     movement/player-prop subset and applies local runtime state mutation only
 - `DevOnlyLocalTcpServer`
   - accepts one TCP client at a time
@@ -78,11 +80,12 @@ yet.
 
 ## Known Gaps
 
-- The TCP shell processes multiple frames for one connection and can apply
-  decoded `PLI_PLAYERPROPS` movement/player-prop frames, but it does not yet
-  decrypt real encrypted post-login client frames.
+- The TCP shell processes multiple frames for one connection and can decode
+  confirmed gen5 post-login client frames before applying `PLI_PLAYERPROPS`
+  movement/player-prop updates.
 - Unsupported post-login packet ids still stop before gameplay/runtime
   dispatch.
+- Inbound gen4 and gen5 bzip2 frame payloads are explicitly blocked.
 - Outbound bzip2 socket framing for gen4 and gen5 payloads over `0x2000` bytes
   is still blocked.
 - Websocket wrapping is not implemented.

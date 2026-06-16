@@ -48,10 +48,11 @@
 - Incoming decoded `PLI_PLAYERPROPS` movement/property parsing is implemented
   for the confirmed X/Y/Z, X2/Y2/Z2, sprite, current-level, and gani subset.
   Safe local runtime mutation and a packet builder for confirmed movement
-  `PLO_OTHERPLPROPS` forwarding bytes exist. Real encrypted post-login frame
-  decoding, live multi-session forwarding, full `setProps`, touch/link
-  traversal, NPC/chest/combat side effects, and invalid-update behavior remain
-  blocked.
+  `PLO_OTHERPLPROPS` forwarding bytes exist. Confirmed inbound gen1/gen2/gen3
+  and gen5 uncompressed/zlib frame decode exists, and the dev-only TCP shell can
+  decode gen5 movement frames after login. Inbound bzip2 branches, live
+  multi-session forwarding, full `setProps`, touch/link traversal,
+  NPC/chest/combat side effects, and invalid-update behavior remain blocked.
 - WebSocket handling is gated by `WOLFSSL_ENABLED` code paths and needs a dedicated pass.
 - `Server::doMain()` timing branches need a dedicated timing recovery pass.
 - Gameplay systems, account persistence, RC/NC file browser, server-list protocol, and scripting bindings are not implemented.

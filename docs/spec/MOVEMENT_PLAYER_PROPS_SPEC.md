@@ -82,16 +82,17 @@ Implemented C# boundary:
   confirmed `PLO_OTHERPLPROPS` movement forwarding bytes for the supported
   subset, including legacy/precise mirror props and sender-version ordering.
 - The dev-only TCP shell accepts decoded `PLI_PLAYERPROPS` frames after the
-  login/level boundary and applies the local mutation. It still does not
-  decrypt real post-login client frames or send live multi-session movement
+  login/level boundary and applies the local mutation. It now decodes confirmed
+  gen5 uncompressed/zlib post-login frame payloads before this parser. It still
+  does not decode inbound bzip2 branches or send live multi-session movement
   broadcasts.
 
 ## Required Recovery Before Implementation
 
 Still blocked:
 
-- inbound gen4/gen5 decrypt/decompress for real post-login client frames in the
-  dev shell
+- inbound gen4/gen5 bzip2 decrypt/decompress for real post-login client frames
+  in the dev shell
 - full `Player::setProps` implementation for all property ids
 - `PLPROP_GANI == "spin"` hit-object side effects
 - `PLPROP_STATUS`, carry NPC, chat, touch/link/chest/NPC/combat side effects

@@ -129,6 +129,34 @@ output:
 The bzip2 fixture is documented but not implemented in C# yet because the port
 does not currently have a source-confirmed bzip2 codec implementation strategy.
 
+## Inbound Decode Fixtures
+
+The harness also emits deterministic inbound decode fixtures. These are built
+from the same source-confirmed socket output by stripping the two-byte socket
+length prefix and applying the `Player::decryptPacket` / `CString`
+decompression order.
+
+```txt
+name: inbound-gen2-short-abc-newline
+gen: ENCRYPT_GEN_2
+framePayload: 78 9C 4B 4C 4A E6 02 00 03 7E 01 31
+decoded: 61 62 63 0A
+```
+
+```txt
+name: inbound-gen5-short-abc-newline
+gen: ENCRYPT_GEN_5
+framePayload: 02 79 7A B2 DC
+decoded: 61 62 63 0A
+```
+
+```txt
+name: inbound-gen5-zlib-56a-newline
+gen: ENCRYPT_GEN_5
+framePayload: 04 60 84 9A 9A 5C D3 31 82 58 46 1C 13 5A
+decoded: ASCII("a" repeated 55 + "\n")
+```
+
 ## C# Match Status
 
 Implemented and covered by tests:
@@ -137,6 +165,9 @@ Implemented and covered by tests:
 - gen3 zlib socket flush
 - gen5 uncompressed socket flush for payloads `<= 55`
 - gen5 zlib socket flush for payloads `56..0x2000`
+- inbound gen2 zlib frame decode
+- inbound gen5 uncompressed frame decode
+- inbound gen5 zlib frame decode
 
 Still blocked:
 

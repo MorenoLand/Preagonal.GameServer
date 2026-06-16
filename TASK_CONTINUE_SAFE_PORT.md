@@ -18,164 +18,147 @@ If something is unclear, document it as unknown and continue with the next safe 
 Current status:
 
 * Dev-only local TCP shell exists behind explicit `--dev-only-local`.
-* Shell integrates `GraalFileQueue.FlushSocket`.
-* Shell maintains connection state and reads multiple length-prefixed frames.
-* Dev-only pipeline can reach login -> fake dev auth -> account/level boundary -> `.nw` sendLevel.
-* Manual diagnostic client test is now possible, but not gameplay.
-* Post-login frames currently stop with explicit unsupported logs.
-* Known blockers:
-
-  * bzip2 socket flush for large payloads,
-  * real auth/list-server,
-  * post-login movement/player props/runtime dispatch.
+* Shell integrates source-confirmed outbound `GraalFileQueue.FlushSocket`.
+* Login -> dev auth -> account/level -> sendLevel boundary works in dev-only path.
+* Continuous TCP loop exists.
+* Parser for already-decoded `PLI_PLAYERPROPS` exists.
+* RuntimePlayer mutation exists for confirmed movement props.
+* Forwarding builder for decoded movement props exists.
+* Current blocker: post-login inbound frames from the closed client are still encrypted/compressed/framed and must be decoded before `PLI_PLAYERPROPS` parser can handle them.
 * Tests are green.
 
 Goal of this run:
 
-Implement the first source-confirmed post-login incoming packet boundary: movement/player props parsing, safe state mutation, and nearby player forwarding where confirmed.
+Recover and implement the source-confirmed inbound post-login decrypt/decompress/framing pipeline so the dev server can decode real client packets after login.
 
 ---
 
-# Milestone 1: Trace post-login packet dispatch
+# Milestone 1: Trace inbound post-login decode path
 
-Deeply trace:
+Deeply trace the original inbound packet path:
 
+* `Player::doMain`
+* `Player::decryptPacket`
 * `Player::parsePacket`
-* packet handlers under `server/src/player/packets/`
-* incoming movement/player props packets
-* unsupported packet behavior
-* behavior after login/level entry
-* rawdata mode interactions if any
+* `Player::processPackets` if present
+* any socket receive/read loop
+* any rawdata handling
+* `CEncryption`
+* `CString`
+* `CSocket`
+* relevant packet handlers under `server/src/player/packets/`
 
 Focus on:
 
-* exact PLI packet IDs involved in movement/player props
-* packet body format
-* handler dispatch order
-* unknown/unsupported packet behavior
-* disconnect or ignore behavior for bad packets
-* session state requirements
+* how inbound length-prefixed frames are read
+* when decryptPacket is called
+* which encryption generation is used after login
+* how gen2/gen3/gen4/gen5 inbound decrypt differs
+* how compression flags are detected
+* how zlib/bzip2 decompression is selected
+* how PLI_BUNDLE is handled inbound
+* how PLI_RAWDATA affects the next packet
+* how newline-delimited inner packets are split
+* how malformed encrypted/compressed packets behave
+* how unsupported/unknown packets behave
 
-Allowed:
-
-* Add docs and packet catalog updates.
-* Add dispatcher skeleton only for source-confirmed packets.
-* Unsupported packets should behave according to C++ if known; otherwise log/block explicitly.
+Document everything before implementing.
 
 ---
 
-# Milestone 2: Incoming player props parser
+# Milestone 2: Create gs2lib inbound fixture harness
 
-Trace and implement source-confirmed parser for incoming player property updates.
+Extend or create a C++ fixture harness under:
 
-Focus on:
+```txt
+tools/gs2lib-fixtures/
+```
 
-* `Player::setProps`
-* `Player::setProp`
-* property ID encoding
-* property value boundaries
-* property sequence parsing
-* x/y/level/direction/gani props if present
-* exact string/number parsing behavior
-* empty/malformed property behavior
-* client-version branches
+Use `external/gs2lib` without modifying it.
 
-Allowed:
+Capture exact inbound decode behavior for deterministic cases:
 
-* Add DTOs for parsed property updates.
-* Add parsers with golden fixtures.
-* Add tests for exact byte inputs.
-* Only include confirmed props.
+* gen5 short encrypted packet from client -> decoded inner packet
+* gen5 zlib compressed packet -> decoded inner packet
+* gen2/gen3 if source-confirmed for inbound
+* rawdata next-packet behavior if safe
+* bundle packet behavior if safe
+* malformed packet behavior where deterministic
 
-Not allowed:
+If C++ does not expose a direct inbound helper, create the smallest harness around the same functions used by `Player::decryptPacket`.
 
-* Do not invent prop defaults.
-* Do not guess unknown props.
-* Do not implement gameplay side effects.
+Do not invent fixture bytes.
+
+If harness cannot cover a branch, document why.
 
 ---
 
-# Milestone 3: Safe RuntimePlayer mutation
+# Milestone 3: Implement C# inbound decoder only where byte-confirmed
 
-Apply only source-confirmed safe props to runtime player state.
+Add a C# inbound pipeline that converts socket frame payloads into decoded inner packets.
 
-Focus on:
+Allowed implementation:
 
-* x/y
-* level name if handled here
-* direction
-* gani/animation
-* nickname/body/head/etc only if confirmed here
-* clipping/validation if source-confirmed
-* no side effects beyond confirmed state update
-
-Allowed:
-
-* Add methods on RuntimePlayer or a movement/props service.
-* Add tests for state mutation.
-* Keep unsupported props ignored/blocked exactly as C++ behavior if known.
+* Inbound frame decoder
+* decrypt/decompress helpers for confirmed generations
+* newline splitter after decrypt/decompress
+* bundle splitter if confirmed
+* rawdata mode if confirmed
+* explicit blocked exceptions for unsupported bzip2/gen branches
+* tests against C++ harness fixtures
 
 Not allowed:
 
-* Do not implement combat.
-* Do not implement item use.
-* Do not implement anti-cheat unless traced.
-* Do not implement link traversal unless traced.
+* Do not approximate bzip2.
+* Do not guess compression flags.
+* Do not silently ignore malformed packets unless C++ confirms.
+* Do not consume state incorrectly on unsupported branches.
+* Do not bypass encryption just to make dev server work.
 
 ---
 
-# Milestone 4: Forward player props to nearby players
+# Milestone 4: Integrate inbound decoder into dev-only TCP shell
 
-Trace and implement source-confirmed forwarding behavior.
+If the inbound decoder is confirmed, connect it to the dev-only shell.
 
 Focus on:
 
-* which packet ID is used
-* PLO_OTHERPLPROPS or related packets
-* property table/order for forwarded updates
-* same-level filtering
-* GMAP filtering
-* singleplayer behavior
-* hidden/staff/invisible filters if confirmed
-* packet order
-* whether sender also receives anything
+* after login, decode real client frames before dispatch
+* feed decoded `PLI_PLAYERPROPS` to existing parser
+* keep unsupported packets logged/blocked explicitly
+* preserve generation/key state
+* preserve rawdata/bundle state if confirmed
+* flush outbound responses after each decoded packet if needed
 
 Allowed:
 
-* Add forwarding builder/service.
-* Add tests with two or three RuntimePlayers.
-* Integrate with dev-only shell only if safe and source-confirmed.
+* Add tests with fake transports.
+* Add manual run docs.
+* Add debug logging of decoded packet IDs.
 
 Not allowed:
 
-* Do not invent visibility rules.
-* Do not implement live gameplay beyond prop sync.
+* Do not implement unknown packet handlers.
+* Do not fake movement if packet decoding is unsupported.
+* Do not hide unsupported packet IDs.
 
 ---
 
-# Milestone 5: Integrate minimal movement/player props into dev-only TCP shell
+# Milestone 5: Minimal movement manual test readiness
 
-If parser + mutation + forwarding are source-confirmed enough, integrate them into the dev-only shell.
+If inbound decoding is integrated, update docs for a limited manual test.
 
 Focus on:
 
-* after level entry, accept movement/player prop frames
-* mutate runtime player state
-* flush forwarding packets to affected players if supported
-* log unsupported packets
-* keep fake auth clearly dev-only
-* preserve packet framing/encryption/flush behavior
+* run command
+* required tiny `.nw`
+* expected client behavior
+* expected server logs
+* limitations
+* how to identify unsupported packets
+* whether movement props should now be decoded
 
-Allowed:
-
-* Add integration tests with fake transports.
-* Add docs for manual client test expectations.
-
-Not allowed:
-
-* Do not implement unknown packets.
-* Do not fake gameplay.
-* Do not hide unsupported behavior.
+Do not claim gameplay readiness.
 
 ---
 
@@ -184,10 +167,11 @@ Not allowed:
 Create/update docs:
 
 ```txt
+docs/spec/INBOUND_PACKET_DECODE_SPEC.md
 docs/spec/MOVEMENT_PLAYER_PROPS_SPEC.md
-docs/spec/PLAYER_VISIBILITY_SYNC_SPEC.md
 docs/spec/TCP_SESSION_PIPELINE_SPEC.md
 docs/spec/RUN_LOCAL_DEV_SERVER.md
+docs/spec/CFILEQUEUE_FIXTURE_HARNESS.md
 docs/spec/GOLDEN_FIXTURES.md
 docs/spec/KNOWN_BLOCKERS.md
 KNOWN_BLOCKERS.md
@@ -200,17 +184,19 @@ dotnet build GServharp.sln
 dotnet test GServharp.sln
 ```
 
+If a C++ fixture harness is used, build/run it or document why it cannot run.
+
 At the end, report:
 
 * What was completed
-* Which incoming movement/player prop packets are supported
-* Whether dev-only shell now handles post-login movement/props
-* Which C++/gs2lib files were used
+* Which inbound generations/branches are now supported
+* Which fixture bytes were captured
+* Whether real post-login client movement frames can now be decoded
 * Which C# files/tests were added or modified
 * Which docs were updated
 * Whether `ai_resources/` stayed untouched
 * Build/test results
-* Whether manual client test should now be attempted
+* Whether manual client test is now recommended
 * Exact run command and expected limitations
 * Safest next step
 
