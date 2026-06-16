@@ -750,8 +750,14 @@ lifecycle.
 - `server/src/Server.cpp`
 - filesystem helper classes
 
-- [ ] Document `PLI_UPDATEFILE`, package parsing, checksum comparison, and
+- [x] Document `PLI_UPDATEFILE`, package parsing, checksum comparison, and
   default-file cache behavior.
+  - 2026-06-16: Expanded `docs/spec/FILE_TRANSFER_CACHE_SPEC.md` with
+    `PLI_UPDATEFILE` mod-time/default-file behavior, old-client `.gif`
+    fallback, `PLO_FILESENDFAILED`/`PLO_FILEUPTODATE` branches,
+    `UpdatePackage::load`/`reload` parsing, CRC32/size calculation,
+    base-filename lookup behavior, `std::unordered_map` ordering risk, and
+    existing `PLI_UPDATEPACKAGEREQUESTFILE` send sequence.
 - [ ] Implement source-confirmed update package send/verify lifecycle.
 - [ ] Implement upload/write paths only after exact rights/path behavior is
   confirmed.

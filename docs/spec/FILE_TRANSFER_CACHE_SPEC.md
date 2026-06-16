@@ -13,6 +13,7 @@
 ## Confirmed Packet IDs
 
 - `PLI_WANTFILE = 23`
+- `PLI_UPDATEFILE = 34`
 - `PLI_VERIFYWANTSEND = 47`
 - `PLI_UPDATEPACKAGEREQUESTFILE = 159`
 - `PLO_FILESENDFAILED = 30`
@@ -114,6 +115,35 @@ PLO_FILEUPTODATE + fileName + "\n"
 
 If missing or checksum differs, it calls `sendFile(fileName)`.
 
+## `PLI_UPDATEFILE`
+
+`Player::msgPLI_UPDATEFILE` reads:
+
+```txt
+GINT5 modTime
+remaining string file
+```
+
+Then it asks the main `FileSystem` for `getModTime(file)`.
+
+For clients older than `CLVER_2_1`, if the requested file has no extension,
+C++ appends `.gif` after reading the filename and before default-file checks.
+
+C++ then scans `__defaultfiles` and sets `isDefault = true` when
+`file.match(defaultFile)` succeeds. The recovered source does not define this
+array in `Player.cpp`; the exact default-file pattern list remains a source
+recovery/blocker item.
+
+If the file is not default and `std::difftime(modTime, fModTime) != 0`, C++
+resets the `CString` read cursor to zero and calls `msgPLI_WANTFILE(file)`,
+reusing the normal file-send path.
+
+If the file is default or the mod times match, C++ does not send the file:
+
+- clients older than `CLVER_2_1` receive
+  `PLO_FILESENDFAILED + file + "\n"`;
+- modern clients receive `PLO_FILEUPTODATE + file + "\n"`.
+
 ## `PLI_UPDATEPACKAGEREQUESTFILE`
 
 `Player::msgPLI_UPDATEPACKAGEREQUESTFILE` reads:
@@ -142,6 +172,37 @@ m_fileQueue.sendCompress(true)
 Package manager parsing, package file discovery, and production package
 lifecycle are not implemented in C# yet.
 
+## Update Package Parsing
+
+`UpdatePackage::load(server, name)`:
+
+- uses the main server filesystem to `load(name)`;
+- returns `std::nullopt` when the package file is empty or missing;
+- constructs `UpdatePackage(name)` and calls `reload(server)`.
+
+`UpdatePackage::reload(server)`:
+
+- resets package checksum, package size, and file list;
+- loads the package file by `m_packageName`;
+- returns with empty state when the package file is empty/missing;
+- sets `m_checksum = calculateCrc32Checksum(fileContents)`;
+- tokenizes package contents by newline;
+- only lines whose first token starts at position zero with case-insensitive
+  `FILE` are considered;
+- for each `FILE ...` line:
+  - reads `line.subString(4).trim()` as the file path;
+  - stores only `std::filesystem::path(filePath).filename().string()` as the
+    package entry key;
+  - loads that base filename from the main filesystem, not the full original
+    package path;
+  - if missing/empty, sends an RC warning and skips the entry;
+  - otherwise records file size and CRC32;
+  - adds the size to `m_packageSize`.
+
+The package file list is `std::unordered_map<std::string, FileEntry>`, so file
+iteration/order is not stable from source alone and requires C++ capture before
+the C# port can promise byte-for-byte package file send order.
+
 ## C# Boundary
 
 Implemented:
@@ -158,13 +219,20 @@ Implemented:
 - modern modtime chunk behavior
 - modern large-file start/size/chunk/end sequencing
 - `.gupd` checksum-ignore behavior for verify-want-send
+- `PLI_UPDATEFILE` behavior is documented but not implemented as a production
+  boundary yet
+- update package parsing and request lifecycle are documented but not wired to
+  production repositories yet
 
 Blocked:
 
-- upload/write paths such as `PLI_UPDATEFILE` security and overwrite behavior
-- update package manager/resource parsing and production registration
+- production `PLI_UPDATEFILE` runtime integration and exact default-file list
+- upload/write paths and overwrite behavior
+- update package manager/resource parsing implementation and production
+  registration
 - exact `FileSystem::find` relative path stripping beyond the current resource
   abstraction
-- default-file cache branch in `msgPLI_UPDATEFILE`
+- update-package file send ordering because C++ stores entries in
+  `std::unordered_map`
 - integration with production socket loop beyond already-confirmed
   `GraalFileQueue` queue/compression behavior
