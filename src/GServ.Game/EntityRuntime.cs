@@ -65,8 +65,15 @@ public static class LevelItemRuntime
 public enum BaddyMode : byte
 {
     Walk = 0,
+    Look = 1,
+    Hunt = 2,
+    Hurt = 3,
+    Bumped = 4,
+    Die = 5,
     SwampShot = 6,
-    HareJump = 7
+    HareJump = 7,
+    OctoShot = 8,
+    Dead = 9
 }
 
 public sealed class RuntimeBaddy

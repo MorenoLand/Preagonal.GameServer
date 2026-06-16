@@ -204,13 +204,21 @@ Implemented:
 - `PLI_HURTPLAYER` parser and `PLO_HURTPLAYER` builder field order.
 - `PLI_BADDYHURT` leader-forward packet builder.
 - non-spar `CLAIMPKER` AP-loss formula and AP timer bucket selection.
+- source-confirmed decomposition math for player death rupee drops, including
+  C++-confirmed denomination order and packet `ItemAdd` encoding path.
+- source-confirmed `rand() % 4` arros/bombs draw/counting behavior with
+  inventory-5x caps, expressed as an injectable RNG flow pending exact RNG seed/
+  stream matching.
+- source-confirmed baddy `rand() % 12` drop selector with explicit 0–11 mapping and
+  no-drop slots.
 
 Blocked:
 
 - timeout scheduler integration;
 - live `PLI_BADDYPROPS`, `PLI_BADDYHURT`, and `PLI_BADDYADD` session routing;
 - `BDPROP_MODE` side effects;
-- `dropItem` because exact C `rand()` compatibility/capture is not established;
+- `dropItem` runtime integration into live level tick scheduling because exact C
+  `rand()` stream/seed and timer behavior are not yet capture-confirmed.
 - leader-exclusion recipient selection for baddy timeout events;
 - out-of-bounds `type == 10` behavior decision.
 
