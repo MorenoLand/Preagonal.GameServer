@@ -132,6 +132,22 @@ public sealed class EntityRuntimePacketTests
     }
 
     [Fact]
+    public void MissingClassScriptHeaderUsesConfirmedTokenizedEmptyBytecodeHeader()
+    {
+        Assert.Equal(
+            [
+                172, 0, 32,
+                99, 108, 97, 115, 115, 44,
+                102, 111, 111, 44,
+                49, 44,
+                34, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 44,
+                34, 32, 32, 32, 32, 32, 34,
+                10
+            ],
+            EntityPackets.MissingClassScriptHeader("foo"));
+    }
+
+    [Fact]
     public void NpcDeleteAndNpcPropsUseGIntNpcIds()
     {
         Assert.Equal(new byte[] { 61, 32, 32, 39, 10 }, EntityPackets.NpcDelete(7));

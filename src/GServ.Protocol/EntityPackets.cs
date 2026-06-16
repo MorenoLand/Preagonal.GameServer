@@ -119,6 +119,24 @@ public static class EntityPackets
         return WithNewline(writer);
     }
 
+    public static byte[] MissingClassScriptHeader(string className)
+    {
+        var header = string.Join(
+            ",",
+            [
+                GTokenize("class"),
+                GTokenize(className),
+                GTokenize("1"),
+                GTokenize(GInt5String(0) + GInt5String(0)),
+                GTokenize(GInt5String(0))
+            ]);
+
+        var writer = NewPacket(ServerToPlayerPacketId.NpcWeaponScript);
+        writer.WriteRawShort((ushort)Encoding.ASCII.GetByteCount(header));
+        writer.WriteBytes(Encoding.ASCII.GetBytes(header));
+        return WithNewline(writer);
+    }
+
     public static byte[] NpcDelete(uint npcId)
     {
         var writer = NewPacket(ServerToPlayerPacketId.NpcDelete);
@@ -160,6 +178,40 @@ public static class EntityPackets
         ganiName.EndsWith(".gani", StringComparison.Ordinal)
             ? ganiName[..^5]
             : ganiName;
+
+    private static string GInt5String(uint value)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGInt5(value);
+        return Encoding.ASCII.GetString(writer.ToArray());
+    }
+
+    private static string GTokenize(string value)
+    {
+        var lines = value.EndsWith('\n') ? value.Split('\n') : (value + "\n").Split('\n');
+        var tokens = new List<string>();
+        foreach (var raw in lines.Take(lines.Length - 1))
+        {
+            var temp = raw.Replace("\r", string.Empty, StringComparison.Ordinal);
+            var complex = temp.StartsWith('"') ||
+                          temp.Any(static c => c < 33 || c > 126 || c == ',' || c == '/') ||
+                          temp.Trim().Length == 0;
+
+            if (complex)
+            {
+                temp = temp
+                    .Replace("\\", "\\\\", StringComparison.Ordinal)
+                    .Replace("\"", "\"\"", StringComparison.Ordinal);
+                tokens.Add($"\"{temp}\"");
+            }
+            else
+            {
+                tokens.Add(temp);
+            }
+        }
+
+        return string.Join(",", tokens);
+    }
 
     private static byte[] WithNewline(GraalBinaryWriter writer)
     {

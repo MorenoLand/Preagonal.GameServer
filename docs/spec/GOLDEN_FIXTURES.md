@@ -1568,6 +1568,23 @@ ganiFile = "walk.gani"
 [227, 36, 119, 97, 108, 107, 34, 83, 69, 84, 66, 65, 67, 75, 84, 79, 32, 105, 100, 108, 101, 34, 10]
 ```
 
+Missing `PLI_UPDATECLASS` response for class `foo`:
+
+```txt
+headerData:
+  class
+  foo
+  1
+  GINT5(0) + GINT5(0)
+  GINT5(0)
+
+retokenizeCStringArray(headerData):
+  class,foo,1,"          ","     "
+
+PLO_NPCWEAPONSCRIPT + raw short header length + header + "\n"
+=> [172, 0, 32, 99, 108, 97, 115, 115, 44, 102, 111, 111, 44, 49, 44, 34, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 44, 34, 32, 32, 32, 32, 32, 34, 10]
+```
+
 ## Scripting Bytecode Fixture Boundary
 
 No GS2 bytecode golden fixture is currently considered canonical.

@@ -716,8 +716,13 @@ Completion criteria:
     builder. Production animation-manager repository wiring and real compiled
     bytecode generation remain blocked until scripting/resource prerequisites
     are ready.
-- [ ] Add fixtures for newline replacement, tokenization, and bytecode/script
+- [x] Add fixtures for newline replacement, tokenization, and bytecode/script
   payloads.
+  - 2026-06-16: Existing NC weapon get fixture covers C++ newline-to-`0xa7`
+    replacement. Added GANI raw bytecode fixtures and missing-class
+    `PLI_UPDATECLASS` fallback fixture covering
+    `utilities::retokenizeCStringArray`, quoted GINT5-zero whitespace tokens,
+    raw big-endian header length, and `PLO_NPCWEAPONSCRIPT` payload bytes.
 
 Completion criteria:
 

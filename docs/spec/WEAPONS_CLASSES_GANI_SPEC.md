@@ -248,6 +248,20 @@ bytecode
   - comment says this should technically be `PLO_UNKNOWN197`, but the alternate
     packet fixes client breakage with `player.join()` scripts.
 
+For the missing-class fallback, header fields are retokenized with
+`utilities::retokenizeCStringArray`:
+
+```txt
+class
+className
+1
+GINT5(0) + GINT5(0)
+GINT5(0)
+```
+
+The GINT5 zero strings are spaces (`0x20`), so `CString::gtokenize` quotes them
+as complex/whitespace tokens.
+
 `Player::msgPLI_UPDATEGANI`:
 
 - reads `GUInt5 checksum`;
@@ -285,6 +299,9 @@ Implemented:
 - `PLO_NPCWEAPONDEL + weaponName + "\n"`;
 - `PLO_RAWDATA + GINT(bytecode.length) + "\n" + PLO_NPCWEAPONSCRIPT +
   bytecode` for confirmed script/class bytecode response shape;
+- missing-class `PLI_UPDATECLASS` fallback packet:
+  `PLO_NPCWEAPONSCRIPT + raw GSHORT(header length) + retokenized empty
+  bytecode header + "\n"`;
 - `PLI_UPDATEGANI` parser for `GUInt5 checksum + trailing gani name`;
 - GANI CRC mismatch decision using the source-confirmed CRC32 primitive;
 - `PLO_RAWDATA + PLO_GANISCRIPT` bytecode response wrapper from
