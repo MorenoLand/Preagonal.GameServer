@@ -2272,6 +2272,13 @@ PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_BODYIMG + GCHAR(8) + "body.png" + "\n"
 [40, 32, 39, 67, 40, 98, 111, 100, 121, 46, 112, 110, 103, 10]
 ```
 
+Inbound `PLPROP_BODYIMG` uses `GCHAR len` plus `CString::readChars(len)`.
+A terminal truncated body-image payload parses the remaining bytes:
+
+```txt
+PLPROP_BODYIMG + GCHAR(8) + "body" => "body"
+```
+
 Source-confirmed `PLPROP_RATING` consume-only update:
 
 ```txt

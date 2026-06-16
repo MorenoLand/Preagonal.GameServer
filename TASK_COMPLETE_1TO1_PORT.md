@@ -554,6 +554,10 @@ behavior, and movement-loop invocation.
     The parser reads `GCHAR len + bytes`, the runtime applier mirrors
     `Account::setBodyImage` by truncating to 223 bytes/chars, and forwarding
     emits the current body image through the C++ generic local prop payload.
+  - 2026-06-16: Added source-confirmed `PLPROP_BODYIMG` truncated terminal
+    payload coverage, matching `CString::readChars` clamping the requested body
+    image length to bytes remaining in the packet before the runtime
+    `setBodyImage` 223-byte storage limit is applied.
   - 2026-06-16: Implemented the source-confirmed `PLPROP_RATING` consume-only
     mutation boundary. The parser consumes the incoming `GInt`, and the runtime
     applier performs no ELO mutation because the recovered C++ assignment is
