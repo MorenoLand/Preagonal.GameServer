@@ -2206,9 +2206,29 @@ PLPROP_HORSEGIF + GCHAR(9) + "horse.png"
 ```
 
 C++ stores the decoded horse image in `m_character.horseImage`. For clients
-older than `CLVER_2_1`, extensionless horse images append `.gif`; that branch
-remains blocked until runtime property mutation is version-aware. Generic
-forwarding also remains blocked until it can serialize current state exactly.
+older than `CLVER_2_1`, extensionless horse images append `.gif`:
+
+```txt
+PLPROP_HORSEGIF + GCHAR(5) + "horse" => "horse.gif"
+```
+
+C++ reads at most 219 bytes from the declared string length. If `len` is larger,
+remaining bytes are parsed as subsequent properties:
+
+```txt
+PLPROP_HORSEGIF + GCHAR(222) + 219 * "h" + PLPROP_X + GCHAR(70)
+=> horse image length 219, then PLPROP_X is parsed normally
+```
+
+Generic local forwarding uses C++ `getProp(PLPROP_HORSEGIF)` shape:
+
+```txt
+PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_HORSEGIF + GCHAR(9) + "horse.png" + "\n"
+bytes: 40 32 39 53 41 104 111 114 115 101 46 112 110 103 10
+```
+
+Loaded/global recipient routing remains blocked until production session
+routing can match the original exactly.
 
 Source-confirmed `PLPROP_HEADGIF` updates:
 

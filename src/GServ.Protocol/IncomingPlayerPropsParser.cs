@@ -101,7 +101,7 @@ public static class IncomingPlayerPropsParser
                     break;
 
                 case PlayerPropertyId.HorseGif:
-                    updates.Add(IncomingPlayerPropertyUpdate.String(propertyId, ReadGCharString(reader)));
+                    updates.Add(ReadHorseImage(reader, clientVersion));
                     break;
 
                 case PlayerPropertyId.AccountName:
@@ -206,6 +206,18 @@ public static class IncomingPlayerPropsParser
             image += ".gif";
 
         return IncomingPlayerPropertyUpdate.String(PlayerPropertyId.HeadGif, image);
+    }
+
+    private static IncomingPlayerPropertyUpdate ReadHorseImage(
+        GraalBinaryReader reader,
+        ClientVersionId clientVersion)
+    {
+        var length = reader.ReadGChar();
+        var image = Encoding.ASCII.GetString(reader.ReadBytes(Math.Min((int)length, 219)));
+        if (image.Length != 0 && clientVersion < ClientVersionId.Client21 && HasNoExtension(image))
+            image += ".gif";
+
+        return IncomingPlayerPropertyUpdate.String(PlayerPropertyId.HorseGif, image);
     }
 
     private static IncomingPlayerPropertyUpdate ReadSwordPower(
@@ -338,6 +350,10 @@ public static class IncomingPlayerPropsForwarding
 
                 case PlayerPropertyId.HeadGif:
                     WriteProperty(levelBuff, PlayerPropertyId.HeadGif, writer => WriteHeadImage(writer, update.StringValue ?? string.Empty));
+                    break;
+
+                case PlayerPropertyId.HorseGif:
+                    WriteProperty(levelBuff, PlayerPropertyId.HorseGif, writer => WriteGCharString(writer, update.StringValue ?? string.Empty));
                     break;
 
                 case PlayerPropertyId.ApCounter:

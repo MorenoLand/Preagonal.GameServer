@@ -215,6 +215,20 @@ public sealed class RuntimePlayerPropsMutationTests
     }
 
     [Fact]
+    public void AppliesConfirmedHorseImagePropAfterParserLimitAndOldSuffix()
+    {
+        var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
+
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            [IncomingPlayerPropertyUpdate.String(PlayerPropertyId.HorseGif, "horse.gif")]);
+
+        Assert.Equal("horse.gif", player.HorseImage);
+        Assert.False(player.MovementUpdated);
+        Assert.False(player.TouchTestRequested);
+    }
+
+    [Fact]
     public void AppliesConfirmedHeadImagePropWithCppLengthLimit()
     {
         var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);

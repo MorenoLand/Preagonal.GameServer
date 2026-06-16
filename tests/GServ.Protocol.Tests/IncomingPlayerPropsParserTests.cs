@@ -226,6 +226,40 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedOldClientHorseImageWithGifSuffix()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.HorseGif);
+        body.WriteGChar(5);
+        body.WriteBytes("horse"u8);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray(), ClientVersionId.Client1411);
+
+        Assert.True(result.Success);
+        var update = Assert.Single(result.Updates);
+        Assert.Equal(PlayerPropertyId.HorseGif, update.PropertyId);
+        Assert.Equal("horse.gif", update.StringValue);
+    }
+
+    [Fact]
+    public void ParsesConfirmedHorseImageByReadingAtMost219Bytes()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.HorseGif);
+        body.WriteGChar(222);
+        body.WriteBytes(Enumerable.Repeat((byte)'h', 219).ToArray());
+        body.WriteGChar((byte)PlayerPropertyId.X);
+        body.WriteGChar(70);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray(), ClientVersionId.Client21);
+
+        Assert.True(result.Success);
+        Assert.Equal([PlayerPropertyId.HorseGif, PlayerPropertyId.X], result.Updates.Select(update => update.PropertyId));
+        Assert.Equal(new string('h', 219), result.Updates[0].StringValue);
+        Assert.Equal((byte)70, result.Updates[1].GCharValue);
+    }
+
+    [Fact]
     public void ParsesConfirmedSwordAndShieldPowerRawValuesAndCustomImages()
     {
         var body = new GraalBinaryWriter();
@@ -622,6 +656,21 @@ public sealed class IncomingPlayerPropsParserTests
             appendNewline: true);
 
         Assert.Equal([40, 32, 39, 43, 140, 104, 101, 97, 100, 46, 112, 110, 103, 10], packet);
+    }
+
+    [Fact]
+    public void ForwardsConfirmedHorseImageWithCurrentStringPayload()
+    {
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: 0,
+            [IncomingPlayerPropertyUpdate.String(PlayerPropertyId.HorseGif, "horse.png")],
+            senderSupportsPreciseMovement: true,
+            appendNewline: true);
+
+        Assert.Equal([40, 32, 39, 53, 41, 104, 111, 114, 115, 101, 46, 112, 110, 103, 10], packet);
     }
 
     [Fact]

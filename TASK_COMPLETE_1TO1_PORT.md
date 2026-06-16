@@ -593,6 +593,14 @@ behavior, and movement-loop invocation.
     old-client extensionless `.gif` append branch remains blocked until the
     runtime property applier is version-aware, and generic forwarding remains
     blocked until it can serialize the current state exactly.
+  - 2026-06-16: Completed the remaining source-confirmed `PLPROP_HORSEGIF`
+    parse/forwarding details. The parser now appends `.gif` for old clients
+    when the horse image is extensionless, preserves C++'s maximum 219-byte
+    read from the declared string length, and leaves subsequent bytes available
+    for following properties just like `readChars(std::min(len, 219))`.
+    Generic local forwarding now serializes `GCHAR(horseImage.length) +
+    horseImage`. Loaded/global recipient routing remains blocked until
+    production session routing is exact.
   - 2026-06-16: Implemented the source-confirmed `PLPROP_HEADGIF` state
     mutation and generic local forwarding boundary. The parser preserves the
     C++ `len < 100` default-head mapping, `len == 100` no-change sentinel,
@@ -649,6 +657,9 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed modern `PLPROP_HORSEGIF` fixtures for
     exact string parsing and runtime state mutation. Old-client suffix fixtures
     remain open.
+  - 2026-06-16: Added source-confirmed `PLPROP_HORSEGIF` fixtures for
+    old-client `.gif` suffixing, the 219-byte maximum read behavior that leaves
+    following bytes for subsequent props, and generic local forwarding bytes.
   - 2026-06-16: Added source-confirmed `PLPROP_HEADGIF` fixtures for
     modern/old default heads, custom `len - 100` images, newline truncation,
     old-client `.gif` suffix, `len == 100` no-change parsing, 123-char runtime
