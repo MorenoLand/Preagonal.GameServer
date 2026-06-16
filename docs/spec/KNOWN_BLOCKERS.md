@@ -92,10 +92,13 @@
   eight-byte signatures. A read-only indexed filesystem boundary,
   source-confirmed `loadAllFolders`/`loadFolderConfig` bucket setup, and
   filesystem-backed `.nw` loading path now exist for static
-  board/layer/link/sign/chest payloads. Full production `Level::findLevel`
-  cache/map ownership, `.graal`/`.zelda`/`.gmap` parsing, horse/baddy/NPC
-  runtime construction, write/delete filesystem mutation, and file-transfer
-  behavior remain blocked.
+  board/layer/link/sign/chest payloads. `Level::findLevel` cache lookup,
+  `loadAbsolute` filesystem-index mutation, map ownership attachment, map reload
+  remapping, and load failure behavior are documented in
+  `LEVEL_RUNTIME_SPEC.md`, but the production C# runtime implementation remains
+  blocked. `.graal`/`.zelda`/`.gmap` parsing, horse/baddy/NPC runtime
+  construction, write/delete filesystem mutation, and file-transfer behavior
+  remain blocked.
 - Pure `.nw` parsing is implemented for confirmed `BOARD`, `LINK`, `SIGN`,
   `CHEST`, `NPC`, and `BADDY` source-line behavior, plus board/layer/link/sign
   and chest packet builders. Player sign translation, NPC runtime creation,

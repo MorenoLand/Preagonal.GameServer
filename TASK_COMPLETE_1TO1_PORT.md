@@ -382,8 +382,12 @@ and all level formats.
 - `server/src/level/LevelItem.cpp`
 - any `.gmap`, `.graal`, `.zelda` parser code under `server/src/level/`
 
-- [ ] Document `Level::findLevel` cache, filesystem lookup, map ownership, and
+- [x] Document `Level::findLevel` cache, filesystem lookup, map ownership, and
   load failure behavior in `docs/spec/LEVEL_RUNTIME_SPEC.md`.
+  - 2026-06-16: Added `docs/spec/LEVEL_RUNTIME_SPEC.md` covering the C++
+    global level cache, case-insensitive first-match lookup, exact filesystem
+    lookup rules, legacy pointer-to-bool `loadAbsolute` call-site behavior, map
+    first-match ownership, map reload remapping, and load failure boundaries.
 - [ ] Implement `.graal` parser from C++ fixtures.
 - [ ] Implement `.zelda` parser from C++ fixtures.
 - [ ] Implement `.gmap` parser/map adjacency/group behavior.

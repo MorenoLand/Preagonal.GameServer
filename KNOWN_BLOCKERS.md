@@ -87,7 +87,10 @@
   signature selection. A source-confirmed read-only indexed filesystem boundary,
   `loadAllFolders`/`loadFolderConfig` bucket setup, and filesystem-backed `.nw`
   loading path now feed static board/layer/link/sign/chest payloads into
-  `sendLevel`. Full `Level::findLevel` cache/map ownership, `.graal`/`.zelda`/
+  `sendLevel`. `Level::findLevel` cache lookup, `loadAbsolute`
+  filesystem-index mutation, map ownership attachment, map reload remapping, and
+  load failure behavior are documented in `docs/spec/LEVEL_RUNTIME_SPEC.md`, but
+  the production C# runtime implementation remains blocked. `.graal`/`.zelda`/
   `.gmap` parsing, write/delete filesystem mutation, and file/resource transfer
   remain blocked.
 - Pure `.nw` parsing is implemented for confirmed board tiles, links with an
