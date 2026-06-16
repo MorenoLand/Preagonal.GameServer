@@ -571,6 +571,11 @@ behavior, and movement-loop invocation.
     and the runtime applier ignores the incoming value because C++ `setProps`
     only discards those bytes. Generic forwarding remains blocked until it can
     serialize the current community-name state through `getProp`.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_IPADDR`
+    consume-only mutation boundary. The parser consumes the incoming `GInt5`,
+    and the runtime applier ignores it because C++ `setProps` reads and
+    discards client-sent IP bytes. Generic forwarding remains blocked until it
+    can serialize the current account IP state through `getProp`.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -596,6 +601,9 @@ behavior, and movement-loop invocation.
     and full state-backed forwarding order remain open.
   - 2026-06-16: Added the same source-confirmed blocked/update boundary
     fixtures for `PLPROP_COMMUNITYNAME`.
+  - 2026-06-16: Added source-confirmed blocked/update boundary fixtures for
+    `PLPROP_IPADDR`: exact `GInt5` consumption, no invented mutation value, and
+    no runtime state change.
 
 Completion criteria:
 

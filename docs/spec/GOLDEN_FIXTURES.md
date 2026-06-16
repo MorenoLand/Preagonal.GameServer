@@ -2164,3 +2164,14 @@ The incoming community-name bytes are consumed, but C++ `setProps` discards
 them. Full generic forwarding for this property must use the current
 `getProp(PLPROP_COMMUNITYNAME)` state and remains blocked until that
 state-backed forwarding path exists.
+
+Source-confirmed `PLPROP_IPADDR` consume-only update:
+
+```txt
+PLPROP_IPADDR + GInt5(0x7F000001)
+```
+
+The incoming IP bytes are consumed, but C++ `setProps` discards them. Full
+generic forwarding for this property must use the current
+`getProp(PLPROP_IPADDR)` account-IP state and remains blocked until that
+state-backed forwarding path exists.

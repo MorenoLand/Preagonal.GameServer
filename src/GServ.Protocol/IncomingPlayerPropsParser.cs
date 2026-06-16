@@ -128,6 +128,11 @@ public static class IncomingPlayerPropsParser
                     updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
                     break;
 
+                case PlayerPropertyId.IpAddress:
+                    reader.ReadGInt5();
+                    updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
+                    break;
+
                 case PlayerPropertyId.JoinLeaveLevel:
                 case PlayerPropertyId.PlayerConnected:
                     updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
