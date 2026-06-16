@@ -526,6 +526,32 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedOldClientSwordAndShieldCustomImagesByClampingDeclaredLengthToRemainingBytes()
+    {
+        var swordBody = new GraalBinaryWriter();
+        swordBody.WriteGChar((byte)PlayerPropertyId.SwordPower);
+        swordBody.WriteGChar(35);
+        swordBody.WriteGChar(5);
+        swordBody.WriteBytes("sl"u8);
+
+        var shieldBody = new GraalBinaryWriter();
+        shieldBody.WriteGChar((byte)PlayerPropertyId.ShieldPower);
+        shieldBody.WriteGChar(12);
+        shieldBody.WriteGChar(6);
+        shieldBody.WriteBytes("gu"u8);
+
+        var sword = IncomingPlayerPropsParser.Parse(swordBody.ToArray(), ClientVersionId.Client1411);
+        var shield = IncomingPlayerPropsParser.Parse(shieldBody.ToArray(), ClientVersionId.Client1411);
+
+        Assert.True(sword.Success);
+        Assert.True(shield.Success);
+        Assert.Equal("sl.gif", Assert.Single(sword.Updates).StringValue);
+        Assert.Equal((byte)35, sword.Updates[0].GCharValue);
+        Assert.Equal("gu.gif", Assert.Single(shield.Updates).StringValue);
+        Assert.Equal((byte)12, shield.Updates[0].GCharValue);
+    }
+
+    [Fact]
     public void ParsesConfirmedShieldClient141BugAsNoChangeWhenNoBytesRemain()
     {
         var body = new GraalBinaryWriter();

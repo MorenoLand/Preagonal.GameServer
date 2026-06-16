@@ -2499,6 +2499,11 @@ old-client extensionless custom shield:
 PLPROP_SHIELDPOWER + GCHAR(12) + GCHAR(6) + "guard1"
 => image "guard1.gif"
 
+old-client truncated extensionless custom images still append `.gif` after
+`CString::readChars` clamps to remaining bytes:
+PLPROP_SWORDPOWER + GCHAR(35) + GCHAR(5) + "sl" => image "sl.gif"
+PLPROP_SHIELDPOWER + GCHAR(12) + GCHAR(6) + "gu" => image "gu.gif"
+
 old 1.41 shield bug:
 PLPROP_SHIELDPOWER + GCHAR(11) with no bytes left
 => no invented mutation value

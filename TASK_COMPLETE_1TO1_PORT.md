@@ -795,6 +795,10 @@ behavior, and movement-loop invocation.
     `PLPROP_SHIELDPOWER` fixtures for custom image parsing, old-client `.gif`
     suffixes, default-image settings clamps, the old shield no-change bug,
     223-char image truncation, and generic forwarding bytes.
+  - 2026-06-16: Added source-confirmed old-client `PLPROP_SWORDPOWER` and
+    `PLPROP_SHIELDPOWER` custom-image truncated terminal payload coverage,
+    matching `CString::readChars` clamping before extensionless `.gif`
+    suffixing.
   - 2026-06-16: Added source-confirmed old-client `PLPROP_GANI` fixtures for
     bow-power parsing, extensionless bow-image `.gif` suffixing, runtime
     bow-state mutation, and old-client generic forwarding bytes.
