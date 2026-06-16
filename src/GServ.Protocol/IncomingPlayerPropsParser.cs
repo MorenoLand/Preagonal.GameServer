@@ -409,8 +409,16 @@ public static class IncomingPlayerPropsForwarding
                     });
                     break;
 
+                case PlayerPropertyId.CarrySprite:
+                    WriteProperty(levelBuff, PlayerPropertyId.CarrySprite, writer => writer.WriteGChar(update.GCharValue.GetValueOrDefault()));
+                    break;
+
                 case PlayerPropertyId.ApCounter:
                     WriteProperty(levelBuff, PlayerPropertyId.ApCounter, writer => writer.WriteGShort((ushort)(update.GShortValue.GetValueOrDefault() + 1)));
+                    break;
+
+                case PlayerPropertyId.Alignment:
+                    WriteProperty(levelBuff, PlayerPropertyId.Alignment, writer => writer.WriteGChar(Math.Min(update.GCharValue.GetValueOrDefault(), (byte)100)));
                     break;
 
                 case PlayerPropertyId.Colors:

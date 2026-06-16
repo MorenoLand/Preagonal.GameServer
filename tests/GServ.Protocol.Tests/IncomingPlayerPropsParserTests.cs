@@ -634,6 +634,27 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ForwardsConfirmedLocalScalarPropsUsingCppSendLocalTable()
+    {
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: 0,
+            [
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.CarrySprite, 12),
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.MagicPoints, 88),
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.Alignment, 120),
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.AdditionalFlags, 77),
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.HorseBushes, 6)
+            ],
+            senderSupportsPreciseMovement: true,
+            appendNewline: true);
+
+        Assert.Equal([40, 32, 39, 51, 44, 64, 132, 10], packet);
+    }
+
+    [Fact]
     public void ForwardsConfirmedGaniAttributesWithOriginalStringPayload()
     {
         var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(

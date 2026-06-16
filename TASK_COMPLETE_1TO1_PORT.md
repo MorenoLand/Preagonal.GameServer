@@ -642,6 +642,12 @@ behavior, and movement-loop invocation.
     power/image without changing modern `gani`, and generic forwarding emits
     the C++ old-client bow payload shape. Modern `gani == "spin"`
     `PLO_HITOBJECTS` side effects remain blocked.
+  - 2026-06-16: Added source-confirmed generic local forwarding for the safe
+    `__sendLocal` scalar subset `PLPROP_CARRYSPRITE` and `PLPROP_ALIGNMENT`.
+    Forwarding uses `getProp`-equivalent payloads and preserves the C++
+    alignment clamp to `100`. `PLPROP_MAGICPOINTS`, `PLPROP_ADDITFLAGS`, and
+    `PLPROP_HORSEBUSHES` remain mutation-only because their `__sendLocal`
+    entries are false in the recovered C++ table.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to
@@ -697,6 +703,10 @@ behavior, and movement-loop invocation.
   - 2026-06-16: Added source-confirmed old-client `PLPROP_GANI` fixtures for
     bow-power parsing, extensionless bow-image `.gif` suffixing, runtime
     bow-state mutation, and old-client generic forwarding bytes.
+  - 2026-06-16: Added source-confirmed forwarding-version fixture coverage for
+    the scalar `__sendLocal` table subset: carry sprite and clamped alignment
+    are forwarded, while magic points, additional flags, and horse bushes are
+    not forwarded.
 
 Completion criteria:
 

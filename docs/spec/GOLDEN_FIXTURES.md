@@ -1521,6 +1521,19 @@ emits `GSHORT(124)`:
 28 20 27 39 20 9c 0a
 ```
 
+Forwarded local scalar props follow the C++ `__sendLocal` table. In this
+confirmed fixture `PLPROP_CARRYSPRITE` and clamped `PLPROP_ALIGNMENT` are
+forwarded, while `PLPROP_MAGICPOINTS`, `PLPROP_ADDITFLAGS`, and
+`PLPROP_HORSEBUSHES` are not:
+
+```txt
+PLO_OTHERPLPROPS + GSHORT(7)
++ PLPROP_CARRYSPRITE + GCHAR(12)
++ PLPROP_ALIGNMENT + GCHAR(100)
++ "\n"
+bytes: 40 32 39 51 44 64 132 10
+```
+
 ## Combat Runtime Fixtures
 
 Inbound `PLI_HURTPLAYER` fixture:
