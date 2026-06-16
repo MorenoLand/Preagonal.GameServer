@@ -563,8 +563,12 @@ Completion criteria:
     `msgPLI_OPENCHEST -> getItemPlayerProp -> setProps` boundary for confirmed
     durable item state.
 - [ ] Implement item pickup/removal mutation and packets.
-- [ ] Add tests for rupees, bombs, arrows, hearts, weapons, spinattack, and
+- [x] Add tests for rupees, bombs, arrows, hearts, weapons, spinattack, and
   invalid item ids where confirmed.
+  - 2026-06-16: Existing and added `GServ.Game.Tests` cover rupee/bomb/arrow/
+    heart/equipment/spinattack payloads and mutations, default weapon empty
+    payload side effects, invalid catalog IDs/names, and invalid item reward
+    empty payload behavior.
 - [ ] Keep shop/trade/party/quest/mission behavior out of scope unless future
   source/capture proof shows a built-in C++ server path.
 

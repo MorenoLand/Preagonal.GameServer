@@ -62,6 +62,12 @@ public sealed class InventoryItemRulesTests
     }
 
     [Fact]
+    public void InvalidPickupItemReturnsEmptyPayload()
+    {
+        Assert.Empty(InventoryItemRules.BuildPickupPlayerProps(LevelItemType.Invalid, new DurablePlayerInventoryState()));
+    }
+
+    [Fact]
     public void ApplyPickupPlayerPropsMutatesConfirmedRewardPropsLikeSetProps()
     {
         var state = new DurablePlayerInventoryState
