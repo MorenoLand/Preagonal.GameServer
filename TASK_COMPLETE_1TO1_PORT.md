@@ -535,6 +535,10 @@ behavior, and movement-loop invocation.
     power gate, current-power AP healing refusal, rupee/AP clamps, and direct
     state mutations. `PLPROP_STATUS` remains blocked because the C++ branch
     includes death/revive/drop/level-leader side effects.
+  - 2026-06-16: Corrected `PLPROP_RUPEESCOUNT` parsing to use source-confirmed
+    unsigned `readGUInt()` semantics. A terminal malformed rupee prop with no
+    payload now matches C++ zero-filled scalar decode plus unsigned clamp and
+    yields the maximum `9,999,999` value instead of a signed negative value.
   - 2026-06-16: Implemented a source-confirmed environment/GANI-attribute
     subset: `PLPROP_PLANGUAGE`, `PLPROP_OSTYPE`, `PLPROP_TEXTCODEPAGE`, and
     `PLPROP_GATTRIB1..30`. The parser consumes the exact C++ string/GInt

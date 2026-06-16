@@ -88,7 +88,7 @@ public static class IncomingPlayerPropsParser
                     break;
 
                 case PlayerPropertyId.RupeesCount:
-                    updates.Add(IncomingPlayerPropertyUpdate.GInt(propertyId, Math.Min(reader.ReadGInt(), 9_999_999)));
+                    updates.Add(IncomingPlayerPropertyUpdate.GInt(propertyId, (int)Math.Min(reader.ReadGUInt(), 9_999_999u)));
                     break;
 
                 case PlayerPropertyId.CarryNpc:

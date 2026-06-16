@@ -51,6 +51,8 @@ public sealed class GraalBinaryReader
         return (((a << 7) + b) << 7) + c - 0x81020;
     }
 
+    public uint ReadGUInt() => unchecked((uint)ReadGInt());
+
     public int ReadGInt4()
     {
         var a = ReadByte();

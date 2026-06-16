@@ -262,6 +262,20 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedTerminalRupeesWithoutPayloadAsUnsignedClampedMaximum()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.RupeesCount);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray());
+
+        Assert.True(result.Success);
+        var update = Assert.Single(result.Updates);
+        Assert.Equal(PlayerPropertyId.RupeesCount, update.PropertyId);
+        Assert.Equal(9_999_999, update.GIntValue);
+    }
+
+    [Fact]
     public void ParsesConfirmedEnvironmentAndGaniAttributeProps()
     {
         var body = new GraalBinaryWriter();

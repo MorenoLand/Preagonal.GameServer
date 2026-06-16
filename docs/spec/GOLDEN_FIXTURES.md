@@ -1169,6 +1169,15 @@ boundary:
 PLPROP_NICKNAME + GCHAR(4) + "Ru" => "Ru"
 ```
 
+Inbound `PLPROP_RUPEESCOUNT` uses `CString::readGUInt()` in the recovered
+C++ branch, then clamps the unsigned value to `9999999u`. Because `CString`
+zero-fills missing scalar bytes, a terminal property id with no value bytes
+decodes as unsigned `4294438880`, then clamps to the maximum:
+
+```txt
+PLPROP_RUPEESCOUNT => 9999999
+```
+
 Modern `sendLevel` no-map visibility tail fixture:
 
 ```txt
