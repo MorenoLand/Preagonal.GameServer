@@ -210,6 +210,37 @@ public sealed class IncomingPlayerPropsParserTests
     }
 
     [Fact]
+    public void ParsesConfirmedEffectColorsByConsumingOptionalGInt4()
+    {
+        var body = new GraalBinaryWriter();
+        body.WriteGChar((byte)PlayerPropertyId.EffectColors);
+        body.WriteGChar(0);
+        body.WriteGChar((byte)PlayerPropertyId.EffectColors);
+        body.WriteGChar(1);
+        body.WriteGInt4(0x01020304);
+        body.WriteGChar((byte)PlayerPropertyId.X);
+        body.WriteGChar(70);
+
+        var result = IncomingPlayerPropsParser.Parse(body.ToArray());
+
+        Assert.True(result.Success);
+        Assert.Equal(
+            [
+                PlayerPropertyId.EffectColors,
+                PlayerPropertyId.EffectColors,
+                PlayerPropertyId.X
+            ],
+            result.Updates.Select(update => update.PropertyId));
+        Assert.All(result.Updates.Take(2), update =>
+        {
+            Assert.Null(update.GCharValue);
+            Assert.Null(update.GIntValue);
+            Assert.Null(update.BytesValue);
+        });
+        Assert.Equal((byte)70, result.Updates[2].GCharValue);
+    }
+
+    [Fact]
     public void BuildsConfirmedForwardedMovementPropsForPreciseSender()
     {
         var updates = new[]
@@ -257,6 +288,21 @@ public sealed class IncomingPlayerPropsParserTests
             pixelY: 0,
             pixelZ: 0,
             updates,
+            senderSupportsPreciseMovement: true,
+            appendNewline: true);
+
+        Assert.Equal([40, 32, 39, 10], packet);
+    }
+
+    [Fact]
+    public void DoesNotForwardConfirmedEffectColorsBecauseSendLocalIsFalse()
+    {
+        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+            playerId: 7,
+            pixelX: 0,
+            pixelY: 0,
+            pixelZ: 0,
+            [IncomingPlayerPropertyUpdate.NoValue(PlayerPropertyId.EffectColors)],
             senderSupportsPreciseMovement: true,
             appendNewline: true);
 

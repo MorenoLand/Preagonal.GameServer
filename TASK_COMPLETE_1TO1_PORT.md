@@ -535,6 +535,10 @@ behavior, and movement-loop invocation.
     The parser consumes exactly five color bytes, the runtime applier stores
     the confirmed five slots without movement side effects, and forwarding
     emits the C++ generic local payload because `__sendLocal[13]` is true.
+  - 2026-06-16: Implemented the source-confirmed `PLPROP_EFFECTCOLORS`
+    consume-only branch. The parser reads `GCHAR len` and consumes `GInt4`
+    only when `len > 0`, records no invented state, and emits no forwarding
+    bytes because `__sendLocal[23]` is false.
 - [x] Wire live `testSign` invocation through confirmed movement branches.
   - 2026-06-16: Added a source-confirmed movement sign-touch helper that runs
     only after movement requested touch testing, converts internal pixels to

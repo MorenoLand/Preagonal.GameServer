@@ -87,7 +87,7 @@ For sender client versions `>= CLVER_2_3`, C++ sends `levelBuff2` before
 | 20 | `PLPROP_CURLEVEL` | `GCHAR len` + bytes | Non-V8 stores `m_levelName`; V8 reads/discards. | Generic forwarding. | Implemented for confirmed movement subset as state-only. |
 | 21 | `PLPROP_HORSEGIF` | `GCHAR len` + bytes, max read `219` | Stores horse image; old clients append `.gif` when extensionless. | Generic forwarding. | Blocked. |
 | 22 | `PLPROP_HORSEBUSHES` | `GUChar` | Stores horse bomb count. | No local forwarding. | Implemented as state mutation. |
-| 23 | `PLPROP_EFFECTCOLORS` | `GCHAR len`, optional `GInt4` | Reads effect color bytes when length is positive; no visible field mutation in recovered branch. | No local forwarding. | Blocked/no-op candidate after fixture. |
+| 23 | `PLPROP_EFFECTCOLORS` | `GCHAR len`, optional `GInt4` | Reads effect color bytes when length is positive; no visible field mutation in recovered branch. | No local forwarding. | Implemented as consume-only parser branch with no invented runtime state. |
 | 24 | `PLPROP_CARRYNPC` | `GUInt` | Stores carried NPC id, with duplicate-carry ownership checks unless `duplicatecanbecarried` is true. | May send self `PLO_PLAYERPROPS`, self/global `PLO_NPCDEL2`, and level `PLO_OTHERPLPROPS`. | Blocked on NPC/runtime ownership. |
 | 25 | `PLPROP_APCOUNTER` | `GUShort` | Stores AP counter. | Generic forwarding. `getProp` serializes `m_apCounter + 1`. | Implemented as scalar mutation and local forwarding using the C++ plus-one serialization. |
 | 26 | `PLPROP_MAGICPOINTS` | `GUChar` | Stores magic points capped at `100` in non-V8 path. | No local forwarding. | Implemented as scalar mutation with C++ clamp. |

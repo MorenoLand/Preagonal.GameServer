@@ -2112,3 +2112,14 @@ player id `7`, colors `[1, 2, 3, 4, 5]`, newline appended by `sendPacket`:
 PLO_OTHERPLPROPS + GSHORT(7) + PLPROP_COLORS + five GUChar color bytes + "\n"
 [40, 32, 39, 45, 33, 34, 35, 36, 37, 10]
 ```
+
+Source-confirmed `PLPROP_EFFECTCOLORS` consume-only update:
+
+```txt
+PLPROP_EFFECTCOLORS + GCHAR(0)
+PLPROP_EFFECTCOLORS + GCHAR(1) + GInt4(0x01020304)
+```
+
+Both forms parse successfully and produce no forwarded `PLO_OTHERPLPROPS`
+payload because `__sendLocal[23]` is false and the recovered branch does not
+mutate visible runtime state.

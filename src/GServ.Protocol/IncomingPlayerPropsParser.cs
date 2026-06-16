@@ -90,6 +90,13 @@ public static class IncomingPlayerPropsParser
                         [reader.ReadGChar(), reader.ReadGChar(), reader.ReadGChar(), reader.ReadGChar(), reader.ReadGChar()]));
                     break;
 
+                case PlayerPropertyId.EffectColors:
+                    var effectColorLength = reader.ReadGChar();
+                    if (effectColorLength > 0)
+                        reader.ReadGInt4();
+                    updates.Add(IncomingPlayerPropertyUpdate.NoValue(propertyId));
+                    break;
+
                 case PlayerPropertyId.TextCodePage:
                     updates.Add(IncomingPlayerPropertyUpdate.GInt(propertyId, reader.ReadGInt()));
                     break;
