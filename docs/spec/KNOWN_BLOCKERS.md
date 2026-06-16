@@ -111,3 +111,9 @@
   Exact original gs2compiler gitlink commit, native compiler invocation,
   bytecode header golden fixtures, V8 bindings, lifecycle scheduling,
   exception behavior, and all script-visible gameplay APIs remain blocked.
+- Combat/player gameplay is implemented only for deterministic source-confirmed
+  packet builders, resource clamps, AP thresholds, and death/revive status
+  transitions. Full combat simulation, projectile conversion/routing, death item
+  drops, persistence writes, hit validation, sparring-zone warp integration, and
+  script/NPC side effects remain blocked until their surrounding runtime
+  behavior is ported.
