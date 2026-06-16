@@ -1,5 +1,14 @@
 namespace GServ.Protocol;
 
+public sealed record InboundHurtPlayerPacket(
+    ushort VictimPlayerId,
+    byte HurtDx,
+    byte HurtDy,
+    byte Power,
+    uint NpcId);
+
+public sealed record InboundHurtPlayerParseResult(bool Success, InboundHurtPlayerPacket? Packet);
+
 public static class CombatPackets
 {
     public static byte[] BombAdd(ushort playerId, ReadOnlySpan<byte> clientPacket, bool appendNewline = false)
@@ -46,6 +55,35 @@ public static class CombatPackets
         writer.WriteGChar(hurtDy);
         writer.WriteGChar(power);
         writer.WriteGInt(npcId);
+        AppendNewline(writer, appendNewline);
+        return writer.ToArray();
+    }
+
+    public static InboundHurtPlayerParseResult ParseHurtPlayer(ReadOnlySpan<byte> clientPacket)
+    {
+        if (clientPacket.IsEmpty)
+            return new InboundHurtPlayerParseResult(false, null);
+
+        var reader = new GraalBinaryReader(clientPacket);
+        var opcode = (PlayerToServerPacketId)reader.ReadGChar();
+        if (opcode != PlayerToServerPacketId.HurtPlayer)
+            return new InboundHurtPlayerParseResult(false, null);
+
+        var packet = new InboundHurtPlayerPacket(
+            reader.ReadGShort(),
+            reader.ReadGChar(),
+            reader.ReadGChar(),
+            reader.ReadGChar(),
+            unchecked((uint)reader.ReadGInt()));
+
+        return new InboundHurtPlayerParseResult(true, packet);
+    }
+
+    public static byte[] BaddyHurtToLeader(ReadOnlySpan<byte> clientPacket, bool appendNewline = false)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToPlayerPacketId.BaddyHurt);
+        WriteAfterClientOpcode(writer, clientPacket);
         AppendNewline(writer, appendNewline);
         return writer.ToArray();
     }

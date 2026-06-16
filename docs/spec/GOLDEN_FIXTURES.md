@@ -1495,6 +1495,45 @@ emits `GSHORT(124)`:
 28 20 27 39 20 9c 0a
 ```
 
+## Combat Runtime Fixtures
+
+Inbound `PLI_HURTPLAYER` fixture:
+
+```txt
+PLI_HURTPLAYER
+GSHORT victimPlayerId=8
+GCHAR hurtDx=18
+GCHAR hurtDy=30
+GCHAR power=5
+GINT npcId=200
+```
+
+Decoded values:
+
+```txt
+victimPlayerId=8
+hurtDx=18
+hurtDy=30
+power=5
+npcId=200
+```
+
+`PLI_BADDYHURT` leader-forward fixture:
+
+```txt
+in:  [16, 48, 49, 50]
+out: [59, 48, 49, 50, 10]
+```
+
+Non-spar `CLAIMPKER` AP-loss examples:
+
+```txt
+killerAp=80, loserAp=20 => killerAp=75, apCounter=600
+killerAp=10, loserAp=20 => killerAp=9, apCounter=30
+killerAp=1, loserAp=99 => killerAp=0, apCounter=30
+killerAp=90, loserAp=19 => killerAp=90, apCounter=0
+```
+
 Gen5 socket-framed post-login `PLI_PLAYERPROPS` movement frame with key `42`:
 
 ```txt

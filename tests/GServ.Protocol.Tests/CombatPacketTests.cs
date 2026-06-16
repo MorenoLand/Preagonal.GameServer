@@ -53,4 +53,29 @@ public sealed class CombatPacketTests
             [78, 32, 32, 36, 54, 64, 32, 33, 104, 10],
             CombatPackets.HitObjectsFromNpc(npcId: 200, encodedPower: 4, encodedX: 22, encodedY: 32, appendNewline: true));
     }
+
+    [Fact]
+    public void ParsesInboundHurtPlayerAndBuildsBaddyHurtLeaderForwardLikeCpp()
+    {
+        var hurt = new GraalBinaryWriter();
+        hurt.WriteGChar((byte)PlayerToServerPacketId.HurtPlayer);
+        hurt.WriteGShort(8);
+        hurt.WriteGChar(18);
+        hurt.WriteGChar(30);
+        hurt.WriteGChar(5);
+        hurt.WriteGInt(200);
+
+        var parsed = CombatPackets.ParseHurtPlayer(hurt.ToArray());
+
+        Assert.True(parsed.Success);
+        Assert.Equal(8, parsed.Packet!.VictimPlayerId);
+        Assert.Equal(18, parsed.Packet.HurtDx);
+        Assert.Equal(30, parsed.Packet.HurtDy);
+        Assert.Equal(5, parsed.Packet.Power);
+        Assert.Equal(200u, parsed.Packet.NpcId);
+
+        Assert.Equal(
+            [59, 48, 49, 50, 10],
+            CombatPackets.BaddyHurtToLeader([16, 48, 49, 50], appendNewline: true));
+    }
 }

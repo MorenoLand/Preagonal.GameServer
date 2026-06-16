@@ -42,6 +42,8 @@ public sealed record AlignmentTimerSettings(
     ushort ApTime3,
     ushort ApTime4);
 
+public sealed record NonSparKillClaimAlignmentPenalty(byte Alignment, ushort ApCounter);
+
 public static class CombatPlayerGameplay
 {
     public static void ApplyMaxPower(CombatPlayerState state, byte newMaxPower, int heartLimit)
@@ -131,6 +133,33 @@ public static class CombatPlayerGameplay
         return changed;
     }
 
+    public static NonSparKillClaimAlignmentPenalty ApplyNonSparKillClaimAlignmentPenalty(
+        byte killerAlignment,
+        byte loserAlignment,
+        AlignmentTimerSettings timers)
+    {
+        if (killerAlignment == 0 || loserAlignment < 20)
+            return new NonSparKillClaimAlignmentPenalty(killerAlignment, 0);
+
+        var newAlignment = killerAlignment - (((killerAlignment / 20) + 1) * (loserAlignment / 20));
+        if (newAlignment < 0)
+            newAlignment = 0;
+
+        var alignment = (byte)newAlignment;
+        return new NonSparKillClaimAlignmentPenalty(alignment, SelectApTimer(alignment, timers));
+    }
+
     private static void SetPower(CombatPlayerState state, float power) =>
         state.Hitpoints = Math.Clamp(power, 0.0f, state.MaxPower);
+
+    private static ushort SelectApTimer(byte alignment, AlignmentTimerSettings timers) =>
+        alignment < 20
+            ? timers.ApTime0
+            : alignment < 40
+                ? timers.ApTime1
+                : alignment < 60
+                    ? timers.ApTime2
+                    : alignment < 80
+                        ? timers.ApTime3
+                        : timers.ApTime4;
 }

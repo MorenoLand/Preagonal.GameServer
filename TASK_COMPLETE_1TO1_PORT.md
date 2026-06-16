@@ -619,6 +619,11 @@ Completion criteria:
     remains blocked where C++ depends on live session routing, level leader
     mutation, exact C RNG/drop behavior, or rating-flow fixtures.
 - [ ] Implement combat packet parsers/builders and deterministic formulas.
+  - 2026-06-16: Added source-confirmed `PLI_HURTPLAYER` parser,
+    `PLI_BADDYHURT -> PLO_BADDYHURT` leader-forward builder, packet id
+    constants, and non-spar `CLAIMPKER` AP-loss formula tests. This remains
+    open for production routing, sparring rating flow, baddy mode timeout
+    integration, `PLPROP_STATUS` side-packet order, and drop RNG.
 - [ ] Implement drops only after exact C++ RNG/timing behavior is confirmed.
 - [ ] Add golden tests for packet bytes and gameplay rule outputs.
 

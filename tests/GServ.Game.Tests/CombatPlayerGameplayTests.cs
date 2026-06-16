@@ -86,4 +86,24 @@ public sealed class CombatPlayerGameplayTests
         Assert.False(changed);
         Assert.Equal(90, state.ApCounter);
     }
+
+    [Theory]
+    [InlineData(80, 20, 75, 600)]
+    [InlineData(10, 20, 9, 30)]
+    [InlineData(1, 99, 0, 30)]
+    [InlineData(90, 19, 90, 0)]
+    public void NonSparKillClaimApLossMatchesCppFormula(
+        byte killerAlignment,
+        byte loserAlignment,
+        byte expectedAlignment,
+        ushort expectedCounter)
+    {
+        var result = CombatPlayerGameplay.ApplyNonSparKillClaimAlignmentPenalty(
+            killerAlignment,
+            loserAlignment,
+            new AlignmentTimerSettings(30, 90, 300, 600, 1200));
+
+        Assert.Equal(expectedAlignment, result.Alignment);
+        Assert.Equal(expectedCounter, result.ApCounter);
+    }
 }

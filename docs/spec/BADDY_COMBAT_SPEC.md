@@ -48,8 +48,10 @@ Confirmed packet ids:
 | client -> server | 15 | `PLI_BADDYPROPS` |
 | client -> server | 16 | `PLI_BADDYHURT` |
 | client -> server | 17 | `PLI_BADDYADD` |
+| client -> server | 26 | `PLI_HURTPLAYER` |
 | server -> client | 2 | `PLO_BADDYPROPS` |
 | server -> client | 27 | `PLO_BADDYHURT` |
+| server -> client | 40 | `PLO_HURTPLAYER` |
 
 ## Reset Defaults
 
@@ -199,6 +201,9 @@ Implemented:
 - inert `RuntimeBaddy` defaults and full default property serialization;
 - baddy id generation/reuse and the source-confirmed 51-baddy boundary;
 - baddy packet ids and selected packet builders.
+- `PLI_HURTPLAYER` parser and `PLO_HURTPLAYER` builder field order.
+- `PLI_BADDYHURT` leader-forward packet builder.
+- non-spar `CLAIMPKER` AP-loss formula and AP timer bucket selection.
 
 Blocked:
 
@@ -371,3 +376,25 @@ killer.setProps(PLPROP_ALIGNMENT + oAp, FORWARD | FORWARDSELF)
 
 Rating formulas and AP-loss side effects are not fully wired into production C#
 session flow yet.
+
+## C# Fixture Coverage
+
+Confirmed tests currently cover:
+
+- `PLO_BOMBADD`, `PLO_BOMBDEL`, and `PLO_ARROWADD` forwarding payload shape;
+- `PLO_HURTPLAYER`, `PLO_EXPLOSION`, and `PLO_HITOBJECTS` field order;
+- `PLI_HURTPLAYER` decode field order;
+- `PLI_BADDYHURT -> PLO_BADDYHURT` leader-forward payload preservation;
+- max/current power clamps and AP healing gate;
+- revive power thresholds;
+- death count increment outside sparring;
+- AP timer tick thresholds;
+- non-spar `CLAIMPKER` AP-loss formula.
+
+Still blocked:
+
+- production live routing for combat packets;
+- complete sparring rating update wiring;
+- drop RNG and item scatter fixtures;
+- baddy mode timeout integration;
+- full `PLPROP_STATUS` side-packet order.
