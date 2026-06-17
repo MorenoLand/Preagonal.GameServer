@@ -90,6 +90,14 @@ public static class ServerListAuthPackets
         return writer.ToArray();
     }
 
+    public static byte[] SetIp(string ip)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToListServerPacketId.SetIp);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(ip));
+        return writer.ToArray();
+    }
+
     public static byte[] SetPlayers()
     {
         var writer = new GraalBinaryWriter();

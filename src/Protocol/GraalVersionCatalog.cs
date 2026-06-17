@@ -70,8 +70,7 @@ public static class GraalVersionCatalog
     public static ClientVersionId GetClientVersionId(string token) =>
         ClientVersions.GetValueOrDefault(token, ClientVersionId.Unknown);
 
-    public static IReadOnlyList<string> AllClientVersionTokens { get; } =
-        ClientVersions.Keys.ToArray();
+    public static IReadOnlyCollection<string> ClientVersionTokens => ClientVersions.Keys;
 
     public static RemoteControlVersionId GetRemoteControlVersionId(string token) =>
         RemoteControlVersions.GetValueOrDefault(token, RemoteControlVersionId.Unknown);

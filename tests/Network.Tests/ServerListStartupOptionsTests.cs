@@ -26,7 +26,8 @@ public sealed class ServerListStartupOptionsTests
             Gs2Settings.Parse("""
                 hq_password=secret
                 hq_level=3
-                """));
+                """),
+            ["G3D0311C", "G3D0321C"]);
 
         var options = ServerListStartupOptions.FromStartupSnapshot(
             snapshot,
@@ -67,7 +68,8 @@ public sealed class ServerListStartupOptionsTests
                 Source: ServerStartupSource.CommandLineOrEnvironment,
                 Diagnostic: null),
             Gs2Settings.Parse(""),
-            Gs2Settings.Parse(""));
+            Gs2Settings.Parse(""),
+            ["GNW03014"]);
 
         var options = ServerListStartupOptions.FromStartupSnapshot(
             snapshot,
@@ -86,8 +88,7 @@ public sealed class ServerListStartupOptionsTests
         Assert.Equal("14802", options.ServerPort);
         Assert.Equal("AUTO", options.ServerIp);
         Assert.Equal("AUTO", options.LocalIp);
-        Assert.Contains("G3D0311C", options.AllowedVersions);
-        Assert.Contains("GNW03014", options.AllowedVersions);
+        Assert.Equal(["GNW03014"], options.AllowedVersions);
     }
 
     [Fact]

@@ -24,6 +24,23 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void ExtraFrameWhileAuthPendingDoesNotStartSecondLogin()
+    {
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(gateway, AuthOptions());
+        _ = bridge.BeginClientLogin(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket());
+
+        var result = bridge.BeginClientLogin(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            [0x04, 0x6F, 0x76, 0x4E]);
+
+        Assert.True(result.Accepted);
+        Assert.Empty(result.OutboundBytes);
+        Assert.Equal(SessionLifecycle.WaitingForServerListAuth, result.Lifecycle);
+        Assert.Single(gateway.SentPackets);
+    }
+
+    [Fact]
     public void HandleVerifyAccount2ResponseReturnsDisconnectBytesForRejectedLogin()
     {
         var gateway = new RecordingGateway { IsConnected = true };

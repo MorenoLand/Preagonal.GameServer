@@ -196,6 +196,7 @@ public enum ServerToPlayerPacketId : byte
 
 public enum ServerToListServerPacketId : byte
 {
+    SetIp = 5,
     PlayerSet = 7,
     PlayerAdd = 14,
     Ping = 16,
@@ -210,7 +211,13 @@ public enum ServerToListServerPacketId : byte
 
 public enum ListServerToServerPacketId : byte
 {
-    VerifyAccount2 = 11
+    ErrorMessage = 8,
+    VerifyAccount2 = 11,
+    ServerInfo = 18,
+    RequestText = 19,
+    SendText = 20,
+    AssignPcId = 25,
+    Ping = 99
 }
 
 [Flags]

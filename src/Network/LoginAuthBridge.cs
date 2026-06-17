@@ -5,7 +5,8 @@ namespace Preagonal.GServer.Network;
 public sealed record ClientLoginAuthResult(
     bool Accepted,
     SessionLifecycle Lifecycle,
-    byte[] OutboundBytes);
+    byte[] OutboundBytes,
+    string Diagnostic = "");
 
 public sealed record ServerListLoginResponseResult(
     ServerListAuthResponseStatus Status,
@@ -20,12 +21,21 @@ public sealed class LoginAuthBridge(
 {
     private readonly Dictionary<(ushort PlayerId, PlayerSessionType Type), ClientSessionSkeleton> _pendingSessions = [];
     private readonly Dictionary<(ushort PlayerId, PlayerSessionType Type), string> _remoteAddresses = [];
+    private readonly Dictionary<ushort, string> _loginFrameDebug = [];
 
     public ClientLoginAuthResult BeginClientLogin(
         ClientSocketSessionContext context,
         ReadOnlySpan<byte> loginFrame)
     {
+        if (HasPendingSession(context.PlayerId))
+            return new ClientLoginAuthResult(
+                Accepted: true,
+                Lifecycle: SessionLifecycle.WaitingForServerListAuth,
+                OutboundBytes: [],
+                Diagnostic: $"login frame ignored while auth pending; {BuildFrameDebug(loginFrame)}");
+
         var session = new ClientSessionSkeleton(context.PlayerId);
+        _loginFrameDebug[context.PlayerId] = BuildFrameDebug(loginFrame);
         if (!session.ReceiveLoginPacket(loginFrame))
             return Finish(session, accepted: false);
 
@@ -79,8 +89,25 @@ public sealed class LoginAuthBridge(
     private ClientSessionSkeleton? FindSession(ushort id, PlayerSessionType type) =>
         _pendingSessions.TryGetValue((id, type), out var session) ? session : null;
 
-    private static ClientLoginAuthResult Finish(ClientSessionSkeleton session, bool accepted) =>
-        new(accepted, session.Lifecycle, FlushOutboundBytes(session));
+    private bool HasPendingSession(ushort id) =>
+        _pendingSessions.Keys.Any(key => key.PlayerId == id);
+
+    private ClientLoginAuthResult Finish(ClientSessionSkeleton session, bool accepted) =>
+        new(accepted, session.Lifecycle, FlushOutboundBytes(session), BuildDiagnostic(session, accepted));
+
+    private string BuildDiagnostic(ClientSessionSkeleton session, bool accepted)
+    {
+        if (session.LoginPacket is null)
+            return $"login accepted={accepted}; lifecycle={session.Lifecycle}; login packet missing; {_loginFrameDebug.GetValueOrDefault(session.Id, "")}";
+
+        return $"login accepted={accepted}; lifecycle={session.Lifecycle}; type={session.Type}; account={session.LoginPacket.AccountName}; version={session.LoginPacket.VersionToken}; versionId={session.LoginPacket.VersionId}; identity={session.LoginPacket.Identity}; {_loginFrameDebug.GetValueOrDefault(session.Id, "")}; {session.LoginPacket.DebugInfo}";
+    }
+
+    private static string BuildFrameDebug(ReadOnlySpan<byte> frame)
+    {
+        var previewLength = Math.Min(frame.Length, 96);
+        return $"frameHex={Convert.ToHexString(frame[..previewLength])}; frameBytes={frame.Length}";
+    }
 
     private static byte[] FlushOutboundBytes(ClientSessionSkeleton session)
     {

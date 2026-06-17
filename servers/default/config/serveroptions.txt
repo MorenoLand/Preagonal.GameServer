@@ -144,13 +144,13 @@ minimap =
 # --------------------------------------------------------------------------------------
 # The server details seen from the server list.
 name = GSharp
-description = My Server
-url = http://www.graal.in/
+description = .NET GServer
+url = https://github.com/MorenoLand/Preagonal.GServer-Sharp
 
 # The information of the computer hosting the gserver.  This gets sent to people wanting to connect.
 # If myip is set to AUTO, it uses the IP address exposed to the list server.
-serverip = AUTO
-serverport = 14802
+serverip = 127.0.0.1
+serverport = 14899
 serverinterface = AUTO
 
 # The local IP address of the computer.  Helps you connect to your server if your router can't route on

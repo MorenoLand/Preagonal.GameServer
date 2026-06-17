@@ -74,7 +74,23 @@ if (!config.Enabled)
         IPAddress.Any,
         gamePort,
         new LoginSocketFrameHandler(authBridge),
-        clientConnections);
+        clientConnections,
+        session => Console.WriteLine($"Accepted client session {session.PlayerId} from {session.RemoteAddress}."));
+
+    var nextServerListKeepalive = DateTimeOffset.UtcNow.AddMinutes(1);
+    runtime.ServerListTimedEventsHandler = () =>
+    {
+        if (!serverListSocket.IsConnected || DateTimeOffset.UtcNow < nextServerListKeepalive)
+            return;
+
+        nextServerListKeepalive = DateTimeOffset.UtcNow.AddMinutes(1);
+        var ip = snapshot.ServerOptions.GetString("serverip", "AUTO");
+        if (string.IsNullOrEmpty(ip))
+            ip = "AUTO";
+
+        serverListSocket.SendPacket(ServerListAuthPackets.SetIp(ip));
+        Console.WriteLine($"Sent listserver set-ip keepalive: {ip}.");
+    };
 
     runtime.CleanupHandler = () =>
     {
@@ -91,7 +107,12 @@ if (!config.Enabled)
     };
 
     clientServer.Start();
-    var acceptTask = RunClientAcceptLoop(clientServer, productionCts.Token);
+    var acceptTask = clientServer.RunAsync(productionCts.Token, result =>
+    {
+        Console.WriteLine(string.IsNullOrEmpty(result.Diagnostic)
+            ? $"Client session {result.PlayerId} stopped: {result.StopReason}."
+            : $"Client session {result.PlayerId} stopped: {result.StopReason}; {result.Diagnostic}");
+    });
     var listServerReceiveTask = serverListResult.Connected
         ? RunServerListReceiveLoop(serverListSocket, authBridge, clientConnections, productionCts.Token)
         : Task.CompletedTask;
@@ -139,26 +160,6 @@ while (!cts.IsCancellationRequested)
     }
 }
 
-static async Task RunClientAcceptLoop(ClientTcpServer server, CancellationToken cancellationToken)
-{
-    while (!cancellationToken.IsCancellationRequested)
-    {
-        try
-        {
-            var result = await server.AcceptOneAsync(cancellationToken);
-            Console.WriteLine($"Client session {result.PlayerId} stopped: {result.StopReason}.");
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            break;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Client accept loop failed: {ex.Message}");
-        }
-    }
-}
-
 static async Task RunServerListReceiveLoop(
     ServerListTcpSocket serverListSocket,
     LoginAuthBridge authBridge,
@@ -187,12 +188,36 @@ static async Task RunServerListReceiveLoop(
             if (packet.Length == 0)
                 continue;
 
-            if (packet[0] != (byte)ListServerToServerPacketId.VerifyAccount2)
-                continue;
+            var rawPacketId = packet[0];
+            var packetId = (ListServerToServerPacketId)DecodeGChar(rawPacketId);
+            Console.WriteLine($"Listserver packet raw={rawPacketId} decoded={(byte)packetId} ({packetId}) received: {packet.Length} bytes.");
 
-            var result = authBridge.HandleVerifyAccount2(packet.AsSpan(1));
-            if (result.OutboundBytes.Length != 0)
-                await clientConnections.SendAsync(result.PlayerId, result.OutboundBytes, cancellationToken);
+            switch (packetId)
+            {
+                case ListServerToServerPacketId.VerifyAccount2:
+                {
+                    var result = authBridge.HandleVerifyAccount2(packet.AsSpan(1));
+                    if (result.OutboundBytes.Length != 0)
+                        await clientConnections.SendAsync(result.PlayerId, result.OutboundBytes, cancellationToken);
+                    break;
+                }
+                case ListServerToServerPacketId.Ping:
+                    Console.WriteLine("Replying to listserver ping.");
+                    serverListSocket.SendPacket(ServerListAuthPackets.Ping());
+                    break;
+                case ListServerToServerPacketId.ErrorMessage:
+                    Console.WriteLine($"Listserver error: {System.Text.Encoding.ASCII.GetString(packet.AsSpan(1))}");
+                    break;
+                case ListServerToServerPacketId.SendText:
+                    Console.WriteLine($"Listserver text: {PreviewAscii(packet.AsSpan(1))}");
+                    break;
+                case ListServerToServerPacketId.RequestText:
+                    Console.WriteLine($"Listserver request text: {PreviewAscii(packet.AsSpan(1))}");
+                    break;
+                case ListServerToServerPacketId.ServerInfo:
+                    Console.WriteLine($"Listserver server info: {PreviewAscii(packet.AsSpan(1))}");
+                    break;
+            }
         }
     }
 }
@@ -210,3 +235,13 @@ static IReadOnlyList<string> SplitCsv(string value) =>
     value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .Where(entry => entry.Length > 0 && !entry.StartsWith('('))
         .ToArray();
+
+static byte DecodeGChar(byte value) => unchecked((byte)(value - 32));
+
+static string PreviewAscii(ReadOnlySpan<byte> bytes)
+{
+    var text = System.Text.Encoding.ASCII.GetString(bytes);
+    text = text.Replace("\r", "\\r", StringComparison.Ordinal)
+        .Replace("\n", "\\n", StringComparison.Ordinal);
+    return text.Length <= 180 ? text : text[..180] + "...";
+}

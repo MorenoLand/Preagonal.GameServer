@@ -187,8 +187,11 @@ public static class ServerStartupResolver
 public sealed record ServerStartupSnapshot(
     ServerStartupResolution Resolution,
     Gs2Settings ServerOptions,
-    Gs2Settings AdminConfig)
+    Gs2Settings AdminConfig,
+    IReadOnlyList<string>? AllowedVersions = null)
 {
+    public IReadOnlyList<string> EffectiveAllowedVersions => AllowedVersions ?? [];
+
     public bool IsProductionRuntimeBlocked => true;
     public string BlockedReason =>
         "Live sockets/auth/gameplay are intentionally not started until later milestones port Server::init, ServerList, and gameplay runtime behavior.";
@@ -205,6 +208,29 @@ public static class ServerStartupLoader
         var configPath = Path.Combine(resolution.ServerPath, "config");
         var serverOptions = Gs2Settings.LoadFile(Path.Combine(configPath, "serveroptions.txt"));
         var adminConfig = Gs2Settings.LoadFile(Path.Combine(configPath, "adminconfig.txt"));
-        return new ServerStartupSnapshot(resolution, serverOptions, adminConfig);
+        var allowedVersions = LoadAllowedVersions(Path.Combine(configPath, "allowedversions.txt"));
+        return new ServerStartupSnapshot(resolution, serverOptions, adminConfig, allowedVersions);
+    }
+
+    private static IReadOnlyList<string> LoadAllowedVersions(string path)
+    {
+        if (!File.Exists(path))
+            return [];
+
+        return File.ReadAllLines(path)
+            .Select(StripComment)
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .ToArray();
+    }
+
+    private static string StripComment(string line)
+    {
+        var slashComment = line.IndexOf("//", StringComparison.Ordinal);
+        if (slashComment >= 0)
+            line = line[..slashComment];
+
+        var hashComment = line.IndexOf('#');
+        return hashComment >= 0 ? line[..hashComment] : line;
     }
 }

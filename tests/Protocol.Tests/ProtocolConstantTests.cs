@@ -43,6 +43,7 @@ public sealed class ProtocolConstantTests
         Assert.Equal(194, (int)ServerToPlayerPacketId.ClearWeapons);
         Assert.Equal(252, (int)ServerToPlayerPacketId.SetEncryptionKey);
         Assert.Equal(253, (int)ServerToPlayerPacketId.Bundle);
+        Assert.Equal(5, (int)ServerToListServerPacketId.SetIp);
         Assert.Equal(7, (int)ServerToListServerPacketId.PlayerSet);
         Assert.Equal(14, (int)ServerToListServerPacketId.PlayerAdd);
         Assert.Equal(17, (int)ServerToListServerPacketId.VerifyAccount2);
@@ -51,6 +52,7 @@ public sealed class ProtocolConstantTests
         Assert.Equal(24, (int)ServerToListServerPacketId.ServerHqLevel);
         Assert.Equal(30, (int)ServerToListServerPacketId.RegisterV3);
         Assert.Equal(31, (int)ServerToListServerPacketId.SendText);
+        Assert.Equal(99, (int)ListServerToServerPacketId.Ping);
     }
 
     [Fact]

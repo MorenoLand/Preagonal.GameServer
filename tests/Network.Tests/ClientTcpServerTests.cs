@@ -62,6 +62,28 @@ public sealed class ClientTcpServerTests
     }
 
     [Fact]
+    public async Task AnyAddressListenerAcceptsIpv4Clients()
+    {
+        var handler = new RecordingFrameHandler(expectedFrames: 1);
+        using var server = new ClientTcpServer(IPAddress.Any, port: 0, handler);
+        server.Start();
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var acceptTask = server.AcceptOneAsync(timeout.Token);
+
+        using var client = new TcpClient(AddressFamily.InterNetwork);
+        await client.ConnectAsync(IPAddress.Loopback, server.Port, timeout.Token);
+        await using var stream = client.GetStream();
+        await stream.WriteAsync(new byte[] { 0, 1, 70 }, timeout.Token);
+        await handler.WaitForExpectedFrames(timeout.Token);
+        client.Close();
+
+        var result = await acceptTask;
+
+        Assert.Equal(ClientTcpSessionStopReason.ClientDisconnected, result.StopReason);
+    }
+
+    [Fact]
     public async Task AcceptOneAsyncRegistersClientConnectionUntilSessionEnds()
     {
         var handler = new RecordingFrameHandler(expectedFrames: 1);

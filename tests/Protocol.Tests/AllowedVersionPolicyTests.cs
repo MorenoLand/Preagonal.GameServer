@@ -6,9 +6,9 @@ namespace Preagonal.GServer.Protocol.Tests;
 public sealed class AllowedVersionPolicyTests
 {
     [Fact]
-    public void EmptyListAllowsAll()
+    public void EmptyListRejects()
     {
-        Assert.True(AllowedVersionPolicy.IsAllowed(ClientVersionId.Client6037, []));
+        Assert.False(AllowedVersionPolicy.IsAllowed(ClientVersionId.Client6037, []));
     }
 
     [Fact]

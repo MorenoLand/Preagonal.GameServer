@@ -9,7 +9,7 @@ public sealed class LoginSocketFrameHandler(LoginAuthBridge bridge) : IClientSoc
     {
         var result = bridge.BeginClientLogin(session, frame.Span);
         return ValueTask.FromResult(result.Accepted
-            ? ClientSocketFrameResult.Continue(result.OutboundBytes)
-            : ClientSocketFrameResult.Stop(result.OutboundBytes));
+            ? ClientSocketFrameResult.Continue(result.OutboundBytes, result.Diagnostic)
+            : ClientSocketFrameResult.Stop(result.OutboundBytes, result.Diagnostic));
     }
 }

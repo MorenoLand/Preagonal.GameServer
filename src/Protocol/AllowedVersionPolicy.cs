@@ -4,9 +4,6 @@ public static class AllowedVersionPolicy
 {
     public static bool IsAllowed(ClientVersionId versionId, IReadOnlyList<string> allowedVersions)
     {
-        if (allowedVersions.Count == 0)
-            return true;
-
         var allowed = false;
         foreach (var raw in allowedVersions)
         {

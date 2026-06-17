@@ -1,5 +1,4 @@
 using Preagonal.GServer.Persistence;
-using Preagonal.GServer.Protocol;
 
 namespace Preagonal.GServer.Network;
 
@@ -43,11 +42,11 @@ public static class ServerListStartupOptions
             HqPassword: admin.GetString("hq_password", ""),
             HqLevel: admin.GetInt("hq_level", 1),
             OnlyStaff: options.GetBool("onlystaff", false),
-            AllowedVersions: SplitCsv(options.GetString("allowedversions", "")));
+            AllowedVersions: options.Exists("allowedversions")
+                ? SplitCsv(options.GetString("allowedversions", ""))
+                : snapshot.EffectiveAllowedVersions);
     }
 
     private static IReadOnlyList<string> SplitCsv(string value) =>
-        string.IsNullOrWhiteSpace(value)
-            ? GraalVersionCatalog.AllClientVersionTokens
-            : value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
