@@ -9,6 +9,7 @@ public sealed class ProtocolConstantTests
     public void ConfirmedCorePacketIdsMatchGs2libIEnums()
     {
         Assert.Equal(50, (int)PlayerToServerPacketId.RawData);
+        Assert.Equal(41, (int)PlayerToServerPacketId.ServerWarp);
         Assert.Equal(14, (int)PlayerToServerPacketId.ClaimPker);
         Assert.Equal(252, (int)PlayerToServerPacketId.SetEncryptionKey);
         Assert.Equal(253, (int)PlayerToServerPacketId.Bundle);
@@ -39,6 +40,7 @@ public sealed class ProtocolConstantTests
         Assert.Equal(156, (int)ServerToPlayerPacketId.SetActiveLevel);
         Assert.Equal(187, (int)ServerToPlayerPacketId.UpdatePackageIsUpdated);
         Assert.Equal(174, (int)ServerToPlayerPacketId.GhostIcon);
+        Assert.Equal(178, (int)ServerToPlayerPacketId.ServerWarp);
         Assert.Equal(190, (int)ServerToPlayerPacketId.ServerListConnected);
         Assert.Equal(194, (int)ServerToPlayerPacketId.ClearWeapons);
         Assert.Equal(252, (int)ServerToPlayerPacketId.SetEncryptionKey);
@@ -47,6 +49,7 @@ public sealed class ProtocolConstantTests
         Assert.Equal(7, (int)ServerToListServerPacketId.PlayerSet);
         Assert.Equal(14, (int)ServerToListServerPacketId.PlayerAdd);
         Assert.Equal(15, (int)ServerToListServerPacketId.PlayerRemove);
+        Assert.Equal(18, (int)ServerToListServerPacketId.ServerInfo);
         Assert.Equal(17, (int)ServerToListServerPacketId.VerifyAccount2);
         Assert.Equal(22, (int)ServerToListServerPacketId.NewServer);
         Assert.Equal(23, (int)ServerToListServerPacketId.ServerHqPass);

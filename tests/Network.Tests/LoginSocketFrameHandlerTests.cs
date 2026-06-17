@@ -92,5 +92,10 @@ public sealed class LoginSocketFrameHandlerTests
         {
             SentPackets.Add(packetBody);
         }
+
+        public void SendServerInfoForPlayer(byte[] packetBody)
+        {
+            SentPackets.Add(packetBody);
+        }
     }
 }

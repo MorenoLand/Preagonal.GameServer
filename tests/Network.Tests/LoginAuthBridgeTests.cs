@@ -145,6 +145,8 @@ public sealed class LoginAuthBridgeTests
         Assert.Equal(7, broadcast.PlayerId);
         Assert.NotEmpty(broadcast.OutboundBytes);
         Assert.True(second.OutboundBytes.Length > first.OutboundBytes.Length);
+        Assert.True(IndexOf(DecodeSocketPayload(second.OutboundBytes, key: 43), LoginPeerPrefix(7)) >= 0);
+        Assert.True(IndexOf(DecodeSocketPayload(broadcast.OutboundBytes, key: 42), LoginPeerPrefix(8)) >= 0);
     }
 
     [Fact]
@@ -181,6 +183,71 @@ public sealed class LoginAuthBridgeTests
         var broadcast = Assert.Single(result.Broadcasts);
         Assert.Equal(8, broadcast.PlayerId);
         Assert.NotEmpty(broadcast.OutboundBytes);
+    }
+
+    [Fact]
+    public void ServerWarpRequestsListserver()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(ServerWarpPacket("Login"), 42));
+
+        Assert.True(result.ContinueSession);
+        Assert.Empty(result.OutboundBytes);
+        Assert.Equal(
+            ServerListAuthPackets.ServerInfoForPlayer(7, "Login"),
+            Assert.Single(gateway.SentServerInfos));
+    }
+
+    [Fact]
+    public void ServerInfoWarpsClient()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+
+        var response = bridge.HandleServerInfo(ServerListAuthPackets.ServerInfoForPlayer(7, "Login,127.0.0.1,14899")[1..]);
+
+        Assert.Equal(7, response.PlayerId);
+        Assert.Equal(ExpectedServerWarp("Login,127.0.0.1,14899"), DecodeSocketPayload(response.OutboundBytes, key: 42));
     }
 
     [Fact]
@@ -328,6 +395,25 @@ public sealed class LoginAuthBridgeTests
         return packet.ToArray();
     }
 
+    private static byte[] ExpectedServerWarp(string serverPacket)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)ServerToPlayerPacketId.ServerWarp);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(serverPacket));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] LoginPeerPrefix(ushort playerId)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)ServerToPlayerPacketId.OtherPlayerProps);
+        packet.WriteGShort(playerId);
+        packet.WriteGChar((byte)PlayerPropertyId.JoinLeaveLevel);
+        packet.WriteGChar(1);
+        return packet.ToArray();
+    }
+
     private static byte[] PlayerPropsPacket(PlayerPropertyId first, byte firstValue, PlayerPropertyId second, byte secondValue)
     {
         var packet = new GraalBinaryWriter();
@@ -336,6 +422,15 @@ public sealed class LoginAuthBridgeTests
         packet.WriteGChar(firstValue);
         packet.WriteGChar((byte)second);
         packet.WriteGChar(secondValue);
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] ServerWarpPacket(string serverName)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.ServerWarp);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(serverName));
         packet.WriteByte((byte)'\n');
         return packet.ToArray();
     }
@@ -389,6 +484,7 @@ public sealed class LoginAuthBridgeTests
         public List<byte[]> SentPackets { get; } = [];
         public List<byte[]> SentPlayerAdds { get; } = [];
         public List<byte[]> SentPlayerRemoves { get; } = [];
+        public List<byte[]> SentServerInfos { get; } = [];
 
         public void SendLoginPacketForPlayer(byte[] packetBody)
         {
@@ -403,6 +499,11 @@ public sealed class LoginAuthBridgeTests
         public void SendPlayerRemove(byte[] packetBody)
         {
             SentPlayerRemoves.Add(packetBody);
+        }
+
+        public void SendServerInfoForPlayer(byte[] packetBody)
+        {
+            SentServerInfos.Add(packetBody);
         }
     }
 }

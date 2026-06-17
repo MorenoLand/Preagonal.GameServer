@@ -8,6 +8,7 @@ public interface IServerListGateway
     void SendLoginPacketForPlayer(byte[] packetBody);
     void SendPlayerAdd(byte[] packetBody);
     void SendPlayerRemove(byte[] packetBody);
+    void SendServerInfoForPlayer(byte[] packetBody);
 }
 
 public sealed class ServerListAuthBoundary(

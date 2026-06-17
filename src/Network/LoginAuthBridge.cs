@@ -29,6 +29,8 @@ public sealed record ClientSessionEndResult(
     AccountSaveResult? SaveResult,
     IReadOnlyList<ClientSessionOutbound> Broadcasts);
 
+public sealed record ListServerInfoResult(ushort PlayerId, byte[] OutboundBytes, string Diagnostic = "");
+
 public sealed class LoginAuthBridge(
     IServerListGateway serverList,
     PreWorldAuthOptions options,
@@ -163,6 +165,21 @@ public sealed class LoginAuthBridge(
         return new ClientSessionEndResult(null, []);
     }
 
+    public ListServerInfoResult HandleServerInfo(ReadOnlySpan<byte> payloadWithoutPacketId)
+    {
+        var reader = new GraalBinaryReader(payloadWithoutPacketId);
+        var playerId = reader.ReadGShort();
+        var serverPacket = reader.ReadBytes(reader.BytesLeft);
+        if (!_activeSessions.TryGetValue(playerId, out var session))
+            return new ListServerInfoResult(playerId, [], "serverwarp target session is not active");
+
+        if (session.LoginPacket?.VersionId < ClientVersionId.Client21)
+            return new ListServerInfoResult(playerId, [], "serverwarp reply ignored for pre-2.1 client");
+
+        session.QueuePacket(BuildServerWarpPacket(serverPacket));
+        return new ListServerInfoResult(playerId, FlushOutboundBytes(session));
+    }
+
     private ClientSessionSkeleton? FindSession(ushort id, PlayerSessionType type) =>
         _pendingSessions.TryGetValue((id, type), out var session) ? session : null;
 
@@ -197,6 +214,13 @@ public sealed class LoginAuthBridge(
         {
             var reader = new GraalBinaryReader(packet.Payload.Span);
             var packetId = reader.ReadGChar();
+            if (packetId == (byte)PlayerToServerPacketId.ServerWarp)
+            {
+                var serverName = System.Text.Encoding.ASCII.GetString(packet.Payload.Span[1..]).TrimEnd('\n', '\r');
+                serverList.SendServerInfoForPlayer(ServerListAuthPackets.ServerInfoForPlayer(context.PlayerId, serverName));
+                continue;
+            }
+
             if (packetId != (byte)PlayerToServerPacketId.PlayerProps)
                 continue;
 
@@ -344,6 +368,15 @@ public sealed class LoginAuthBridge(
             playerId,
             [(byte)((byte)PlayerPropertyId.PlayerConnected + 32)],
             appendNewline: true);
+
+    private static byte[] BuildServerWarpPacket(ReadOnlySpan<byte> serverPacket)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToPlayerPacketId.ServerWarp);
+        writer.WriteBytes(serverPacket);
+        writer.WriteByte((byte)'\n');
+        return writer.ToArray();
+    }
 
     private IEnumerable<ClientSessionOutbound> ExchangeLoginPlayerProps(
         ClientSessionSkeleton joiningSession,

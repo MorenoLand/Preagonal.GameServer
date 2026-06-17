@@ -121,4 +121,14 @@ public sealed class ServerListAuthPacketTests
             new byte[] { 58, 32, 39, 97, 99, 99, 111, 117, 110, 116, 115 },
             bytes);
     }
+
+    [Fact]
+    public void ServerInfoUsesCppOpcode()
+    {
+        var bytes = ServerListAuthPackets.ServerInfoForPlayer(7, "Login");
+
+        Assert.Equal(
+            new byte[] { 50, 32, 39, 76, 111, 103, 105, 110 },
+            bytes);
+    }
 }

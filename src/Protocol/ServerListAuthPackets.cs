@@ -83,6 +83,15 @@ public static class ServerListAuthPackets
         return writer.ToArray();
     }
 
+    public static byte[] ServerInfoForPlayer(ushort playerId, string serverName)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToListServerPacketId.ServerInfo);
+        writer.WriteGShort(playerId);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(serverName));
+        return writer.ToArray();
+    }
+
     public static byte[] Ping()
     {
         var writer = new GraalBinaryWriter();

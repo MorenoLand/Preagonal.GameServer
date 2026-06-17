@@ -214,7 +214,12 @@ static async Task RunServerListReceiveLoop(
                     foreach (var broadcast in result.Broadcasts)
                     {
                         if (broadcast.OutboundBytes.Length != 0)
-                            await clientConnections.SendAsync(broadcast.PlayerId, broadcast.OutboundBytes, cancellationToken);
+                        {
+                            var sent = await clientConnections.SendAsync(broadcast.PlayerId, broadcast.OutboundBytes, cancellationToken);
+                            Console.WriteLine(sent
+                                ? $"Sent login broadcast to client session {broadcast.PlayerId}: {broadcast.OutboundBytes.Length} bytes."
+                                : $"Missed login broadcast to client session {broadcast.PlayerId}: stream not registered.");
+                        }
                     }
                     break;
                 }
@@ -233,6 +238,11 @@ static async Task RunServerListReceiveLoop(
                     break;
                 case ListServerToServerPacketId.ServerInfo:
                     Console.WriteLine($"Listserver server info: {PreviewAscii(packet.AsSpan(1))}");
+                    var warp = authBridge.HandleServerInfo(packet.AsSpan(1));
+                    if (warp.OutboundBytes.Length != 0)
+                        await clientConnections.SendAsync(warp.PlayerId, warp.OutboundBytes, cancellationToken);
+                    else if (!string.IsNullOrEmpty(warp.Diagnostic))
+                        Console.WriteLine($"Listserver server info ignored: {warp.Diagnostic}");
                     break;
             }
         }
