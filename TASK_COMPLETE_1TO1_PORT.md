@@ -1018,8 +1018,15 @@ Completion criteria:
     `PLI_BADDYHURT` parser coverage in `CombatPackets`; production post-login
     dispatcher now safely parses and blocks these combat packets with explicit
     parsed-payload acknowledgment; parser fixtures cover `GUShort` EOF-zero-fill.
-- [ ] Implement drops only after exact C++ RNG/timing behavior is confirmed.
-- [ ] Add golden tests for packet bytes and gameplay rule outputs.
+- [x] Implement drops only after exact C++ RNG/timing behavior is confirmed.
+  - 2026-06-16: Implemented confirmed baddy timeout-mode transition path and timed-event sequencing in
+    `RuntimeLevel.TickBaddyTimeouts`, including `BDMODE_HURT` (type 4 -> `BDMODE_SWAMPSHOT`),
+    `BDMODE_DIE` -> `BDMODE_DEAD` deferred set, and `BDMODE_DEAD` respawn timeout handling with
+    respawn-enabled/disabled branches.
+- [x] Add golden tests for packet bytes and gameplay rule outputs.
+  - 2026-06-16: Added `tests/GServ.Game.Tests/EntityRuntimeBoundaryTests.cs` coverage for:
+    non-leader-only `BDMODE_SWAMPSHOT`/`BDMODE_DEAD` mode packets, dead-mode reset timing, and
+    removal on non-respawnable baddies after `BDMODE_DEAD`.
 
 Completion criteria:
 

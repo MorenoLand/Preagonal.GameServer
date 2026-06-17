@@ -1,3 +1,5 @@
+using GServ.Protocol;
+
 namespace GServ.Game;
 
 public enum RuntimePlayerKind
@@ -449,6 +451,12 @@ public enum RuntimeNicknameUpdatePolicy
     WordFilterAllowedNoGuild
 }
 
+public sealed record RuntimeLevelBaddyTimedPacket(ushort RecipientId, byte[] Packet);
+
+public sealed record RuntimeLevelBaddyTimedResult(
+    IReadOnlyList<RuntimeLevelBaddyTimedPacket> Packets,
+    IReadOnlyList<RuntimeBaddy.BaddyDropPacket> DropPackets);
+
 public sealed class RuntimeLevel
 {
     private readonly List<ushort> _playerIds = [];
@@ -488,6 +496,91 @@ public sealed class RuntimeLevel
 
     public bool IsPlayerLeader(ushort id) =>
         _playerIds.Count != 0 && _playerIds[0] == id;
+
+    public RuntimeLevelBaddyTimedResult TickBaddyTimeouts(
+        int clientVersion = 217,
+        int baddyRespawnTime = 60)
+    {
+        var packets = new List<RuntimeLevelBaddyTimedPacket>();
+        var allDrops = new List<RuntimeBaddy.BaddyDropPacket>();
+        var setDead = new HashSet<RuntimeBaddy>();
+        var playerIdsSnapshot = _playerIds.ToArray();
+
+        foreach (var baddy in _baddies.Values.ToArray())
+        {
+            allDrops.AddRange(baddy.PopDroppedPackets());
+
+            if (baddy.Timeout.DoTimeout() != 0)
+                continue;
+
+            if (baddy.Type == 4 && baddy.Mode == (byte)BaddyMode.Hurt)
+            {
+                baddy.SetProps(
+                    baddy.BuildModeProps((byte)BaddyMode.SwampShot),
+                    baddyItemsEnabled: false,
+                    baddyRespawnTime: 0,
+                    rng: null,
+                    out _);
+
+                var modePacket = BuildBaddyModePacket(baddy.Id, (byte)BaddyMode.SwampShot);
+                foreach (var recipientId in GetNonLeaderRecipients(playerIdsSnapshot))
+                    packets.Add(new RuntimeLevelBaddyTimedPacket(recipientId, modePacket));
+                continue;
+            }
+
+            if (baddy.Mode == (byte)BaddyMode.Die)
+            {
+                var modePacket = BuildBaddyModePacket(baddy.Id, (byte)BaddyMode.Dead);
+                foreach (var recipientId in GetNonLeaderRecipients(playerIdsSnapshot))
+                    packets.Add(new RuntimeLevelBaddyTimedPacket(recipientId, modePacket));
+
+                setDead.Add(baddy);
+                continue;
+            }
+
+            baddy.Reset(clientVersion);
+            var fullProps = EntityRuntimePackets.BaddyProps(baddy, clientVersion);
+            foreach (var recipientId in playerIdsSnapshot)
+                packets.Add(new RuntimeLevelBaddyTimedPacket(recipientId, fullProps));
+        }
+
+        foreach (var baddy in setDead.ToArray())
+        {
+            var shouldRemove = baddy.SetProps(
+                baddy.BuildModeProps((byte)BaddyMode.Dead),
+                baddyItemsEnabled: false,
+                baddyRespawnTime,
+                rng: null,
+                out _);
+
+            if (shouldRemove)
+                RemoveBaddy(baddy.Id);
+            else
+                allDrops.AddRange(baddy.PopDroppedPackets());
+        }
+
+        return new RuntimeLevelBaddyTimedResult(packets, allDrops);
+    }
+
+    private static IEnumerable<ushort> GetNonLeaderRecipients(IReadOnlyList<ushort> playerIds)
+    {
+        for (var i = 1; i < playerIds.Count; i++)
+            yield return playerIds[i];
+    }
+
+    private static byte[] BuildBaddyModePacket(byte baddyId, byte mode)
+    {
+        var props = new GraalBinaryWriter();
+        props.WriteGChar((byte)5);
+        props.WriteGChar(mode);
+
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToPlayerPacketId.BaddyProps);
+        writer.WriteGChar(baddyId);
+        writer.WriteBytes(props.ToArray());
+        writer.WriteByte((byte)'\n');
+        return writer.ToArray();
+    }
 
     public bool AddItem(float x, float y, LevelItemType itemType)
     {

@@ -169,4 +169,110 @@ public sealed class EntityRuntimeBoundaryTests
             },
             EntityRuntimePackets.BaddyProps(baddy, clientVersion: 217));
     }
+
+    [Fact]
+    public void TickBaddyTimeoutsSendsSwampShotModeOnlyToNonLeader()
+    {
+        var level = new RuntimeLevel("start.nw");
+        var baddy = level.AddBaddy(10, 11, type: 4);
+        Assert.NotNull(baddy);
+
+        level.AddPlayer(10);
+        level.AddPlayer(11);
+
+        baddy.SetProps(
+            [(byte)(5 + 32), (byte)(BaddyMode.Hurt + 32)],
+            baddyItemsEnabled: false,
+            baddyRespawnTime: 60,
+            rng: null,
+            out _);
+        baddy.Timeout.SetTimeout(1);
+
+        var result = level.TickBaddyTimeouts();
+
+        Assert.Single(result.Packets);
+        Assert.Equal(11, result.Packets.Single().RecipientId);
+        Assert.Equal([34, 33, 37, 38, 10], result.Packets.Single().Packet);
+        Assert.Empty(result.DropPackets);
+    }
+
+    [Fact]
+    public void TickBaddyTimeoutsSendsDieModeOnlyToNonLeaderAndSwitchesToDeadMode()
+    {
+        var level = new RuntimeLevel("start.nw");
+        var baddy = level.AddBaddy(10, 11, type: 2);
+        Assert.NotNull(baddy);
+
+        level.AddPlayer(12);
+        level.AddPlayer(13);
+
+        baddy.SetProps(
+            [(byte)(5 + 32), (byte)(BaddyMode.Die + 32)],
+            baddyItemsEnabled: false,
+            baddyRespawnTime: 60,
+            rng: null,
+            out _);
+        baddy.Timeout.SetTimeout(1);
+
+        var result = level.TickBaddyTimeouts(clientVersion: 217, baddyRespawnTime: 60);
+
+        Assert.Single(result.Packets);
+        Assert.Equal(13, result.Packets[0].RecipientId);
+        Assert.Equal([34, 33, 37, 41, 10], result.Packets[0].Packet);
+        Assert.Equal((byte)BaddyMode.Dead, baddy.Mode);
+        Assert.Equal(60, baddy.Timeout.GetTimeout());
+    }
+
+    [Fact]
+    public void TickBaddyTimeoutsResetsAndSendsBaddyPropsToAllPlayers()
+    {
+        var level = new RuntimeLevel("start.nw");
+        var baddy = level.AddBaddy(10, 11, type: 2);
+        Assert.NotNull(baddy);
+
+        level.AddPlayer(20);
+        level.AddPlayer(21);
+        level.AddPlayer(22);
+
+        baddy.SetProps(
+            [(byte)(1 + 32), (byte)(20 + 32), (byte)(2 + 32), (byte)(30 + 32), (byte)(5 + 32), (byte)(BaddyMode.Walk + 32)],
+            baddyItemsEnabled: false,
+            baddyRespawnTime: 60,
+            rng: null,
+            out _);
+        baddy.Timeout.SetTimeout(1);
+
+        var result = level.TickBaddyTimeouts();
+        var expected = EntityRuntimePackets.BaddyProps(baddy, clientVersion: 217);
+
+        Assert.Equal(3, result.Packets.Count);
+        Assert.Equal(new ushort[] { 20, 21, 22 }, result.Packets.Select(p => p.RecipientId).ToArray());
+        Assert.All(result.Packets, packet => Assert.Equal(expected, packet.Packet));
+    }
+
+    [Fact]
+    public void TickBaddyTimeoutsRemovesBaddyWhenRespawnDisabled()
+    {
+        var level = new RuntimeLevel("start.nw");
+        var baddy = level.AddBaddy(10, 11, type: 2);
+        Assert.NotNull(baddy);
+
+        level.AddPlayer(40);
+        level.AddPlayer(41);
+        baddy.SetRespawn(false);
+
+        baddy.SetProps(
+            [(byte)(5 + 32), (byte)(BaddyMode.Die + 32)],
+            baddyItemsEnabled: false,
+            baddyRespawnTime: 60,
+            rng: null,
+            out _);
+        baddy.Timeout.SetTimeout(1);
+
+        var result = level.TickBaddyTimeouts();
+
+        Assert.Single(result.Packets);
+        Assert.Empty(level.Baddies);
+        Assert.Single(result.Packets);
+    }
 }
