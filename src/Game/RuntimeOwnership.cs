@@ -104,6 +104,58 @@ public sealed class RuntimePlayer
         level.RemovePlayer(Id);
         Level = null;
     }
+
+    public void InitializeFromLogin(Preagonal.GServer.Protocol.PlayerPropertySource source)
+    {
+        Nickname = source.Nickname;
+        CommunityName = source.CommunityName;
+        AccountIp = source.AccountIp;
+        EloRating = source.EloRating;
+        EloDeviation = source.EloDeviation;
+        PixelX = source.X;
+        PixelY = source.Y;
+        PixelZ = source.Z;
+        Sprite = source.Sprite;
+        MaxPower = source.MaxPower;
+        Hitpoints = source.Hitpoints;
+        Rupees = source.Rupees;
+        Arrows = source.Arrows;
+        Bombs = source.Bombs;
+        GlovePower = source.GlovePower;
+        SwordPower = source.SwordPower;
+        SwordImage = source.SwordImage;
+        ShieldPower = source.ShieldPower;
+        ShieldImage = source.ShieldImage;
+        BowPower = source.BowPower;
+        BowImage = source.BowImage;
+        ApCounter = source.ApCounter;
+        MagicPoints = source.MagicPoints;
+        Alignment = source.Alignment;
+        AdditionalFlags = source.AdditionalFlags;
+        CarrySprite = source.CarrySprite;
+        HorseBombCount = source.HorseBombCount;
+        UdpPort = source.UdpPort;
+        StatusMessage = source.StatusMessage;
+        AttachedNpcId = unchecked((uint)source.CarryNpcId);
+        CurrentLevelName = source.CurrentLevel;
+        Gani = source.Gani;
+        HeadImage = source.HeadImage;
+        HorseImage = source.HorseImage;
+        BodyImage = source.BodyImage;
+        ChatMessage = source.ChatMessage;
+        Language = source.Language;
+        Os = source.Os;
+        TextCodePage = source.TextCodePage;
+
+        for (var i = 0; i < Math.Min(_colors.Length, source.Colors.Count); i++)
+            _colors[i] = source.Colors[i];
+
+        foreach (var (index, value) in source.GaniAttributes)
+        {
+            if (index is >= 1 and <= 30)
+                _ganiAttributes[index - 1] = value;
+        }
+    }
 }
 
 public static class RuntimePlayerPropsApplier

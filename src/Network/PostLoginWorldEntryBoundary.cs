@@ -1,4 +1,5 @@
 using System.Text;
+using Preagonal.GServer.Persistence;
 using Preagonal.GServer.Protocol;
 
 namespace Preagonal.GServer.Network;
@@ -36,7 +37,8 @@ public sealed record PostLoginPlayerSnapshot(
     PlayerPropertySource LoginPropertySource,
     IReadOnlyList<PlayerPropertyId> LoginPropertyIds,
     IReadOnlyList<LoginFlag> PlayerFlags,
-    IReadOnlyList<LoginFlag> ServerFlags);
+    IReadOnlyList<LoginFlag> ServerFlags,
+    AccountFileData? Account = null);
 
 public enum PostLoginClientStopPoint
 {

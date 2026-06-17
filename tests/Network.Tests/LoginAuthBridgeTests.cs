@@ -117,6 +117,78 @@ public sealed class LoginAuthBridgeTests
         Assert.True(second.OutboundBytes.Length > first.OutboundBytes.Length);
     }
 
+    [Fact]
+    public void ActiveClientPlayerPropsBroadcastToLevelPeer()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(8, "127.0.0.1"), Client3LoginPacket("Z", key: 43));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Z", 8, PlayerSessionType.Client3, "SUCCESS"));
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(PlayerPropsPacket(PlayerPropertyId.X, 70, PlayerPropertyId.Y, 71), 42));
+
+        Assert.True(result.ContinueSession);
+        var broadcast = Assert.Single(result.Broadcasts);
+        Assert.Equal(8, broadcast.PlayerId);
+        Assert.NotEmpty(broadcast.OutboundBytes);
+    }
+
+    [Fact]
+    public void EndSessionSavesRuntimeAccountState()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+        _ = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(PlayerPropsPacket(PlayerPropertyId.X, 70, PlayerPropertyId.Y, 71), 42));
+
+        var save = bridge.EndClientSession(7);
+
+        Assert.NotNull(save);
+        Assert.True(save.WriteSucceeded);
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt"));
+        Assert.Contains("\r\nX 35\r\n", saved, StringComparison.Ordinal);
+        Assert.Contains("\r\nY 35.5\r\n", saved, StringComparison.Ordinal);
+    }
+
     private static PreWorldAuthOptions AuthOptions() =>
         new(
             MaxPlayers: 128,
@@ -161,6 +233,21 @@ public sealed class LoginAuthBridgeTests
         queue.SetCodec(EncryptionGeneration.Gen5, key);
         queue.AddPacket(raw);
         return queue.FlushSocket(forceSendFiles: true);
+    }
+
+    private static byte[] SocketPayload(byte[] raw, byte key) =>
+        SocketFrame(raw, key)[2..];
+
+    private static byte[] PlayerPropsPacket(PlayerPropertyId first, byte firstValue, PlayerPropertyId second, byte secondValue)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.PlayerProps);
+        packet.WriteGChar((byte)first);
+        packet.WriteGChar(firstValue);
+        packet.WriteGChar((byte)second);
+        packet.WriteGChar(secondValue);
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
     }
 
     private static TempServerRoot TestDefaultServerRoot()

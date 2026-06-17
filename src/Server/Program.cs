@@ -68,12 +68,13 @@ if (!config.Enabled)
                 ServerName: serverListOptions.Name,
                 ActiveSessions: [],
                 StaffAccounts: staffAccounts,
-                RemoteIp: "")));
+                RemoteIp: "")),
+        runtimeServer);
     var clientConnections = new TcpClientConnectionRegistry();
     using var clientServer = new ClientTcpServer(
         IPAddress.Any,
         gamePort,
-        new LoginSocketFrameHandler(authBridge),
+        new LoginSocketFrameHandler(authBridge, clientConnections),
         clientConnections,
         session => Console.WriteLine($"Accepted client session {session.PlayerId} from {session.RemoteAddress}."));
 
@@ -94,7 +95,7 @@ if (!config.Enabled)
 
     runtime.CleanupHandler = () =>
     {
-        runtimeServer.CleanupForShutdown(player => { });
+        runtimeServer.CleanupForShutdown(player => authBridge.EndClientSession(player.Id));
         runtimeLevelCache.Clear();
     };
     var hostLoop = new ServerHostLoop(runtime, ServerHostLoop.StaticTime, TimeSpan.Zero);
@@ -109,6 +110,10 @@ if (!config.Enabled)
     clientServer.Start();
     var acceptTask = clientServer.RunAsync(productionCts.Token, result =>
     {
+        var saveResult = authBridge.EndClientSession(result.PlayerId);
+        if (saveResult is { WriteAttempted: true })
+            Console.WriteLine($"Saved account for client session {result.PlayerId}: writeSucceeded={saveResult.WriteSucceeded}; path={saveResult.Path}");
+
         Console.WriteLine(string.IsNullOrEmpty(result.Diagnostic)
             ? $"Client session {result.PlayerId} stopped: {result.StopReason}."
             : $"Client session {result.PlayerId} stopped: {result.StopReason}; {result.Diagnostic}");

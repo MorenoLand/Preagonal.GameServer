@@ -136,7 +136,8 @@ public static class LoginWorldEntry
             source,
             SendLoginPropertySet.ForClient(session.LoginPacket is { VersionId: < ClientVersionId.Client21 }),
             account.Flags.Select(flag => new LoginFlag(flag.Key, flag.Value)).ToArray(),
-            []);
+            [],
+            account);
     }
 
     private static PlayerPropertySource BuildPropertySource(ClientSessionSkeleton session, AccountFileData account, string remoteIp) =>

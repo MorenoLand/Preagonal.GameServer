@@ -1,15 +1,26 @@
 namespace Preagonal.GServer.Network;
 
-public sealed class LoginSocketFrameHandler(LoginAuthBridge bridge) : IClientSocketFrameHandler
+public sealed class LoginSocketFrameHandler(
+    LoginAuthBridge bridge,
+    TcpClientConnectionRegistry? connections = null) : IClientSocketFrameHandler
 {
-    public ValueTask<ClientSocketFrameResult> HandleFrameAsync(
+    public async ValueTask<ClientSocketFrameResult> HandleFrameAsync(
         ClientSocketSessionContext session,
         ReadOnlyMemory<byte> frame,
         CancellationToken cancellationToken)
     {
-        var result = bridge.BeginClientLogin(session, frame.Span);
-        return ValueTask.FromResult(result.Accepted
+        var result = bridge.HandleClientFrame(session, frame.Span);
+        if (connections is not null)
+        {
+            foreach (var broadcast in result.Broadcasts)
+            {
+                if (broadcast.OutboundBytes.Length != 0)
+                    await connections.SendAsync(broadcast.PlayerId, broadcast.OutboundBytes, cancellationToken);
+            }
+        }
+
+        return result.ContinueSession
             ? ClientSocketFrameResult.Continue(result.OutboundBytes, result.Diagnostic)
-            : ClientSocketFrameResult.Stop(result.OutboundBytes, result.Diagnostic));
+            : ClientSocketFrameResult.Stop(result.OutboundBytes, result.Diagnostic);
     }
 }

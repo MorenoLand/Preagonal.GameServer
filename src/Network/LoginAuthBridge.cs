@@ -1,3 +1,5 @@
+using Preagonal.GServer.Game;
+using Preagonal.GServer.Persistence;
 using Preagonal.GServer.Protocol;
 
 namespace Preagonal.GServer.Network;
@@ -17,16 +19,45 @@ public sealed record ServerListLoginResponseResult(
 
 public sealed record ClientSessionOutbound(ushort PlayerId, byte[] OutboundBytes);
 
+public sealed record ClientFrameBridgeResult(
+    bool ContinueSession,
+    byte[] OutboundBytes,
+    IReadOnlyList<ClientSessionOutbound> Broadcasts,
+    string Diagnostic = "");
+
 public sealed class LoginAuthBridge(
     IServerListGateway serverList,
     PreWorldAuthOptions options,
-    LoginWorldEntryOptions? worldEntryOptions = null)
+    LoginWorldEntryOptions? worldEntryOptions = null,
+    RuntimeServer? runtimeServer = null)
 {
     private readonly Dictionary<(ushort PlayerId, PlayerSessionType Type), ClientSessionSkeleton> _pendingSessions = [];
     private readonly Dictionary<(ushort PlayerId, PlayerSessionType Type), string> _remoteAddresses = [];
     private readonly Dictionary<ushort, ClientSessionSkeleton> _activeSessions = [];
     private readonly Dictionary<ushort, PostLoginPlayerSnapshot> _activeSnapshots = [];
+    private readonly Dictionary<ushort, AccountFileData> _activeAccounts = [];
+    private readonly Dictionary<ushort, RuntimePlayer> _activePlayers = [];
+    private readonly Dictionary<ushort, InboundPacketDecoder> _activeDecoders = [];
+    private readonly Dictionary<ushort, ClientPacketStreamFramer> _activeFramers = [];
+    private readonly Dictionary<string, RuntimeLevel> _levels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ushort, string> _loginFrameDebug = [];
+
+    public ClientFrameBridgeResult HandleClientFrame(
+        ClientSocketSessionContext context,
+        ReadOnlySpan<byte> frame)
+    {
+        if (!_activeSessions.ContainsKey(context.PlayerId))
+        {
+            var login = BeginClientLogin(context, frame);
+            return new ClientFrameBridgeResult(
+                login.Accepted,
+                login.OutboundBytes,
+                [],
+                login.Diagnostic);
+        }
+
+        return HandleActiveClientFrame(context, frame);
+    }
 
     public ClientLoginAuthResult BeginClientLogin(
         ClientSocketSessionContext context,
@@ -77,6 +108,9 @@ public sealed class LoginAuthBridge(
             broadcasts = ExchangeLoginPlayerProps(session, snapshot).ToArray();
             _activeSessions[session.Id] = session;
             _activeSnapshots[session.Id] = snapshot;
+            if (snapshot.Account is not null)
+                _activeAccounts[session.Id] = snapshot.Account;
+            ActivateRuntimePlayer(session, snapshot);
             serverList.SendPlayerAdd(playerAdd);
         }
 
@@ -96,11 +130,190 @@ public sealed class LoginAuthBridge(
             broadcasts);
     }
 
+    public AccountSaveResult? EndClientSession(ushort playerId)
+    {
+        RemovePendingSession(playerId);
+        _activeSessions.Remove(playerId);
+        _activeSnapshots.Remove(playerId);
+        _activeDecoders.Remove(playerId);
+        _activeFramers.Remove(playerId);
+
+        AccountSaveResult? saveResult = null;
+        if (_activePlayers.Remove(playerId, out var player))
+        {
+            if (_activeAccounts.Remove(playerId, out var account) && worldEntryOptions is not null)
+            {
+                CopyRuntimeToAccount(player, account);
+                saveResult = AccountSaveService.Save(account, worldEntryOptions.AccountFileSystem);
+            }
+
+            runtimeServer?.DeletePlayer(player);
+        }
+        else
+        {
+            _activeAccounts.Remove(playerId);
+        }
+
+        return saveResult;
+    }
+
     private ClientSessionSkeleton? FindSession(ushort id, PlayerSessionType type) =>
         _pendingSessions.TryGetValue((id, type), out var session) ? session : null;
 
     private bool HasPendingSession(ushort id) =>
         _pendingSessions.Keys.Any(key => key.PlayerId == id);
+
+    private void RemovePendingSession(ushort playerId)
+    {
+        foreach (var key in _pendingSessions.Keys.Where(key => key.PlayerId == playerId).ToArray())
+            _pendingSessions.Remove(key);
+
+        foreach (var key in _remoteAddresses.Keys.Where(key => key.PlayerId == playerId).ToArray())
+            _remoteAddresses.Remove(key);
+    }
+
+    private ClientFrameBridgeResult HandleActiveClientFrame(
+        ClientSocketSessionContext context,
+        ReadOnlySpan<byte> frame)
+    {
+        if (runtimeServer is null ||
+            !_activeSessions.TryGetValue(context.PlayerId, out var session) ||
+            !_activePlayers.TryGetValue(context.PlayerId, out var player) ||
+            !_activeDecoders.TryGetValue(context.PlayerId, out var decoder) ||
+            !_activeFramers.TryGetValue(context.PlayerId, out var framer))
+        {
+            return new ClientFrameBridgeResult(true, [], [], "active session missing runtime state");
+        }
+
+        var decoded = decoder.DecodeSocketFrame(frame);
+        var touched = new HashSet<ushort>();
+        foreach (var packet in framer.Parse(decoded.DecodedPayload))
+        {
+            var reader = new GraalBinaryReader(packet.Payload.Span);
+            var packetId = reader.ReadGChar();
+            if (packetId != (byte)PlayerToServerPacketId.PlayerProps)
+                continue;
+
+            var parsed = IncomingPlayerPropsParser.Parse(packet.Payload.Span[1..], session.LoginPacket?.VersionId ?? ClientVersionId.Client21);
+            if (!parsed.Success)
+                continue;
+
+            var result = LiveWorldSessionForwarder.TryApplyAndForwardConfirmedPlayerProps(
+                runtimeServer,
+                player,
+                parsed.Updates,
+                senderSupportsPreciseMovement: session.LoginPacket?.VersionId >= ClientVersionId.Client21,
+                BuildSinks());
+
+            if (result.Status == LiveWorldPlayerPropsForwardingStatus.Blocked)
+                return new ClientFrameBridgeResult(false, [], [], result.Message);
+
+            foreach (var delivery in result.Deliveries)
+                touched.Add(delivery.PlayerId);
+        }
+
+        var outbound = new List<byte>();
+        var broadcasts = new List<ClientSessionOutbound>();
+        foreach (var playerId in touched)
+        {
+            if (!_activeSessions.TryGetValue(playerId, out var touchedSession))
+                continue;
+
+            var bytes = FlushOutboundBytes(touchedSession);
+            if (bytes.Length == 0)
+                continue;
+
+            if (playerId == context.PlayerId)
+                outbound.AddRange(bytes);
+            else
+                broadcasts.Add(new ClientSessionOutbound(playerId, bytes));
+        }
+
+        var warning = decoded.Warnings.Count == 0 ? "" : string.Join("; ", decoded.Warnings);
+        return new ClientFrameBridgeResult(true, outbound.ToArray(), broadcasts, warning);
+    }
+
+    private IReadOnlyDictionary<ushort, ILiveWorldSessionSink> BuildSinks() =>
+        _activeSessions.ToDictionary(
+            entry => entry.Key,
+            entry => (ILiveWorldSessionSink)new ClientSessionSink(entry.Value));
+
+    private void ActivateRuntimePlayer(ClientSessionSkeleton session, PostLoginPlayerSnapshot snapshot)
+    {
+        if (runtimeServer is null)
+            return;
+
+        var kind = session.Type switch
+        {
+            PlayerSessionType.RemoteControl or PlayerSessionType.RemoteControl2 => RuntimePlayerKind.RemoteControl,
+            PlayerSessionType.NpcServer => RuntimePlayerKind.NpcServer,
+            PlayerSessionType.NpcControl => RuntimePlayerKind.NpcControl,
+            _ => RuntimePlayerKind.Client
+        };
+        var player = new RuntimePlayer(session.Id, snapshot.LoginPropertySource.AccountName, kind);
+        player.InitializeFromLogin(snapshot.LoginPropertySource);
+        runtimeServer.AddPlayer(player, session.Id);
+        var levelName = string.IsNullOrWhiteSpace(player.CurrentLevelName)
+            ? "onlinestartlocal.nw"
+            : player.CurrentLevelName;
+        player.JoinLevel(GetOrCreateLevel(levelName));
+        _activePlayers[session.Id] = player;
+        _activeDecoders[session.Id] = new InboundPacketDecoder(session.InboundEncryptionGeneration, session.LoginPacket?.EncryptionKey ?? 0);
+        _activeFramers[session.Id] = new ClientPacketStreamFramer(new ClientPacketParseOptions(StripRawDataTrailingNewline: true));
+    }
+
+    private RuntimeLevel GetOrCreateLevel(string levelName)
+    {
+        if (_levels.TryGetValue(levelName, out var level))
+            return level;
+
+        level = new RuntimeLevel(levelName);
+        _levels[levelName] = level;
+        return level;
+    }
+
+    private static void CopyRuntimeToAccount(RuntimePlayer player, AccountFileData account)
+    {
+        account.Nickname = player.Nickname;
+        account.CommunityName = player.CommunityName;
+        account.LevelName = player.CurrentLevelName;
+        account.PixelX = ClampShort(player.PixelX);
+        account.PixelY = ClampShort(player.PixelY);
+        account.PixelZ = ClampShort(player.PixelZ);
+        account.MaxHitpoints = player.MaxPower;
+        account.Hitpoints = player.Hitpoints;
+        account.Rupees = player.Rupees;
+        account.Gani = player.Gani;
+        account.Arrows = player.Arrows;
+        account.Bombs = player.Bombs;
+        account.GlovePower = player.GlovePower;
+        account.ShieldPower = player.ShieldPower;
+        account.SwordPower = player.SwordPower;
+        account.BowPower = player.BowPower;
+        account.BowImage = player.BowImage;
+        account.HeadImage = player.HeadImage;
+        account.BodyImage = player.BodyImage;
+        account.SwordImage = player.SwordImage;
+        account.ShieldImage = player.ShieldImage;
+        account.Sprite = player.Sprite;
+        account.Status = player.StatusMessage;
+        account.MagicPoints = player.MagicPoints;
+        account.Alignment = player.Alignment;
+        account.ApCounter = (byte)Math.Min(player.ApCounter, byte.MaxValue);
+        account.AccountIp = player.AccountIp;
+        account.Language = player.Language;
+        account.EloRating = player.EloRating;
+        account.EloDeviation = player.EloDeviation;
+
+        for (var i = 0; i < Math.Min(account.Colors.Length, player.Colors.Count); i++)
+            account.Colors[i] = player.Colors[i];
+
+        for (var i = 0; i < Math.Min(account.GaniAttributes.Length, player.GaniAttributes.Count); i++)
+            account.GaniAttributes[i] = player.GaniAttributes[i];
+    }
+
+    private static short ClampShort(int value) =>
+        (short)Math.Clamp(value, short.MinValue, short.MaxValue);
 
     private IEnumerable<ClientSessionOutbound> ExchangeLoginPlayerProps(
         ClientSessionSkeleton joiningSession,
@@ -136,6 +349,16 @@ public sealed class LoginAuthBridge(
 
     private static bool IsClient(PlayerSessionType type) =>
         (type & PlayerSessionType.AnyClient) != 0;
+
+    private sealed class ClientSessionSink(ClientSessionSkeleton session) : ILiveWorldSessionSink
+    {
+        public ushort PlayerId => session.Id;
+
+        public void QueuePacket(byte[] packet)
+        {
+            session.QueuePacket(packet);
+        }
+    }
 
     private ClientLoginAuthResult Finish(ClientSessionSkeleton session, bool accepted) =>
         new(accepted, session.Lifecycle, FlushOutboundBytes(session), BuildDiagnostic(session, accepted));
