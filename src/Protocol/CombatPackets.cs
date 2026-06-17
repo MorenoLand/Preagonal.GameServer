@@ -1,4 +1,4 @@
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public sealed record InboundHurtPlayerPacket(
     ushort VictimPlayerId,

@@ -1,7 +1,7 @@
 using System.Text;
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Game;
+namespace Preagonal.GServer.Game;
 
 public sealed record RuntimeLevelItem(float X, float Y, LevelItemType ItemType);
 

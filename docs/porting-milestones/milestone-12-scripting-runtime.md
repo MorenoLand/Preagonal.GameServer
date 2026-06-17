@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Recover exact scripting dependencies and port the GS2/V8-compatible scripting lifecycle and API boundary without inventing script semantics.
-**Architecture:** `GServ.Scripting` owns compiler/runtime adapters; `GServ.Game` exposes compatibility interfaces; gameplay calls into scripts only through source-confirmed hooks.
+**Architecture:** `Preagonal.GServer.Scripting` owns compiler/runtime adapters; `Preagonal.GServer.Game` exposes compatibility interfaces; gameplay calls into scripts only through source-confirmed hooks.
 **Tech Stack:** C#/.NET, xUnit, recovered compiler/runtime source, original C++ scripting sources.
 
 ---

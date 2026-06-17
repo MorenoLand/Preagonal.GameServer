@@ -1,14 +1,14 @@
-using GServ.Network;
+using Preagonal.GServer.Network;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
-public sealed class LocalDebugServerCommandLineTests
+public sealed class LocalDebugCommandLineTests
 {
     [Fact]
     public void ParseReturnsDisabledWhenDevOnlyFlagIsAbsent()
     {
-        var config = LocalDebugServerCommandLine.Parse(["--port", "14900"]);
+        var config = LocalDebugCommandLine.Parse(["--port", "14900"]);
 
         Assert.False(config.Enabled);
     }
@@ -17,7 +17,7 @@ public sealed class LocalDebugServerCommandLineTests
     public void ParseRequiresDevRootAndLevelWhenDevOnlyFlagIsPresent()
     {
         var ex = Assert.Throws<ArgumentException>(() =>
-            LocalDebugServerCommandLine.Parse(["--local-debug", "--dev-root", "tmp"]));
+            LocalDebugCommandLine.Parse(["--local-debug", "--dev-root", "tmp"]));
 
         Assert.Equal("--dev-level is required for --local-debug.", ex.Message);
     }
@@ -25,7 +25,7 @@ public sealed class LocalDebugServerCommandLineTests
     [Fact]
     public void ParseReadsExplicitDevOnlyOptions()
     {
-        var config = LocalDebugServerCommandLine.Parse(
+        var config = LocalDebugCommandLine.Parse(
             ["--local-debug", "--dev-root", "tmp", "--dev-level", "start.nw", "--port", "14900"]);
 
         Assert.True(config.Enabled);

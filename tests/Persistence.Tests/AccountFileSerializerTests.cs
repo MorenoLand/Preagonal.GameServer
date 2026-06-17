@@ -1,7 +1,7 @@
-using GServ.Persistence;
+using Preagonal.GServer.Persistence;
 using Xunit;
 
-namespace GServ.Persistence.Tests;
+namespace Preagonal.GServer.Persistence.Tests;
 
 public sealed class AccountFileSerializerTests
 {
@@ -33,7 +33,7 @@ public sealed class AccountFileSerializerTests
     public void SaveUsesCasePreservedExistingFilenameWhenPresent()
     {
         var account = CreatePopulatedAccount();
-        var fileSystem = new MemoryPersistenceFileSystem(@"C:\gserver\");
+        var fileSystem = new MemoryPersistenceFileSystem(@"C:\GServer\");
         fileSystem.ExistingName = "PC-Ruan.TXT";
 
         var result = AccountSaveService.Save(account, fileSystem);
@@ -41,7 +41,7 @@ public sealed class AccountFileSerializerTests
         Assert.True(result.CppReturnValue);
         Assert.True(result.WriteAttempted);
         Assert.True(result.WriteSucceeded);
-        Assert.Equal(@"C:\gserver\accounts\PC-Ruan.TXT", result.Path);
+        Assert.Equal(@"C:\GServer\accounts\PC-Ruan.TXT", result.Path);
         Assert.Equal(ExpectedPopulatedAccountText(), fileSystem.WrittenContents);
         Assert.Null(result.AccountFileAdded);
     }
@@ -50,14 +50,14 @@ public sealed class AccountFileSerializerTests
     public void SaveReturnsCppSuccessEvenWhenDiskWriteFailsAfterSerialization()
     {
         var account = CreatePopulatedAccount();
-        var fileSystem = new MemoryPersistenceFileSystem(@"C:\gserver\") { WriteResult = false };
+        var fileSystem = new MemoryPersistenceFileSystem(@"C:\GServer\") { WriteResult = false };
 
         var result = AccountSaveService.Save(account, fileSystem);
 
         Assert.True(result.CppReturnValue);
         Assert.True(result.WriteAttempted);
         Assert.False(result.WriteSucceeded);
-        Assert.Equal(@"C:\gserver\accounts\pc:Ruan.txt", result.Path);
+        Assert.Equal(@"C:\GServer\accounts\pc:Ruan.txt", result.Path);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class AccountFileSerializerTests
     {
         var account = CreatePopulatedAccount();
         account.AccountName = "NewAccount";
-        var fileSystem = new MemoryPersistenceFileSystem(@"C:\gserver\");
+        var fileSystem = new MemoryPersistenceFileSystem(@"C:\GServer\");
 
         var result = AccountSaveService.SaveCreatedDefaultAccount(account, fileSystem, "NewAccount");
 

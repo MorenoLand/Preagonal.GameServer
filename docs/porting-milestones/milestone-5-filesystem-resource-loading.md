@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Port production folder configuration, file indexing, resource lookup, and static level file loading semantics.
-**Architecture:** Keep filesystem/index services in `GServ.Persistence`, static level models in `GServ.Game`, and packet serialization in `GServ.Protocol`.
+**Architecture:** Keep filesystem/index services in `Preagonal.GServer.Persistence`, static level models in `Preagonal.GServer.Game`, and packet serialization in `Preagonal.GServer.Protocol`.
 **Tech Stack:** C#/.NET, xUnit, C++ filesystem and level sources.
 
 ---

@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace fake local auth with source-confirmed production auth/list-server login behavior up to the account/world boundary.
-**Architecture:** Put list-server protocol builders in `GServ.Protocol`, list-server sockets in `GServ.Network` or `GServ.Admin`, and auth decisions behind interfaces until persistence is confirmed.
+**Architecture:** Put list-server protocol builders in `Preagonal.GServer.Protocol`, list-server sockets in `Preagonal.GServer.Network` or `Preagonal.GServer.Admin`, and auth decisions behind interfaces until persistence is confirmed.
 **Tech Stack:** C#/.NET, xUnit, C++ server-list and player-login sources.
 
 ---

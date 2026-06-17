@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public sealed class GraalBinaryWriter
 {

@@ -1,11 +1,12 @@
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public interface IServerListGateway
 {
     bool IsConnected { get; }
     void SendLoginPacketForPlayer(byte[] packetBody);
+    void SendPlayerAdd(byte[] packetBody);
 }
 
 public sealed class ServerListAuthBoundary(

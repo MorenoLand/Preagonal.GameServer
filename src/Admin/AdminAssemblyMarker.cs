@@ -1,3 +1,3 @@
-namespace GServ.Admin;
+namespace Preagonal.GServer.Admin;
 
 public static class AdminAssemblyMarker;

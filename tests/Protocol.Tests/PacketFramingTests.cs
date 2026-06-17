@@ -1,8 +1,8 @@
 using System.Text;
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace GServ.Protocol.Tests;
+namespace Preagonal.GServer.Protocol.Tests;
 
 public sealed class PacketFramingTests
 {

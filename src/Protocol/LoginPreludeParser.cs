@@ -1,4 +1,4 @@
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public readonly record struct LoginPrelude(PlayerSessionType Type, EncryptionGeneration InboundGeneration, bool ReadsEncryptionKeyBeforeVersion);
 

@@ -1,4 +1,4 @@
-namespace GServ.Admin;
+namespace Preagonal.GServer.Admin;
 
 public sealed record ControlLoginDecision(bool Allowed, string? DisconnectMessage);
 

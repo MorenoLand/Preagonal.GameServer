@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using ICSharpCode.SharpZipLib.BZip2;
 
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public sealed class GraalFileQueue
 {

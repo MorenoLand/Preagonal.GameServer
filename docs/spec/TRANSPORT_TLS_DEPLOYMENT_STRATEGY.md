@@ -6,9 +6,9 @@
   - `Player::onRecv()`
   - `Player::doMain()`
 - `ai_resources/GServer-CPP-ORIGINAL/server/CMakeLists.txt`
-- `ai_resources/GServer-CPP-ORIGINAL/docker/gserver-x86_64-linux-gnu.dockerfile`
-- `ai_resources/GServer-CPP-ORIGINAL/docker/gserver-x86_64-linux-musl.dockerfile`
-- `ai_resources/GServer-CPP-ORIGINAL/docker/gserver-x86_64-w64-mingw.dockerfile`
+- `ai_resources/GServer-CPP-ORIGINAL/docker/GServer-x86_64-linux-gnu.dockerfile`
+- `ai_resources/GServer-CPP-ORIGINAL/docker/GServer-x86_64-linux-musl.dockerfile`
+- `ai_resources/GServer-CPP-ORIGINAL/docker/GServer-x86_64-w64-mingw.dockerfile`
 - `external/gs2lib/include/CSocket.h`
 - `external/gs2lib/src/CSocket.cpp`
 - `external/gs2lib/include/CString.h`

@@ -1,7 +1,7 @@
-using GServ.Persistence;
+using Preagonal.GServer.Persistence;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class ServerListStartupOptionsTests
 {
@@ -84,5 +84,20 @@ public sealed class ServerListStartupOptionsTests
         Assert.Equal("14802", options.ServerPort);
         Assert.Equal("AUTO", options.ServerIp);
         Assert.Equal("AUTO", options.LocalIp);
+    }
+
+    [Fact]
+    public void FromStartupSnapshotRegistersPublicNameFromServerOptions()
+    {
+        var snapshot = new ServerStartupSnapshot(
+            new ServerStartupResolution(true, "default", @"C:\servers\default\", ServerStartupSource.CommandLineOrEnvironment, null),
+            Gs2Settings.Parse("name=My Server"),
+            Gs2Settings.Parse(""));
+
+        var options = ServerListStartupOptions.FromStartupSnapshot(
+            snapshot,
+            new ServerStartupOverrides("default", null, null, null, null, null, null, false));
+
+        Assert.Equal("My Server", options.Name);
     }
 }

@@ -1,6 +1,6 @@
-using GServ.Persistence;
+using Preagonal.GServer.Persistence;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public static class ServerListStartupOptions
 {
@@ -15,7 +15,7 @@ public static class ServerListStartupOptions
 
         var options = snapshot.ServerOptions;
         var serverName = string.IsNullOrEmpty(overrides.ServerName)
-            ? snapshot.Resolution.ServerName
+            ? options.GetString("name", snapshot.Resolution.ServerName)
             : overrides.ServerName;
         var serverPort = string.IsNullOrEmpty(overrides.Port)
             ? options.GetString("serverport", "14802")

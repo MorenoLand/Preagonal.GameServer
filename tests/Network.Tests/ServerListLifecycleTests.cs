@@ -1,14 +1,14 @@
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class ServerListLifecycleTests
 {
     [Fact]
     public void ConnectServerSuccessUsesConfirmedRegistrationPacketOrderAndCodecSwitch()
     {
-        var socket = new RecordingServerListSocket
+        var socket = new RecordinGServerListSocket
         {
             LocalIp = "10.0.0.5"
         };
@@ -58,7 +58,7 @@ public sealed class ServerListLifecycleTests
         string socketLocalIp,
         string expectedLocalIp)
     {
-        var socket = new RecordingServerListSocket
+        var socket = new RecordinGServerListSocket
         {
             LocalIp = socketLocalIp
         };
@@ -77,7 +77,7 @@ public sealed class ServerListLifecycleTests
     [Fact]
     public void ConnectServerReturnsFalseWhenSocketInitializeFailsAndDoesNotRegister()
     {
-        var socket = new RecordingServerListSocket
+        var socket = new RecordinGServerListSocket
         {
             InitializeResult = false
         };
@@ -106,7 +106,7 @@ public sealed class ServerListLifecycleTests
             OnlyStaff: false,
             AllowedVersions: ["G3D0311C"]);
 
-    private sealed class RecordingServerListSocket : IServerListSocket
+    private sealed class RecordinGServerListSocket : IServerListSocket
     {
         public bool IsConnected { get; private set; }
         public string LocalIp { get; init; } = "";

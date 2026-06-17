@@ -1,4 +1,4 @@
-namespace GServ.Core;
+namespace Preagonal.GServer.Core;
 
 public static class SourceReferences
 {

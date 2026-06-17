@@ -100,7 +100,7 @@ authoritative artifact is the raw byte stream.
 
 ## Comparison
 
-Use `GServ.Network.ClientCertificationHarness` for step-level byte equality
+Use `Preagonal.GServer.Network.ClientCertificationHarness` for step-level byte equality
 when captures have been segmented into labeled steps.
 
 For each step, record:

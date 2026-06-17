@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement source-confirmed live player registry, level membership, visibility selection, and packet forwarding across sessions.
-**Architecture:** `GServ.Game` manages world/session state; `GServ.Network` exposes session sinks; `GServ.Protocol` builds exact packet payloads.
+**Architecture:** `Preagonal.GServer.Game` manages world/session state; `Preagonal.GServer.Network` exposes session sinks; `Preagonal.GServer.Protocol` builds exact packet payloads.
 **Tech Stack:** C#/.NET, xUnit multi-session tests, C++ server/player/level sources.
 
 ---

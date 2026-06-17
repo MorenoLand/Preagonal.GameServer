@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public sealed class ServerListReceiveBuffer
 {

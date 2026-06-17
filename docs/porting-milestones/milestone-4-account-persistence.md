@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Port C++ account loading, saving, default account behavior, guest handling, and pre-world player data semantics.
-**Architecture:** Keep file-format parsers in `GServ.Persistence`; expose typed account/player DTOs to `GServ.Game`; avoid gameplay side effects outside confirmed boundaries.
+**Architecture:** Keep file-format parsers in `Preagonal.GServer.Persistence`; expose typed account/player DTOs to `Preagonal.GServer.Game`; avoid gameplay side effects outside confirmed boundaries.
 **Tech Stack:** C#/.NET, xUnit, account golden fixtures derived from C++ format.
 
 ---

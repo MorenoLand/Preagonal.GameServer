@@ -1,4 +1,4 @@
-namespace GServ.Scripting;
+namespace Preagonal.GServer.Scripting;
 
 public sealed class BlockedGs2CompilerAdapter
 {

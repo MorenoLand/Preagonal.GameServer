@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using GServ.Network;
-using GServ.Game;
+using Preagonal.GServer.Network;
+using Preagonal.GServer.Game;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
     public sealed class ServerHostLoopTests
     {
@@ -11,7 +11,7 @@ namespace GServ.Network.Tests;
         public void RunOneIterationExecutesSourceConfirmedActionOrderAndCleanup()
     {
         var clock = new FakeHostClock();
-        var runtime = new RecordingServerHostRuntime();
+        var runtime = new RecordinGServerHostRuntime();
         var loop = new ServerHostLoop(runtime, clock.Next);
 
         clock.Current = TimeSpan.Zero;
@@ -40,7 +40,7 @@ namespace GServ.Network.Tests;
     public void RunCallsInitializeBeforeLoopAndCleanupWhenInitializeFails()
     {
         var clock = new FakeHostClock();
-        var runtime = new RecordingServerHostRuntime { InitializeResult = false };
+        var runtime = new RecordinGServerHostRuntime { InitializeResult = false };
         var loop = new ServerHostLoop(runtime, clock.Next);
 
         loop.Run(TimeSpan.Zero);
@@ -56,7 +56,7 @@ namespace GServ.Network.Tests;
     public void RestartRequestsRunCleanupThenReinitializeBeforeContinuing()
     {
         var clock = new FakeHostClock();
-        var runtime = new RecordingServerHostRuntime { InitializeResult = true };
+        var runtime = new RecordinGServerHostRuntime { InitializeResult = true };
         var loop = new ServerHostLoop(runtime, clock.Next);
 
         clock.Current = TimeSpan.FromSeconds(1);
@@ -74,7 +74,7 @@ namespace GServ.Network.Tests;
     public void RestartFailureStopsTheLoopAtNextIterationBoundary()
     {
         var clock = new FakeHostClock();
-        var runtime = new RecordingServerHostRuntime { InitializeResult = false };
+        var runtime = new RecordinGServerHostRuntime { InitializeResult = false };
         var loop = new ServerHostLoop(runtime, clock.Next);
 
         clock.Current = TimeSpan.FromSeconds(1);
@@ -123,7 +123,7 @@ namespace GServ.Network.Tests;
     public void ShutdownRequestStopsWithoutFurtherIterations()
     {
         var clock = new FakeHostClock();
-        var runtime = new RecordingServerHostRuntime();
+        var runtime = new RecordinGServerHostRuntime();
         using var cts = new CancellationTokenSource();
 
         var loop = new ServerHostLoop(runtime, clock.Next);
@@ -137,7 +137,7 @@ namespace GServ.Network.Tests;
         Assert.True(runtime.CleanupCalled);
     }
 
-    private sealed class RecordingServerHostRuntime : IServerHostRuntime
+    private sealed class RecordinGServerHostRuntime : IServerHostRuntime
     {
         public bool V8NpcServerEnabled { get; }
 

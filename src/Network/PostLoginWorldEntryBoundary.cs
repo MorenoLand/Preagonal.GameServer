@@ -1,7 +1,7 @@
 using System.Text;
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public sealed record LoginFlag(string Name, string Value);
 

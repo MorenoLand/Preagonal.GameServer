@@ -1,7 +1,7 @@
-using GServ.Game;
-using GServ.Protocol;
+using Preagonal.GServer.Game;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Game.Tests;
+namespace Preagonal.GServer.Game.Tests;
 
 public sealed class EntityRuntimeBoundaryTests
 {

@@ -1,4 +1,4 @@
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public enum SessionLifecycle
 {

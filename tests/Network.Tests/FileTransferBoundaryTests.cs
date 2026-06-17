@@ -1,9 +1,9 @@
 using System.Text;
-using GServ.Network;
-using GServ.Protocol;
+using Preagonal.GServer.Network;
+using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class FileTransferBoundaryTests
 {

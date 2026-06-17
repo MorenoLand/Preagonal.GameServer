@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Port client file/resource transfer, wanted-file handling, update packages, cache checks, and raw-data file payload behavior.
-**Architecture:** Resource lookup in `GServ.Persistence`, packet/file queue building in `GServ.Protocol`, socket flush in `GServ.Network`.
+**Architecture:** Resource lookup in `Preagonal.GServer.Persistence`, packet/file queue building in `Preagonal.GServer.Protocol`, socket flush in `Preagonal.GServer.Network`.
 **Tech Stack:** C#/.NET, xUnit golden fixtures, C++ file queue and player file-transfer sources.
 
 ---

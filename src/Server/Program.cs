@@ -1,13 +1,13 @@
 using System.Net;
-using GServ.Game;
-using GServ.Network;
-using GServ.Persistence;
-using GServ.Protocol;
+using Preagonal.GServer.Game;
+using Preagonal.GServer.Network;
+using Preagonal.GServer.Persistence;
+using Preagonal.GServer.Protocol;
 
-var config = LocalDebugServerCommandLine.Parse(args);
+var config = LocalDebugCommandLine.Parse(args);
 if (!config.Enabled)
 {
-    Console.WriteLine("GServ C# compatibility foundation initialized. Full server runtime is not implemented yet.");
+    Console.WriteLine("Preagonal.GServer C# runtime initialized.");
     var productionArgs = ServerStartupCommandLine.Parse(args, Environment.GetEnvironmentVariable);
     if (productionArgs.ShowHelp)
     {
@@ -45,6 +45,10 @@ if (!config.Enabled)
         return;
     }
 
+    var serverRoot = snapshot.Resolution.ServerPath!;
+    var resourceFileSystems = LoadResourceFileSystems(serverRoot, snapshot.ServerOptions);
+    var levelLoader = new NwLevelFileLoader(resourceFileSystems.Get(ServerFileSystemKind.All));
+    var staffAccounts = SplitCsv(snapshot.ServerOptions.GetString("staff", ""));
     var authBridge = new LoginAuthBridge(
         serverListSocket,
         new PreWorldAuthOptions(
@@ -53,7 +57,18 @@ if (!config.Enabled)
             IsIpBanned: false,
             IsServerListConnected: serverListResult.Connected,
             AllowedVersions: serverListOptions.AllowedVersions,
-            AllowedVersionText: string.Join(", ", serverListOptions.AllowedVersions)));
+            AllowedVersionText: string.Join(", ", serverListOptions.AllowedVersions)),
+        new LoginWorldEntryOptions(
+            new DiskAccountFileSystem(serverRoot),
+            snapshot.ServerOptions,
+            levelLoader,
+            new FileLevelLookup(levelLoader),
+            new AccountLoginOptions(
+                OnlyStaff: snapshot.ServerOptions.GetBool("onlystaff", false),
+                ServerName: serverListOptions.Name,
+                ActiveSessions: [],
+                StaffAccounts: staffAccounts,
+                RemoteIp: "")));
     var clientConnections = new TcpClientConnectionRegistry();
     using var clientServer = new ClientTcpServer(
         IPAddress.Any,
@@ -96,7 +111,7 @@ Console.WriteLine($"Port: {config.Port}");
 var fileSystems = ServerResourceFileSystems.LoadAllFolders(config.RootPath, shareFolder: string.Empty);
 var fileSystem = fileSystems.Get(ServerFileSystemKind.All);
 var pipeline = new LocalDebugSessionPipeline(
-    new LocalDebugServerOptions(EnableLocalDebugAuth: true, LevelName: config.LevelName),
+    new LocalDebugOptions(EnableLocalDebugAuth: true, LevelName: config.LevelName),
     new NwLevelFileLoader(fileSystem));
 
 using var server = new LocalDebugTcpServer(IPAddress.Any, config.Port, pipeline);
@@ -181,3 +196,17 @@ static async Task RunServerListReceiveLoop(
         }
     }
 }
+
+static ServerResourceFileSystems LoadResourceFileSystems(string serverRoot, Gs2Settings options)
+{
+    var foldersConfig = Path.Combine(serverRoot, "config", "foldersconfig.txt");
+    if (!options.GetBool("nofoldersconfig", false) && File.Exists(foldersConfig))
+        return ServerResourceFileSystems.LoadFolderConfig(serverRoot, File.ReadAllText(foldersConfig));
+
+    return ServerResourceFileSystems.LoadAllFolders(serverRoot, options.GetString("sharefolder", ""));
+}
+
+static IReadOnlyList<string> SplitCsv(string value) =>
+    value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(entry => entry.Length > 0 && !entry.StartsWith('('))
+        .ToArray();

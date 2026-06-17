@@ -1,6 +1,6 @@
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Game;
+namespace Preagonal.GServer.Game;
 
 public sealed class DurablePlayerInventoryState
 {

@@ -1,9 +1,9 @@
-using GServ.Network;
-using GServ.Persistence;
-using GServ.Protocol;
+using Preagonal.GServer.Network;
+using Preagonal.GServer.Persistence;
+using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class PlayerSendLoginContinuationTests
 {
@@ -11,9 +11,9 @@ public sealed class PlayerSendLoginContinuationTests
     public void AccountLoginLoadsAccountSnapshotAndRunsContinuationChecks()
     {
         var session = AuthenticatedClient3Session();
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
         filesystem.AddExisting(
-            @"C:\gserver\accounts\pc-Ruan.txt",
+            @"C:\GServer\accounts\pc-Ruan.txt",
             "pc:Ruan.txt",
             string.Join(
                 "\n",
@@ -49,9 +49,9 @@ public sealed class PlayerSendLoginContinuationTests
     public void AccountLoginSavesDefaultCreatedAccountBeforeContinuation()
     {
         var session = AuthenticatedClient3Session();
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
         filesystem.AddReadable(
-            @"C:\gserver\accounts\defaultaccount.txt",
+            @"C:\GServer\accounts\defaultaccount.txt",
             "GRACC001\nLEVEL ignored.nw\nLOADONLY 0");
         var settings = new AccountLoadSettings(new Dictionary<string, string>
         {
@@ -83,9 +83,9 @@ public sealed class PlayerSendLoginContinuationTests
         var session = AuthenticatedClient3Session("guest");
         session.ReceiveServerListAuthResponse(
             new ServerListVerifyAccount2Response("guest", session.Id, PlayerSessionType.Client3, "SUCCESS"));
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
         filesystem.AddExisting(
-            @"C:\gserver\accounts\guest.txt",
+            @"C:\GServer\accounts\guest.txt",
             "guest.txt",
             "GRACC001\nLOADONLY 0");
 
@@ -112,9 +112,9 @@ public sealed class PlayerSendLoginContinuationTests
         var session = AuthenticatedClient3Session("guest");
         session.ReceiveServerListAuthResponse(
             new ServerListVerifyAccount2Response("guest", session.Id, PlayerSessionType.Client3, "SUCCESS"));
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
         filesystem.AddExisting(
-            @"C:\gserver\accounts\guest.txt",
+            @"C:\GServer\accounts\guest.txt",
             "guest.txt",
             "GRACC001\nLOADONLY 0\nIPRANGE 0.0.0.0");
 

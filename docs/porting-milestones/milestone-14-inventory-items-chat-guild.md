@@ -7,8 +7,8 @@
 
 **Goal:** Port only durable gameplay/chat/guild behavior that is directly
 confirmed in the original C++ server.
-**Architecture:** Domain rules live in `GServ.Game`; persistence formats in
-`GServ.Persistence`; network packet builders in `GServ.Protocol`.
+**Architecture:** Domain rules live in `Preagonal.GServer.Game`; persistence formats in
+`Preagonal.GServer.Persistence`; network packet builders in `Preagonal.GServer.Protocol`.
 **Tech Stack:** C#/.NET, xUnit state/packet/persistence tests, C++ gameplay and
 account sources.
 

@@ -1,7 +1,7 @@
-using GServ.Persistence;
+using Preagonal.GServer.Persistence;
 using Xunit;
 
-namespace GServ.Persistence.Tests;
+namespace Preagonal.GServer.Persistence.Tests;
 
 public sealed class ServerStartupTests
 {
@@ -9,7 +9,7 @@ public sealed class ServerStartupTests
     public void ParseCommandLineMatchesCppOverrideOrderingRules()
     {
         var parsed = ServerStartupCommandLine.Parse(
-            ["gserver", "--port", "14900", "--server", "classic", "--localip", "127.0.0.1", "-p", "15000"],
+            ["GServer", "--port", "14900", "--server", "classic", "--localip", "127.0.0.1", "-p", "15000"],
             _ => null);
 
         Assert.False(parsed.ShowHelp);
@@ -28,7 +28,7 @@ public sealed class ServerStartupTests
             ["SERVERIP"] = "1.2.3.4",
         };
 
-        var parsed = ServerStartupCommandLine.Parse(["gserver", "--server", "ignored"], env.GetValueOrDefault);
+        var parsed = ServerStartupCommandLine.Parse(["GServer", "--server", "ignored"], env.GetValueOrDefault);
 
         Assert.Null(parsed.Server);
         Assert.Null(parsed.Port);

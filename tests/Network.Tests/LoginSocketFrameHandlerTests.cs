@@ -1,7 +1,7 @@
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class LoginSocketFrameHandlerTests
 {
@@ -38,7 +38,7 @@ public sealed class LoginSocketFrameHandlerTests
 
         Assert.False(result.ContinueSession);
         Assert.Equal(
-            OutboundLoginPackets.DisconnectMessage("The login server is offline.  Try again later.", appendNewline: true),
+            SocketFrame(OutboundLoginPackets.DisconnectMessage("The login server is offline.  Try again later.", appendNewline: true), 42),
             result.OutboundBytes);
     }
 
@@ -65,12 +65,25 @@ public sealed class LoginSocketFrameHandlerTests
         return packet.ToArray();
     }
 
+    private static byte[] SocketFrame(byte[] raw, byte key)
+    {
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen5, key);
+        queue.AddPacket(raw);
+        return queue.FlushSocket(forceSendFiles: true);
+    }
+
     private sealed class RecordingGateway : IServerListGateway
     {
         public bool IsConnected { get; init; }
         public List<byte[]> SentPackets { get; } = [];
 
         public void SendLoginPacketForPlayer(byte[] packetBody)
+        {
+            SentPackets.Add(packetBody);
+        }
+
+        public void SendPlayerAdd(byte[] packetBody)
         {
             SentPackets.Add(packetBody);
         }

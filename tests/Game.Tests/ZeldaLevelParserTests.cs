@@ -1,7 +1,7 @@
-using GServ.Game;
+using Preagonal.GServer.Game;
 using System.Text;
 
-namespace GServ.Game.Tests;
+namespace Preagonal.GServer.Game.Tests;
 
 public sealed class ZeldaLevelParserTests
 {

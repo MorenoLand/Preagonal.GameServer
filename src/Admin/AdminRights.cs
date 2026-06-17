@@ -1,4 +1,4 @@
-namespace GServ.Admin;
+namespace Preagonal.GServer.Admin;
 
 [Flags]
 public enum AdminRight

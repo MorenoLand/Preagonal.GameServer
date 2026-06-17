@@ -1,14 +1,14 @@
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
-public sealed record LocalDebugServerCommandLineConfig(
+public sealed record LocalDebugCommandLineConfig(
     bool Enabled,
     string RootPath,
     string LevelName,
     int Port);
 
-public static class LocalDebugServerCommandLine
+public static class LocalDebugCommandLine
 {
-    public static LocalDebugServerCommandLineConfig Parse(IReadOnlyList<string> args)
+    public static LocalDebugCommandLineConfig Parse(IReadOnlyList<string> args)
     {
         var enabled =
             args.Contains("--local-debug", StringComparer.Ordinal) ||
@@ -19,14 +19,14 @@ public static class LocalDebugServerCommandLine
         var port = int.TryParse(portText, out var parsedPort) ? parsedPort : 14900;
 
         if (!enabled)
-            return new LocalDebugServerCommandLineConfig(false, root, level, port);
+            return new LocalDebugCommandLineConfig(false, root, level, port);
 
         if (string.IsNullOrWhiteSpace(root))
             throw new ArgumentException("--dev-root is required for --local-debug.");
         if (string.IsNullOrWhiteSpace(level))
             throw new ArgumentException("--dev-level is required for --local-debug.");
 
-        return new LocalDebugServerCommandLineConfig(true, root, level, port);
+        return new LocalDebugCommandLineConfig(true, root, level, port);
     }
 
     private static string? ValueAfter(IReadOnlyList<string> args, string key)

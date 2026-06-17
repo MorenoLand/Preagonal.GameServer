@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace GServ.Game;
+namespace Preagonal.GServer.Game;
 
 public enum MapFileType
 {

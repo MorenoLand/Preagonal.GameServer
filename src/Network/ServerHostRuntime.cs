@@ -1,6 +1,6 @@
-using GServ.Game;
+using Preagonal.GServer.Game;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public interface IServerHostRuntime
 {

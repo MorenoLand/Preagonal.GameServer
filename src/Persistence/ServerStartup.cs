@@ -1,4 +1,4 @@
-namespace GServ.Persistence;
+namespace Preagonal.GServer.Persistence;
 
 public sealed record ServerStartupOverrides(
     string? Server,

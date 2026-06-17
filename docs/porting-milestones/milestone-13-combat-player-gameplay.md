@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Port player-facing gameplay rules for hearts, damage, death, AP, bombs/arrows, hit detection, spar, and related packets.
-**Architecture:** Rules live in `GServ.Game`; packet bytes in `GServ.Protocol`; persistence writes behind `GServ.Persistence`; scripts called only through milestone-12 confirmed hooks.
+**Architecture:** Rules live in `Preagonal.GServer.Game`; packet bytes in `Preagonal.GServer.Protocol`; persistence writes behind `Preagonal.GServer.Persistence`; scripts called only through milestone-12 confirmed hooks.
 **Tech Stack:** C#/.NET, xUnit formula/packet tests, C++ gameplay sources.
 
 ---

@@ -1,6 +1,6 @@
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public sealed class ClientSessionSkeleton
 {

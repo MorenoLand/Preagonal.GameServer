@@ -2,20 +2,20 @@
 
 Solution projects:
 
-- `GServ`: executable host.
-- `GServ.Core`: shared source references, common constants, future clocks/config abstractions.
-- `GServ.Protocol`: packet IDs, Graal codecs, encryption/compression/framing, packet abstractions.
-- `GServ.Network`: socket/session lifecycle and send/receive queues.
-- `GServ.Game`: player/world/level/gameplay domain model.
-- `GServ.Scripting`: GS2/V8-compatible scripting boundary and future runtime.
-- `GServ.Persistence`: account/settings/filesystem persistence.
-- `GServ.Admin`: RC/NC/admin/server-list command surfaces.
+- `Preagonal.GServer`: executable host.
+- `Preagonal.GServer.Core`: shared source references, common constants, future clocks/config abstractions.
+- `Preagonal.GServer.Protocol`: packet IDs, Graal codecs, encryption/compression/framing, packet abstractions.
+- `Preagonal.GServer.Network`: socket/session lifecycle and send/receive queues.
+- `Preagonal.GServer.Game`: player/world/level/gameplay domain model.
+- `Preagonal.GServer.Scripting`: GS2/V8-compatible scripting boundary and future runtime.
+- `Preagonal.GServer.Persistence`: account/settings/filesystem persistence.
+- `Preagonal.GServer.Admin`: RC/NC/admin/server-list command surfaces.
 
 Dependency direction:
 
 - Higher-level projects may depend on lower-level projects.
-- `GServ.Protocol` must stay independent of gameplay/persistence.
-- `GServ.Network` may depend on protocol and core, but not gameplay until session handoff is explicit.
+- `Preagonal.GServer.Protocol` must stay independent of gameplay/persistence.
+- `Preagonal.GServer.Network` may depend on protocol and core, but not gameplay until session handoff is explicit.
 - Scripting should depend on game abstractions only through stable compatibility interfaces.
 
 Current implementation status:

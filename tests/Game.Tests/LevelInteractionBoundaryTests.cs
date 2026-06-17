@@ -1,6 +1,6 @@
-using GServ.Game;
+using Preagonal.GServer.Game;
 
-namespace GServ.Game.Tests;
+namespace Preagonal.GServer.Game.Tests;
 
 public sealed class LevelInteractionBoundaryTests
 {
@@ -122,8 +122,8 @@ public sealed class LevelInteractionBoundaryTests
         RuntimePlayerPropsApplier.ApplyConfirmed(
             player,
             [
-                GServ.Protocol.IncomingPlayerPropertyUpdate.GShort(GServ.Protocol.PlayerPropertyId.X2, 320),
-                GServ.Protocol.IncomingPlayerPropertyUpdate.GShort(GServ.Protocol.PlayerPropertyId.Y2, 352)
+                Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate.GShort(Preagonal.GServer.Protocol.PlayerPropertyId.X2, 320),
+                Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate.GShort(Preagonal.GServer.Protocol.PlayerPropertyId.Y2, 352)
             ]);
 
         var packets = LevelInteraction.BuildMovementTriggeredSignPackets(level, player, serverside: true);
@@ -138,7 +138,7 @@ public sealed class LevelInteractionBoundaryTests
         var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
         RuntimePlayerPropsApplier.ApplyConfirmed(
             player,
-            [GServ.Protocol.IncomingPlayerPropertyUpdate.GChar(GServ.Protocol.PlayerPropertyId.Sprite, 0)]);
+            [Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate.GChar(Preagonal.GServer.Protocol.PlayerPropertyId.Sprite, 0)]);
 
         Assert.Empty(LevelInteraction.BuildMovementTriggeredSignPackets(level, player, serverside: true));
     }

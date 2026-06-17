@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public sealed record ServerListVerifyAccount2Response(
     string AccountName,

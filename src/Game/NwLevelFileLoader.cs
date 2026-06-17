@@ -1,4 +1,4 @@
-namespace GServ.Game;
+namespace Preagonal.GServer.Game;
 
 public enum LevelLoadStatus
 {

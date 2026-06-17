@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace GServ.Game;
+namespace Preagonal.GServer.Game;
 
 public interface IServerFileSystem
 {

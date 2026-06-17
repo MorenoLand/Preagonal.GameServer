@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
-using GServ.Protocol;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public sealed class ServerListTcpSocket : IServerListSocket, IServerListGateway, IDisposable
 {
@@ -86,6 +86,11 @@ public sealed class ServerListTcpSocket : IServerListSocket, IServerListGateway,
     }
 
     public void SendLoginPacketForPlayer(byte[] packetBody)
+    {
+        SendPacket(packetBody);
+    }
+
+    public void SendPlayerAdd(byte[] packetBody)
     {
         SendPacket(packetBody);
     }

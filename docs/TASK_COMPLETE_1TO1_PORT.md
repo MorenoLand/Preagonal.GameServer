@@ -967,7 +967,7 @@ Completion criteria:
     production recipient/socket dispatch separate.
 - [x] Add tests for rupees, bombs, arrows, hearts, weapons, spinattack, and
   invalid item ids where confirmed.
-  - 2026-06-16: Existing and added `GServ.Game.Tests` cover rupee/bomb/arrow/
+  - 2026-06-16: Existing and added `Preagonal.GServer.Game.Tests` cover rupee/bomb/arrow/
     heart/equipment/spinattack payloads and mutations, default weapon empty
     payload side effects, invalid catalog IDs/names, and invalid item reward
     empty payload behavior.

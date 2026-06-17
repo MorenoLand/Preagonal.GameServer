@@ -1,4 +1,4 @@
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public static class AllowedVersionPolicy
 {

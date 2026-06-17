@@ -1,8 +1,8 @@
 using System.Globalization;
 
-namespace GServ.Persistence;
+namespace Preagonal.GServer.Persistence;
 
-public sealed class Gs2Settings
+public sealed class Gs2Settings : IAccountLoadSettings
 {
     private readonly Dictionary<string, SettingValue> _keys = new(StringComparer.Ordinal);
 

@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace local-debug startup assumptions with source-confirmed production startup, settings, and server-root structure scaffolding.
-**Architecture:** Keep startup in `GServ`, durable configuration in `GServ.Core`/`GServ.Persistence`, and no protocol/gameplay behavior outside confirmed source paths.
+**Architecture:** Keep startup in `Preagonal.GServer`, durable configuration in `Preagonal.GServer.Core`/`Preagonal.GServer.Persistence`, and no protocol/gameplay behavior outside confirmed source paths.
 **Tech Stack:** C#/.NET, xUnit, original C++ files under `ai_resources/GServer-CPP-ORIGINAL/`, recovered `external/gs2lib/`.
 
 ---

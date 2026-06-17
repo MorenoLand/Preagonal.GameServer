@@ -1,4 +1,4 @@
-namespace GServ.Scripting;
+namespace Preagonal.GServer.Scripting;
 
 public static class ScriptingRuntimeStatus
 {

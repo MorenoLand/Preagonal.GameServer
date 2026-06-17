@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace GServ.Persistence;
+namespace Preagonal.GServer.Persistence;
 
 public sealed record AccountFileSerializeResult(bool Success, string Contents)
 {

@@ -205,14 +205,14 @@ weapon script execution remain blocked.
 
 Implemented:
 
-- `GServ.Game.RuntimeLevelItem`
-- `GServ.Game.LevelItemRuntime`
-- `GServ.Game.RuntimeHorse`
-- `GServ.Game.RuntimeBaddy`
+- `Preagonal.GServer.Game.RuntimeLevelItem`
+- `Preagonal.GServer.Game.LevelItemRuntime`
+- `Preagonal.GServer.Game.RuntimeHorse`
+- `Preagonal.GServer.Game.RuntimeBaddy`
 - inert `RuntimeLevel` item/horse/NPC/baddy containers
 - `LevelItemCatalog.GetRupeeCount`
-- `GServ.Protocol.EntityPackets`
-- `GServ.Game.EntityRuntimePackets.BaddyProps`
+- `Preagonal.GServer.Protocol.EntityPackets`
+- `Preagonal.GServer.Game.EntityRuntimePackets.BaddyProps`
 
 Tests:
 

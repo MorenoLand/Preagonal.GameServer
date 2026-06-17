@@ -1,21 +1,21 @@
-using GServ.Persistence;
+using Preagonal.GServer.Persistence;
 using Xunit;
 
-namespace GServ.Persistence.Tests;
+namespace Preagonal.GServer.Persistence.Tests;
 
 public sealed class AccountLoadServiceTests
 {
     [Fact]
     public void LoadUsesCaseInsensitiveAccountFilesystemLookupBeforeDefaultAccount()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
-        filesystem.AddExisting(@"C:\gserver\accounts\PC-Ruan.TXT", "PC-Ruan.TXT", "GRACC001\nNICK Ruan\nLEVEL existing.nw");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        filesystem.AddExisting(@"C:\GServer\accounts\PC-Ruan.TXT", "PC-Ruan.TXT", "GRACC001\nNICK Ruan\nLEVEL existing.nw");
 
         var result = AccountLoadService.Load("pc-ruan", filesystem, AccountLoadSettings.Empty);
 
         Assert.True(result.Success);
         Assert.False(result.LoadedFromDefault);
-        Assert.Equal(@"C:\gserver\accounts\PC-Ruan.TXT", result.SourcePath);
+        Assert.Equal(@"C:\GServer\accounts\PC-Ruan.TXT", result.SourcePath);
         Assert.Equal("pc-ruan", result.Account!.AccountName);
         Assert.Equal("pc-ruan", result.Account.CommunityName);
         Assert.Equal("Ruan", result.Account.Nickname);
@@ -26,8 +26,8 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadFallsBackToDefaultAccountAndAppliesConfiguredStartOverrides()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
-        filesystem.AddReadable(@"C:\gserver\accounts\defaultaccount.txt", "GRACC001\nLEVEL ignored.nw\nX 1\nY 2\nLOADONLY 0");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        filesystem.AddReadable(@"C:\GServer\accounts\defaultaccount.txt", "GRACC001\nLEVEL ignored.nw\nX 1\nY 2\nLOADONLY 0");
         var settings = new AccountLoadSettings(new Dictionary<string, string>
         {
             ["startlevel"] = "onlinestartlocal.nw",
@@ -39,7 +39,7 @@ public sealed class AccountLoadServiceTests
 
         Assert.True(result.Success);
         Assert.True(result.LoadedFromDefault);
-        Assert.Equal(@"C:\gserver\accounts\defaultaccount.txt", result.SourcePath);
+        Assert.Equal(@"C:\GServer\accounts\defaultaccount.txt", result.SourcePath);
         Assert.Equal("onlinestartlocal.nw", result.Account!.LevelName);
         Assert.Equal(480, result.Account.PixelX);
         Assert.Equal(488, result.Account.PixelY);
@@ -50,8 +50,8 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadDoesNotRequestDefaultAccountSaveWhenLoadedAccountIsLoadOnly()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
-        filesystem.AddReadable(@"C:\gserver\accounts\defaultaccount.txt", "GRACC001\nLOADONLY 1");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        filesystem.AddReadable(@"C:\GServer\accounts\defaultaccount.txt", "GRACC001\nLOADONLY 1");
 
         var result = AccountLoadService.Load("ReadOnlyAccount", filesystem, AccountLoadSettings.Empty);
 
@@ -65,8 +65,8 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadRejectsMissingOrMalformedResolvedFileWithoutSideEffects()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
-        filesystem.AddReadable(@"C:\gserver\accounts\defaultaccount.txt", "GRACC000\n");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        filesystem.AddReadable(@"C:\GServer\accounts\defaultaccount.txt", "GRACC000\n");
 
         var result = AccountLoadService.Load("MissingAccount", filesystem, AccountLoadSettings.Empty);
 
@@ -80,8 +80,8 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadGuestMarksSourceConfirmedLoadOnlyAndLeavesIdentityGenerationBlocked()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\gserver\");
-        filesystem.AddExisting(@"C:\gserver\accounts\guest.txt", "guest.txt", "GRACC001\nLOADONLY 0");
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        filesystem.AddExisting(@"C:\GServer\accounts\guest.txt", "guest.txt", "GRACC001\nLOADONLY 0");
 
         var result = AccountLoadService.Load("guest", filesystem, AccountLoadSettings.Empty);
 

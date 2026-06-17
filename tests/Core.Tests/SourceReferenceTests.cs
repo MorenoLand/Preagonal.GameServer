@@ -1,7 +1,7 @@
-using GServ.Core;
+using Preagonal.GServer.Core;
 using Xunit;
 
-namespace GServ.Core.Tests;
+namespace Preagonal.GServer.Core.Tests;
 
 public sealed class SourceReferenceTests
 {

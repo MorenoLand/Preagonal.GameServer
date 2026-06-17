@@ -1,7 +1,7 @@
-using GServ.Scripting;
+using Preagonal.GServer.Scripting;
 using Xunit;
 
-namespace GServ.Scripting.Tests;
+namespace Preagonal.GServer.Scripting.Tests;
 
 public sealed class ScriptingBoundaryTests
 {

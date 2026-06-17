@@ -1,4 +1,4 @@
-namespace GServ.Game.Tests;
+namespace Preagonal.GServer.Game.Tests;
 
 public sealed class CombatDropRuntimeTests
 {
@@ -134,7 +134,7 @@ public sealed class CombatDropRuntimeTests
 
         Assert.Equal(
             [
-                (byte)GServ.Protocol.ServerToPlayerPacketId.ItemAdd + 32,
+                (byte)Preagonal.GServer.Protocol.ServerToPlayerPacketId.ItemAdd + 32,
                 (byte)(1.25f * 2 + 32),
                 (byte)(4.75f * 2 + 32),
                 (byte)(LevelItemType.RedRupee + 32),

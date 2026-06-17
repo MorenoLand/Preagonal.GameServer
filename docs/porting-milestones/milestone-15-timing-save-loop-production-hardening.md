@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Port production server loop timing, autosave, shutdown, websocket/TLS branches, logging, signal handling, and operational hardening.
-**Architecture:** `GServ` owns host lifecycle; `GServ.Core` owns clocks/logging abstractions; network transports remain source-compatible wrappers.
+**Architecture:** `Preagonal.GServer` owns host lifecycle; `Preagonal.GServer.Core` owns clocks/logging abstractions; network transports remain source-compatible wrappers.
 **Tech Stack:** C#/.NET, xUnit fake-clock tests, C++ server/socket sources.
 
 ---

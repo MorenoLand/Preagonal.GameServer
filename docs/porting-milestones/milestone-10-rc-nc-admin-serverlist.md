@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Port source-confirmed RC, NC, admin command, rights, file browser, and server-list operational behavior.
-**Architecture:** `GServ.Admin` owns RC/NC/admin services; protocol builders stay in `GServ.Protocol`; persistence/file access stays behind confirmed interfaces.
+**Architecture:** `Preagonal.GServer.Admin` owns RC/NC/admin services; protocol builders stay in `Preagonal.GServer.Protocol`; persistence/file access stays behind confirmed interfaces.
 **Tech Stack:** C#/.NET, xUnit, C++ admin and server-list sources.
 
 ---

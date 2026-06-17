@@ -842,9 +842,9 @@ Existing account lookup:
 
 ```txt
 input account: "pc-ruan"
-account fs findi: "pc-ruan.txt" => "C:\gserver\accounts\PC-Ruan.TXT"
+account fs findi: "pc-ruan.txt" => "C:\GServer\accounts\PC-Ruan.TXT"
 file header: GRACC001
-result: LoadedFromDefault=false, SourcePath="C:\gserver\accounts\PC-Ruan.TXT"
+result: LoadedFromDefault=false, SourcePath="C:\GServer\accounts\PC-Ruan.TXT"
 result: ShouldSaveCreatedAccount=false
 ```
 
@@ -853,7 +853,7 @@ Missing account fallback:
 ```txt
 input account: "NewAccount"
 account fs findi: "NewAccount.txt" => empty
-fallback path: "C:\gserver\accounts\defaultaccount.txt"
+fallback path: "C:\GServer\accounts\defaultaccount.txt"
 settings: startlevel=onlinestartlocal.nw, startx=30, starty=30.5
 result: LoadedFromDefault=true
 result level: onlinestartlocal.nw
@@ -915,7 +915,7 @@ Existing case-preserved filename:
 ```txt
 account name: pc:Ruan
 fileExistsAs("pc:Ruan.txt") => "PC-Ruan.TXT"
-write path: C:\gserver\accounts\PC-Ruan.TXT
+write path: C:\GServer\accounts\PC-Ruan.TXT
 ```
 
 Disk write failure after serialization:

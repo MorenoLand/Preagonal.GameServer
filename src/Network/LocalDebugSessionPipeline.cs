@@ -1,13 +1,13 @@
-using GServ.Game;
-using GServ.Protocol;
+using Preagonal.GServer.Game;
+using Preagonal.GServer.Protocol;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
-public sealed record LocalDebugServerOptions(
+public sealed record LocalDebugOptions(
     bool EnableLocalDebugAuth,
     string LevelName,
     ushort PlayerId = 7,
-    string ServerName = "GServharp Dev Only",
+    string ServerName = "GServerSharp Dev Only",
     float StartX = 30.0f,
     float StartY = 30.0f,
     float StartZ = 0.0f,
@@ -33,7 +33,7 @@ public sealed record LocalDebugSessionResult(
     IReadOnlyList<string> Log);
 
 public sealed class LocalDebugSessionPipeline(
-    LocalDebugServerOptions options,
+    LocalDebugOptions options,
     NwLevelFileLoader levelLoader)
 {
     public LocalDebugSessionResult ProcessLengthPrefixedInput(ReadOnlySpan<byte> input)
@@ -317,7 +317,7 @@ public sealed class LocalDebugSessionPipeline(
         public static LocalDebugAccount FromLogin(
             ClientSessionSkeleton session,
             string accountName,
-            LocalDebugServerOptions options)
+            LocalDebugOptions options)
         {
             var nickname = accountName.StartsWith("pc:", StringComparison.Ordinal)
                 ? accountName[3..]

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public sealed class TcpClientConnectionRegistry
 {

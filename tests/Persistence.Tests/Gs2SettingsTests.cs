@@ -1,7 +1,7 @@
-using GServ.Persistence;
+using Preagonal.GServer.Persistence;
 using Xunit;
 
-namespace GServ.Persistence.Tests;
+namespace Preagonal.GServer.Persistence.Tests;
 
 public sealed class Gs2SettingsTests
 {

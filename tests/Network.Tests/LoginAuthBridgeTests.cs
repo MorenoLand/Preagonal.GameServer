@@ -1,7 +1,9 @@
-using GServ.Protocol;
+using Preagonal.GServer.Game;
+using Preagonal.GServer.Persistence;
+using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class LoginAuthBridgeTests
 {
@@ -33,8 +35,38 @@ public sealed class LoginAuthBridgeTests
         Assert.Equal(ServerListAuthResponseStatus.Rejected, result.Status);
         Assert.Equal(7, result.PlayerId);
         Assert.Equal(
-            OutboundLoginPackets.DisconnectMessage("Bad password.", appendNewline: true),
+            SocketFrame(OutboundLoginPackets.DisconnectMessage("Bad password.", appendNewline: true), 42),
             result.OutboundBytes);
+    }
+
+    [Fact]
+    public void HandleVerifyAccount2SuccessLoadsDefaultServerAccountAndSendsWorldEntry()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")));
+        _ = bridge.BeginClientLogin(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket());
+
+        var result = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+
+        Assert.Equal(ServerListAuthResponseStatus.AcceptedPreWorld, result.Status);
+        Assert.True(result.OutboundBytes.Length > 64);
+        Assert.Equal(7, result.PlayerId);
+        Assert.NotEmpty(gateway.SentPlayerAdds);
+        Assert.Equal((byte)ServerToListServerPacketId.PlayerAdd + 32, gateway.SentPlayerAdds[0][0]);
+        Assert.True(File.Exists(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt")));
     }
 
     private static PreWorldAuthOptions AuthOptions() =>
@@ -75,14 +107,71 @@ public sealed class LoginAuthBridgeTests
         return writer.ToArray();
     }
 
+    private static byte[] SocketFrame(byte[] raw, byte key)
+    {
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen5, key);
+        queue.AddPacket(raw);
+        return queue.FlushSocket(forceSendFiles: true);
+    }
+
+    private static TempServerRoot TestDefaultServerRoot()
+    {
+        var source = FindRepoRoot();
+        var destination = Path.Combine(Path.GetTempPath(), "preagonal-gserver-test-" + Guid.NewGuid().ToString("N"));
+        CopyDirectory(Path.Combine(source, "servers", "default"), destination);
+        return new TempServerRoot(destination);
+    }
+
+    private static string FindRepoRoot()
+    {
+        var current = AppContext.BaseDirectory;
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (File.Exists(Path.Combine(current, "GServerSharp.sln")))
+                return current;
+
+            current = Directory.GetParent(current)?.FullName ?? "";
+        }
+
+        throw new DirectoryNotFoundException("Could not find repository root.");
+    }
+
+    private static void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (var directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
+            Directory.CreateDirectory(Path.Combine(destination, Path.GetRelativePath(source, directory)));
+
+        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+            File.Copy(file, Path.Combine(destination, Path.GetRelativePath(source, file)), overwrite: true);
+    }
+
+    private sealed class TempServerRoot(string path) : IDisposable
+    {
+        public string Path { get; } = path;
+
+        public void Dispose()
+        {
+            if (Directory.Exists(Path))
+                Directory.Delete(Path, recursive: true);
+        }
+    }
+
     private sealed class RecordingGateway : IServerListGateway
     {
         public bool IsConnected { get; init; }
         public List<byte[]> SentPackets { get; } = [];
+        public List<byte[]> SentPlayerAdds { get; } = [];
 
         public void SendLoginPacketForPlayer(byte[] packetBody)
         {
             SentPackets.Add(packetBody);
+        }
+
+        public void SendPlayerAdd(byte[] packetBody)
+        {
+            SentPlayerAdds.Add(packetBody);
         }
     }
 }

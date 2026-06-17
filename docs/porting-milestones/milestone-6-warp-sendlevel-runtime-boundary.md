@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Finish source-confirmed `Player::warp`, `Player::setLevel`, `Player::sendLevel`, and old-client level-send behavior while stopping before unported gameplay runtimes.
-**Architecture:** `GServ.Game` owns warp/level state; `GServ.Protocol` owns packet bytes; `GServ.Network` only flushes ordered output.
+**Architecture:** `Preagonal.GServer.Game` owns warp/level state; `Preagonal.GServer.Protocol` owns packet bytes; `Preagonal.GServer.Network` only flushes ordered output.
 **Tech Stack:** C#/.NET, xUnit golden packet sequences, C++ player/level sources.
 
 ---

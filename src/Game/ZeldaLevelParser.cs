@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace GServ.Game;
+namespace Preagonal.GServer.Game;
 
 public static class ZeldaLevelParser
 {

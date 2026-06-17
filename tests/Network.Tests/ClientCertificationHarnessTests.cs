@@ -1,7 +1,7 @@
-using GServ.Network;
+using Preagonal.GServer.Network;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class ClientCertificationHarnessTests
 {

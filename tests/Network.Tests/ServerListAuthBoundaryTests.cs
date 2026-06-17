@@ -1,8 +1,8 @@
-using GServ.Network;
-using GServ.Protocol;
+using Preagonal.GServer.Network;
+using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class ServerListAuthBoundaryTests
 {
@@ -54,7 +54,7 @@ public sealed class ServerListAuthBoundaryTests
     [Fact]
     public void HandleVerifyAccount2SuccessOverwritesAccountAndMovesSessionToPreWorldBoundary()
     {
-        var session = BeginPendingServerListAuth();
+        var session = BeginPendinGServerListAuth();
         var handler = new ServerListAuthResponseHandler((id, type) =>
             id == 7 && type == PlayerSessionType.Client3 ? session : null);
 
@@ -74,7 +74,7 @@ public sealed class ServerListAuthBoundaryTests
     [Fact]
     public void HandleVerifyAccount2FailureQueuesDisconnectAndRejectsSession()
     {
-        var session = BeginPendingServerListAuth();
+        var session = BeginPendinGServerListAuth();
         var handler = new ServerListAuthResponseHandler((id, type) =>
             id == 7 && type == PlayerSessionType.Client3 ? session : null);
 
@@ -123,7 +123,7 @@ public sealed class ServerListAuthBoundaryTests
         return session;
     }
 
-    private static ClientSessionSkeleton BeginPendingServerListAuth()
+    private static ClientSessionSkeleton BeginPendinGServerListAuth()
     {
         var session = Client3Session();
         var gateway = new CapturingGateway(isConnected: true);
@@ -162,6 +162,11 @@ public sealed class ServerListAuthBoundaryTests
         public byte[]? LastLoginPacketForPlayer { get; private set; }
 
         public void SendLoginPacketForPlayer(byte[] packetBody)
+        {
+            LastLoginPacketForPlayer = packetBody;
+        }
+
+        public void SendPlayerAdd(byte[] packetBody)
         {
             LastLoginPacketForPlayer = packetBody;
         }

@@ -142,7 +142,7 @@ diagnostic shell.
 
 ## Implemented C# Boundary
 
-`GServ.Game` now contains:
+`Preagonal.GServer.Game` now contains:
 
 - `IndexedServerFileSystem`
 - `ServerFileSystemKind`

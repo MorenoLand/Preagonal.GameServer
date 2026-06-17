@@ -1,4 +1,4 @@
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public static class GraalVersionCatalog
 {
@@ -56,9 +56,9 @@ public static class GraalVersionCatalog
 
     private static readonly Dictionary<string, RemoteControlVersionId> RemoteControlVersions = new(StringComparer.Ordinal)
     {
-        ["GSERV023"] = RemoteControlVersionId.Rc1010,
-        ["GSERV024"] = RemoteControlVersionId.Rc11,
-        ["GSERV025"] = RemoteControlVersionId.Rc2
+        ["Preagonal.GServer023"] = RemoteControlVersionId.Rc1010,
+        ["Preagonal.GServer024"] = RemoteControlVersionId.Rc11,
+        ["Preagonal.GServer025"] = RemoteControlVersionId.Rc2
     };
 
     private static readonly Dictionary<string, NpcControlVersionId> NpcControlVersions = new(StringComparer.Ordinal)

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public enum PlayerPropertyId : byte
 {

@@ -1,7 +1,7 @@
 using System.Text;
-using GServ.Game;
+using Preagonal.GServer.Game;
 
-namespace GServ.Game.Tests;
+namespace Preagonal.GServer.Game.Tests;
 
 public sealed class LevelFileFormatDetectionTests
 {

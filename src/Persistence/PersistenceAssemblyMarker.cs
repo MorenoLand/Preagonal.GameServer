@@ -1,3 +1,3 @@
-namespace GServ.Persistence;
+namespace Preagonal.GServer.Persistence;
 
 public static class PersistenceAssemblyMarker;

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace GServ.Protocol;
+namespace Preagonal.GServer.Protocol;
 
 public sealed record RcFileBrowserEntry(string Name, string Rights, uint Size, uint ModifiedTime);
 

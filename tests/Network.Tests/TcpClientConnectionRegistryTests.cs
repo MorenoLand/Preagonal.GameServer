@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Xunit;
 
-namespace GServ.Network.Tests;
+namespace Preagonal.GServer.Network.Tests;
 
 public sealed class TcpClientConnectionRegistryTests
 {

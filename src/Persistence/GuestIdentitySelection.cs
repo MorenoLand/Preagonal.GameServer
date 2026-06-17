@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace GServ.Persistence;
+namespace Preagonal.GServer.Persistence;
 
 public sealed record GuestIdentitySelectionResult(bool Success, string? AccountName)
 {

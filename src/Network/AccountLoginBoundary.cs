@@ -1,6 +1,6 @@
-using GServ.Persistence;
+using Preagonal.GServer.Persistence;
 
-namespace GServ.Network;
+namespace Preagonal.GServer.Network;
 
 public sealed record AccountLoginOptions(
     bool OnlyStaff,
@@ -16,7 +16,8 @@ public sealed record AccountLoginResult(
     bool GuestIdentityBlocked,
     string? GuestAccountName,
     AccountSaveResult? CreatedAccountSave,
-    IReadOnlyList<DuplicateSessionDisconnect> DuplicateDisconnects);
+    IReadOnlyList<DuplicateSessionDisconnect> DuplicateDisconnects,
+    AccountFileData? Account = null);
 
 public static class AccountLoginBoundary
 {
@@ -47,13 +48,13 @@ public static class AccountLoginBoundary
         if (load.RequiresGuestIdentityGeneration)
         {
             if (options.GuestIdentitySelector is null)
-                return new AccountLoginResult(false, true, true, null, null, []);
+                return new AccountLoginResult(false, true, true, null, null, [], load.Account);
 
             var identity = options.GuestIdentitySelector.TrySelect(accountName =>
                 options.ActiveSessions.Any(activeSession =>
                     string.Equals(activeSession.AccountName, accountName, StringComparison.OrdinalIgnoreCase)));
             if (!identity.Success || identity.AccountName is null)
-                return new AccountLoginResult(false, true, true, null, null, []);
+                return new AccountLoginResult(false, true, true, null, null, [], load.Account);
 
             load.Account!.AccountName = identity.AccountName;
             load.Account.CommunityName = "guest";
@@ -83,7 +84,8 @@ public static class AccountLoginBoundary
             false,
             load.RequiresGuestIdentityGeneration ? load.Account!.AccountName : null,
             createdAccountSave,
-            continuation.DuplicateDisconnects);
+            continuation.DuplicateDisconnects,
+            load.Account);
     }
 
     public static PlayerSendLoginAccount ToPlayerSendLoginAccount(
