@@ -217,6 +217,7 @@ static async Task RunServerListReceiveLoop(
                 case ListServerToServerPacketId.VerifyAccount2:
                 {
                     var result = authBridge.HandleVerifyAccount2(packet.AsSpan(1));
+                    Console.WriteLine($"VerifyAccount2 result: status={result.Status}; player={result.PlayerId}; type={result.Type}; outbound={result.OutboundBytes.Length}; broadcasts={result.Broadcasts.Count}.");
                     if (result.OutboundBytes.Length != 0)
                         await clientConnections.SendAsync(result.PlayerId, result.OutboundBytes, cancellationToken);
                     foreach (var broadcast in result.Broadcasts)

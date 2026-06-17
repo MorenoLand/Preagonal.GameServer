@@ -111,4 +111,34 @@ public sealed class PacketFramingTests
             p => Assert.Equal(new byte[] { 1, 2, 3 }, p.ToArray()),
             p => Assert.Equal(new byte[] { 4, 5 }, p.ToArray()));
     }
+
+    [Fact]
+    public void ClientBundleExpandsInnerPackets()
+    {
+        var first = new GraalBinaryWriter();
+        first.WriteGChar((byte)PlayerToServerPacketId.ItemAdd);
+        first.WriteGChar(20);
+        first.WriteGChar(22);
+        first.WriteGChar(3);
+        var second = new GraalBinaryWriter();
+        second.WriteGChar((byte)PlayerToServerPacketId.OpenChest);
+        second.WriteGChar(20);
+        second.WriteGChar(24);
+        var bundle = new GraalBinaryWriter();
+        bundle.WriteByte(WrappedGChar((byte)PlayerToServerPacketId.Bundle));
+        bundle.WriteRawShort((ushort)first.ToArray().Length);
+        bundle.WriteBytes(first.ToArray());
+        bundle.WriteRawShort((ushort)second.ToArray().Length);
+        bundle.WriteBytes(second.ToArray());
+        bundle.WriteByte((byte)'\n');
+
+        var packets = PacketFramer.ParseClientPackets(bundle.ToArray());
+
+        Assert.Collection(
+            packets,
+            p => Assert.Equal(PlayerToServerPacketId.ItemAdd, p.Id),
+            p => Assert.Equal(PlayerToServerPacketId.OpenChest, p.Id));
+    }
+
+    private static byte WrappedGChar(byte value) => unchecked((byte)(value + 32));
 }

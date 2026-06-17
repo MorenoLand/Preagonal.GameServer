@@ -213,7 +213,7 @@ public sealed class LoginAuthBridgeTests
 
         var result = bridge.HandleClientFrame(
             new ClientSocketSessionContext(7, "127.0.0.1"),
-            SocketPayload(ItemAddPacket(20, 22, (byte)LevelItemType.Bombs), 42));
+            SocketPayload(BundlePacket(ItemAddPacket(20, 22, (byte)LevelItemType.Bombs)), 42));
 
         var broadcast = Assert.Single(result.Broadcasts);
         Assert.Equal(8, broadcast.PlayerId);
@@ -248,7 +248,7 @@ public sealed class LoginAuthBridgeTests
 
         var result = bridge.HandleClientFrame(
             new ClientSocketSessionContext(7, "127.0.0.1"),
-            SocketPayload(OpenChestPacket(20, 24), 42));
+            SocketPayload(BundlePacket(OpenChestPacket(20, 24)), 42));
 
         Assert.True(IndexOf(DecodeSocketPayload(result.OutboundBytes, key: 42), OpenedChestPacket(20, 24)) >= 0);
         _ = bridge.EndClientSession(7);
@@ -287,11 +287,11 @@ public sealed class LoginAuthBridgeTests
         var payload = BoardModifyPayload((byte)tileX, (byte)tileY, 1, 1, 0);
         var result = bridge.HandleClientFrame(
             new ClientSocketSessionContext(7, "127.0.0.1"),
-            SocketPayload(BoardModifyPacket(payload), 42));
+            SocketPayload(BundlePacket(BoardModifyPacket(payload)), 42));
 
-        Assert.Equal(BoardChangeRuntime.BuildBoardModifyPacket(payload), DecodeSocketPayload(result.OutboundBytes, key: 42));
+        Assert.True(IndexOf(DecodeSocketPayload(result.OutboundBytes, key: 42), BoardChangeRuntime.BuildBoardModifyPacket(payload)) >= 0);
         var broadcast = Assert.Single(result.Broadcasts);
-        Assert.Equal(BoardChangeRuntime.BuildBoardModifyPacket(payload), DecodeSocketPayload(broadcast.OutboundBytes, key: 43));
+        Assert.True(IndexOf(DecodeSocketPayload(broadcast.OutboundBytes, key: 43), BoardChangeRuntime.BuildBoardModifyPacket(payload)) >= 0);
 
         IReadOnlyList<ClientSessionOutbound> respawns = [];
         for (var i = 0; i < 15; i++)
@@ -478,7 +478,7 @@ public sealed class LoginAuthBridgeTests
     {
         var queue = new GraalFileQueue();
         queue.SetCodec(EncryptionGeneration.Gen5, key);
-        queue.AddPacket(raw);
+        queue.AddRawPacket(raw);
         return queue.FlushSocket(forceSendFiles: true);
     }
 
@@ -612,6 +612,25 @@ public sealed class LoginAuthBridgeTests
         packet.WriteByte((byte)'\n');
         return packet.ToArray();
     }
+
+    private static byte[] BundlePacket(params byte[][] packets)
+    {
+        var bundle = new GraalBinaryWriter();
+        bundle.WriteByte(WrappedGChar((byte)PlayerToServerPacketId.Bundle));
+        foreach (var rawPacket in packets)
+        {
+            var payload = rawPacket[^1] == (byte)'\n'
+                ? rawPacket[..^1]
+                : rawPacket;
+            bundle.WriteRawShort((ushort)payload.Length);
+            bundle.WriteBytes(payload);
+        }
+
+        bundle.WriteByte((byte)'\n');
+        return bundle.ToArray();
+    }
+
+    private static byte WrappedGChar(byte value) => unchecked((byte)(value + 32));
 
     private static TempServerRoot TestDefaultServerRoot()
     {

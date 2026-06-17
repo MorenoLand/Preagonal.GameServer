@@ -223,10 +223,12 @@ public sealed class LoginAuthBridge(
 
         var decoded = decoder.DecodeSocketFrame(frame);
         var touched = new HashSet<ushort>();
+        var packetNames = new List<string>();
         foreach (var packet in framer.Parse(decoded.DecodedPayload))
         {
             var reader = new GraalBinaryReader(packet.Payload.Span);
             var packetId = reader.ReadGChar();
+            packetNames.Add(((PlayerToServerPacketId)packetId).ToString());
             if (packetId == (byte)PlayerToServerPacketId.ServerWarp)
             {
                 var serverName = System.Text.Encoding.ASCII.GetString(packet.Payload.Span[1..]).TrimEnd('\n', '\r');
@@ -297,7 +299,9 @@ public sealed class LoginAuthBridge(
         }
 
         var warning = decoded.Warnings.Count == 0 ? "" : string.Join("; ", decoded.Warnings);
-        return new ClientFrameBridgeResult(true, outbound.ToArray(), broadcasts, warning);
+        var packetTrace = packetNames.Count == 0 ? "" : $"active packets={string.Join(",", packetNames)}";
+        var diagnostic = string.IsNullOrEmpty(warning) ? packetTrace : string.Join("; ", packetTrace, warning);
+        return new ClientFrameBridgeResult(true, outbound.ToArray(), broadcasts, diagnostic);
     }
 
     private void HandleBoardModify(ReadOnlySpan<byte> payload, RuntimePlayer player, ISet<ushort> touched)

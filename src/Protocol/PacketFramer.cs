@@ -26,14 +26,29 @@ public sealed class ClientPacketStreamFramer(ClientPacketParseOptions options)
 
             var line = PacketFramer.ReadLine(reader);
             if (line.Length == 0) continue;
-            var lineReader = new GraalBinaryReader(line);
-            var id = (PlayerToServerPacketId)lineReader.ReadGChar();
-            packets.Add(new FramedPacket(id, line));
-            if (id == PlayerToServerPacketId.RawData)
-                _nextRawSize = lineReader.ReadGInt();
+            AddLinePackets(line, packets, size => _nextRawSize = size);
         }
 
         return packets;
+    }
+
+    private static void AddLinePackets(
+        ReadOnlySpan<byte> line,
+        List<FramedPacket> packets,
+        Action<int> setNextRawSize)
+    {
+        var lineReader = new GraalBinaryReader(line);
+        var id = (PlayerToServerPacketId)lineReader.ReadGChar();
+        if (id == PlayerToServerPacketId.Bundle)
+        {
+            foreach (var inner in PacketFramer.ReadBundle(line[1..]))
+                AddLinePackets(inner.Span, packets, setNextRawSize);
+            return;
+        }
+
+        packets.Add(new FramedPacket(id, line.ToArray()));
+        if (id == PlayerToServerPacketId.RawData)
+            setNextRawSize(lineReader.ReadGInt());
     }
 }
 
@@ -79,14 +94,29 @@ public static class PacketFramer
 
             var line = ReadLine(reader);
             if (line.Length == 0) continue;
-            var lineReader = new GraalBinaryReader(line);
-            var id = (PlayerToServerPacketId)lineReader.ReadGChar();
-            packets.Add(new FramedPacket(id, line));
-            if (id == PlayerToServerPacketId.RawData)
-                nextRawSize = lineReader.ReadGInt();
+            AddLinePackets(line, packets, size => nextRawSize = size);
         }
 
         return packets;
+    }
+
+    private static void AddLinePackets(
+        ReadOnlySpan<byte> line,
+        List<FramedPacket> packets,
+        Action<int> setNextRawSize)
+    {
+        var lineReader = new GraalBinaryReader(line);
+        var id = (PlayerToServerPacketId)lineReader.ReadGChar();
+        if (id == PlayerToServerPacketId.Bundle)
+        {
+            foreach (var inner in ReadBundle(line[1..]))
+                AddLinePackets(inner.Span, packets, setNextRawSize);
+            return;
+        }
+
+        packets.Add(new FramedPacket(id, line.ToArray()));
+        if (id == PlayerToServerPacketId.RawData)
+            setNextRawSize(lineReader.ReadGInt());
     }
 
     public static IReadOnlyList<ReadOnlyMemory<byte>> ReadLengthPrefixedFrames(ReadOnlySpan<byte> payload)
