@@ -160,6 +160,13 @@ public static class RcNcPackets
         return WithTrailingNewline(writer);
     }
 
+    public static byte[] DeletePlayer(ushort playerId)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.DeletePlayer);
+        writer.WriteGShort(playerId);
+        return WithTrailingNewline(writer);
+    }
+
     public static byte[] FileBrowserDirList(string folders) =>
         PacketWithAsciiPayload(ServerToPlayerPacketId.RcFileBrowserDirList, GTokenize(folders));
 

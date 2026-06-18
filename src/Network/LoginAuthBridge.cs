@@ -191,13 +191,19 @@ public sealed class LoginAuthBridge(
         if (_activePlayers.Remove(playerId, out var player))
         {
             var broadcasts = BuildDisconnectBroadcasts(player).ToArray();
-            if (serverList.IsConnected)
+            if (serverList.IsConnected && player.Kind == RuntimePlayerKind.Client)
                 serverList.SendPlayerRemove(ServerListAuthPackets.PlayerRemove(playerId));
 
-            if (_activeAccounts.Remove(playerId, out var account) && worldEntryOptions is not null)
+            if (player.Kind == RuntimePlayerKind.Client &&
+                _activeAccounts.Remove(playerId, out var account) &&
+                worldEntryOptions is not null)
             {
                 CopyRuntimeToAccount(player, account);
                 saveResult = AccountSaveService.Save(account, worldEntryOptions.AccountFileSystem);
+            }
+            else
+            {
+                _activeAccounts.Remove(playerId);
             }
 
             runtimeServer?.DeletePlayer(player);
@@ -980,7 +986,7 @@ public sealed class LoginAuthBridge(
 
                 var run = _serverScripts.Call(name, "onCreated").GetAwaiter().GetResult();
                 foreach (var line in run.Output)
-                    BroadcastToRemoteControls(RcNcPackets.RcChat($"GS2 {name}: {line}"), touched);
+                    BroadcastToRemoteControls(RcNcPackets.RcChat(FormatScriptOutput(name, line)), touched);
 
                 if (!run.Success)
                 {
@@ -2909,16 +2915,23 @@ public sealed class LoginAuthBridge(
 
     private IEnumerable<ClientSessionOutbound> BuildDisconnectBroadcasts(RuntimePlayer player)
     {
-        if (player.Kind == RuntimePlayerKind.NpcControl)
+        if (player.Kind == RuntimePlayerKind.NpcServer)
             yield break;
 
-        var packet = BuildOtherPlayerDisconnected(player.Id);
+        var clientPacket = BuildOtherPlayerDisconnected(player.Id);
+        var controlPacket = RcNcPackets.DeletePlayer(player.Id);
         foreach (var (otherId, session) in _activeSessions.ToArray())
         {
-            if (otherId == player.Id || !IsClient(session.Type))
+            if (otherId == player.Id)
                 continue;
 
-            session.QueuePacket(packet);
+            if (IsRemoteControl(session.Type))
+                session.QueuePacket(controlPacket);
+            else if (IsClient(session.Type) && player.Kind == RuntimePlayerKind.Client)
+                session.QueuePacket(clientPacket);
+            else
+                continue;
+
             var outbound = FlushOutboundBytes(session);
             if (outbound.Length != 0)
                 yield return new ClientSessionOutbound(otherId, outbound);
@@ -3122,6 +3135,11 @@ public sealed class LoginAuthBridge(
             snapshot.LoginPropertySource.StatusMessage,
             snapshot.LoginPropertySource.Nickname,
             snapshot.LoginPropertySource.CommunityName);
+
+    private string FormatScriptOutput(string scriptName, string line) =>
+        worldEntryOptions?.AccountSettings.GetString("scriptcall", "echo").Trim().Equals("debug", StringComparison.OrdinalIgnoreCase) == true
+            ? $"GS2 {scriptName}: {line}"
+            : line;
 
     private static bool IsClient(PlayerSessionType type) =>
         (type & PlayerSessionType.AnyClient) != 0;
