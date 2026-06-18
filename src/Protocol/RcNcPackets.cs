@@ -77,6 +77,67 @@ public static class RcNcPackets
         return WithTrailingNewline(writer);
     }
 
+    public static byte[] AccountListGet(IEnumerable<string> accountNames)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.RcAccountListGet);
+        foreach (var accountName in accountNames)
+            WriteGCharString(writer, accountName);
+
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] AccountGet(AccountView account)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.RcAccountGet);
+        WriteGCharString(writer, account.AccountName);
+        writer.WriteGChar(0);
+        WriteGCharString(writer, account.Email);
+        writer.WriteGChar((byte)(account.IsBanned ? 1 : 0));
+        writer.WriteGChar((byte)(account.IsLoadOnly ? 1 : 0));
+        writer.WriteGChar(0);
+        WriteGCharString(writer, "main");
+        WriteGCharString(writer, account.BanLength);
+        WriteGCharString(writer, account.BanReason);
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] PlayerRightsGet(AccountRightsView account)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.RcPlayerRightsGet);
+        WriteGCharString(writer, account.AccountName);
+        writer.WriteGInt5(unchecked((uint)account.AdminRights));
+        WriteGCharString(writer, account.AdminIp);
+        var folders = GTokenize(string.Join('\n', account.FolderRights) + "\n");
+        writer.WriteGShort((ushort)folders.Length);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(folders));
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] PlayerCommentsGet(string accountName, string comments)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.RcPlayerCommentsGet);
+        WriteGCharString(writer, accountName);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(comments));
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] PlayerBanGet(string accountName, bool isBanned, string reason)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.RcPlayerBanGet);
+        WriteGCharString(writer, accountName);
+        writer.WriteGChar((byte)(isBanned ? 1 : 0));
+        writer.WriteBytes(Encoding.ASCII.GetBytes(reason));
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] PlayerPropsGet(ushort playerId, byte[] props)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.RcPlayerPropertiesGet);
+        writer.WriteGShort(playerId);
+        writer.WriteBytes(props);
+        return WithTrailingNewline(writer);
+    }
+
     public static byte[] AddPlayer(
         ushort playerId,
         string accountName,
@@ -237,3 +298,17 @@ public static class RcNcPackets
         return writer.ToArray();
     }
 }
+
+public sealed record AccountView(
+    string AccountName,
+    string Email,
+    bool IsBanned,
+    bool IsLoadOnly,
+    string BanLength,
+    string BanReason);
+
+public sealed record AccountRightsView(
+    string AccountName,
+    int AdminRights,
+    string AdminIp,
+    IReadOnlyList<string> FolderRights);

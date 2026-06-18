@@ -126,9 +126,11 @@ public sealed class LoginAuthBridge(
             _activeSessions[session.Id] = session;
             _activeSnapshots[session.Id] = snapshot;
             if (snapshot.Account is not null)
-                _activeAccounts[session.Id] = snapshot.Account;
+            _activeAccounts[session.Id] = snapshot.Account;
             ActivateRuntimePlayer(session, snapshot);
             serverList.SendPlayerAdd(playerAdd);
+            _pendingSessions.Remove(key);
+            _remoteAddresses.Remove(key);
         }
 
         var outbound = session is null ? [] : FlushOutboundBytes(session);
@@ -551,6 +553,31 @@ public sealed class LoginAuthBridge(
             case PlayerToServerPacketId.RcServerFlagsGet:
                 QueueSelfPacket(session.Id, RcNcPackets.ServerFlagsGet([]), touched);
                 return true;
+            case PlayerToServerPacketId.RcAccountListGet:
+                HandleAccountListGet(session.Id, payload, touched);
+                return true;
+            case PlayerToServerPacketId.RcAccountGet:
+                HandleAccountGet(session.Id, ReadAsciiPayload(payload), touched);
+                return true;
+            case PlayerToServerPacketId.RcPlayerPropsGetById:
+                HandlePlayerPropsGetById(session.Id, payload, touched);
+                return true;
+            case PlayerToServerPacketId.RcPlayerPropsGetByAccount:
+                HandlePlayerPropsGetByAccount(session.Id, payload, touched);
+                return true;
+            case PlayerToServerPacketId.RcPlayerRightsGet:
+                HandlePlayerRightsGet(session.Id, ReadAsciiPayload(payload), touched);
+                return true;
+            case PlayerToServerPacketId.RcPlayerCommentsGet:
+                HandlePlayerCommentsGet(session.Id, ReadAsciiPayload(payload), touched);
+                return true;
+            case PlayerToServerPacketId.RcPlayerBanGet:
+                HandlePlayerBanGet(session.Id, ReadAsciiPayload(payload), touched);
+                return true;
+            case PlayerToServerPacketId.RcListRemoteControls:
+                foreach (var snapshot in _activeSnapshots.Values.Where(snapshot => IsRemoteControl(snapshot.Type)))
+                    QueueSelfPacket(session.Id, BuildRcAddPlayer(snapshot), touched);
+                return true;
             case PlayerToServerPacketId.RcFileBrowserStart:
                 HandleFileBrowserStart(session.Id, touched);
                 return true;
@@ -562,6 +589,110 @@ public sealed class LoginAuthBridge(
             default:
                 return false;
         }
+    }
+
+    private void HandleAccountListGet(ushort playerId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        var reader = new GraalBinaryReader(payload);
+        var name = ReadGCharString(reader).Replace("%", "*", StringComparison.Ordinal);
+        if (name.Length == 0)
+            name = "*";
+        _ = ReadGCharString(reader);
+
+        var accountsPath = AccountsPath();
+        if (accountsPath is null || !Directory.Exists(accountsPath))
+            return;
+
+        var names = Directory.EnumerateFiles(accountsPath, "*.txt")
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(account => !string.IsNullOrWhiteSpace(account))
+            .Select(account => account!.Replace('_', ':'))
+            .Where(account => WildcardMatch(account, name))
+            .OrderBy(account => account, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        QueueSelfPacket(playerId, RcNcPackets.AccountListGet(names), touched);
+    }
+
+    private void HandleAccountGet(ushort playerId, string accountName, ISet<ushort> touched)
+    {
+        if (!TryGetAccount(CleanAccountName(accountName), out var account))
+            return;
+
+        QueueSelfPacket(
+            playerId,
+            RcNcPackets.AccountGet(new AccountView(
+                account.AccountName,
+                account.Email,
+                account.IsBanned,
+                account.IsLoadOnly,
+                account.BanLength,
+                account.BanReason)),
+            touched);
+    }
+
+    private void HandlePlayerPropsGetById(ushort rcId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (payload.Length < 2)
+            return;
+
+        var reader = new GraalBinaryReader(payload);
+        var targetId = reader.ReadGShort();
+        if (!_activeSnapshots.TryGetValue(targetId, out var snapshot))
+            return;
+
+        QueueSelfPacket(rcId, RcNcPackets.PlayerPropsGet(targetId, BuildRcPlayerProps(snapshot)), touched);
+    }
+
+    private void HandlePlayerPropsGetByAccount(ushort rcId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        var reader = new GraalBinaryReader(payload);
+        var accountName = CleanAccountName(ReadGCharString(reader));
+        if (accountName.Length == 0)
+            return;
+
+        var active = _activeSnapshots.Values.FirstOrDefault(snapshot =>
+            string.Equals(snapshot.LoginPropertySource.AccountName, accountName, StringComparison.OrdinalIgnoreCase));
+        if (active is not null)
+        {
+            QueueSelfPacket(rcId, RcNcPackets.PlayerPropsGet(active.PlayerId, BuildRcPlayerProps(active)), touched);
+            return;
+        }
+
+        if (!TryGetAccount(accountName, out var account))
+            return;
+
+        QueueSelfPacket(rcId, RcNcPackets.PlayerPropsGet(0, BuildRcPlayerProps(account)), touched);
+    }
+
+    private void HandlePlayerRightsGet(ushort playerId, string accountName, ISet<ushort> touched)
+    {
+        if (!TryGetAccount(CleanAccountName(accountName), out var account))
+            return;
+
+        QueueSelfPacket(
+            playerId,
+            RcNcPackets.PlayerRightsGet(new AccountRightsView(
+                account.AccountName,
+                account.AdminRights,
+                account.AdminIp,
+                account.FolderRights)),
+            touched);
+    }
+
+    private void HandlePlayerCommentsGet(ushort playerId, string accountName, ISet<ushort> touched)
+    {
+        if (!TryGetAccount(CleanAccountName(accountName), out var account))
+            return;
+
+        QueueSelfPacket(playerId, RcNcPackets.PlayerCommentsGet(account.AccountName, account.Comments), touched);
+    }
+
+    private void HandlePlayerBanGet(ushort playerId, string accountName, ISet<ushort> touched)
+    {
+        if (!TryGetAccount(CleanAccountName(accountName), out var account))
+            return;
+
+        QueueSelfPacket(playerId, RcNcPackets.PlayerBanGet(account.AccountName, account.IsBanned, account.BanReason), touched);
     }
 
     private void HandlePrivateAdminMessage(
@@ -615,6 +746,103 @@ public sealed class LoginAuthBridge(
         account.LastFolder = normalized;
         QueueSelfPacket(playerId, RcNcPackets.FileBrowserMessage($"Folder changed to {normalized}"), touched);
         QueueSelfPacket(playerId, BuildFileBrowserDir(account, normalized), touched);
+    }
+
+    private byte[] BuildRcPlayerProps(PostLoginPlayerSnapshot snapshot) =>
+        BuildRcPlayerProps(
+            snapshot.PlayerId,
+            snapshot.LoginPropertySource,
+            snapshot.PlayerFlags,
+            snapshot.Account?.Chests ?? [],
+            snapshot.Account?.Weapons ?? []);
+
+    private byte[] BuildRcPlayerProps(AccountFileData account) =>
+        BuildRcPlayerProps(
+            0,
+            BuildPropertySource(account),
+            account.Flags.Select(flag => new LoginFlag(flag.Key, flag.Value)).ToArray(),
+            account.Chests,
+            account.Weapons);
+
+    private static byte[] BuildRcPlayerProps(
+        ushort playerId,
+        PlayerPropertySource source,
+        IReadOnlyList<LoginFlag> flags,
+        IReadOnlyList<string> chests,
+        IReadOnlyList<string> weapons)
+    {
+        var writer = new GraalBinaryWriter();
+        WriteGCharString(writer, source.AccountName);
+        WriteGCharString(writer, "main");
+
+        var props = PlayerPropertySerializer.SerializeConfirmedLoginSubset(source with { PlayerId = playerId }, RcPlayerPropertyIds);
+        writer.WriteGChar((byte)props.Length);
+        writer.WriteBytes(props);
+
+        writer.WriteGShort((ushort)flags.Count);
+        foreach (var flag in flags)
+        {
+            var text = string.IsNullOrEmpty(flag.Value) ? flag.Name : $"{flag.Name}={flag.Value}";
+            if (text.Length > 0xDF)
+                text = text[..0xDF];
+            WriteGCharString(writer, text);
+        }
+
+        writer.WriteGShort((ushort)chests.Count);
+        foreach (var chest in chests)
+        {
+            var parts = chest.Split(':', 3);
+            if (parts.Length != 3)
+                continue;
+
+            var chestData = new GraalBinaryWriter();
+            chestData.WriteGChar(byte.TryParse(parts[0], out var x) ? x : (byte)0);
+            chestData.WriteGChar(byte.TryParse(parts[1], out var y) ? y : (byte)0);
+            chestData.WriteBytes(System.Text.Encoding.ASCII.GetBytes(parts[2]));
+            var chestBytes = chestData.ToArray();
+            writer.WriteGChar((byte)chestBytes.Length);
+            writer.WriteBytes(chestBytes);
+        }
+
+        writer.WriteGChar((byte)weapons.Count);
+        foreach (var weapon in weapons)
+            WriteGCharString(writer, weapon);
+
+        return writer.ToArray();
+    }
+
+    private bool TryGetAccount(string accountName, out AccountFileData account)
+    {
+        if (_activeAccounts.Values.FirstOrDefault(active =>
+                string.Equals(active.AccountName, accountName, StringComparison.OrdinalIgnoreCase)) is { } activeAccount)
+        {
+            account = activeAccount;
+            return true;
+        }
+
+        account = new AccountFileData();
+        if (worldEntryOptions is null || accountName.Length == 0)
+            return false;
+
+        if (worldEntryOptions.AccountFileSystem.FindCaseInsensitive(accountName + ".txt") is null)
+            return false;
+
+        var load = AccountLoadService.Load(
+            accountName,
+            worldEntryOptions.AccountFileSystem,
+            worldEntryOptions.AccountSettings,
+            ignoreNickname: IsRemoteControl(PlayerSessionType.RemoteControl2));
+        if (!load.Success || load.Account is null)
+            return false;
+
+        account = load.Account;
+        return true;
+    }
+
+    private string? AccountsPath()
+    {
+        var root = worldEntryOptions?.AccountFileSystem.ServerPath;
+        return root is null ? null : Path.Combine(root, "accounts");
     }
 
     private byte[] BuildFileBrowserDir(AccountFileData account, string folder)
@@ -681,6 +909,60 @@ public sealed class LoginAuthBridge(
     private static string ReadAsciiPayload(ReadOnlySpan<byte> payload) =>
         System.Text.Encoding.ASCII.GetString(payload).TrimEnd('\r', '\n');
 
+    private static string ReadGCharString(GraalBinaryReader reader)
+    {
+        var length = reader.ReadGChar();
+        return System.Text.Encoding.ASCII.GetString(reader.ReadBytes(length));
+    }
+
+    private static void WriteGCharString(GraalBinaryWriter writer, string value)
+    {
+        var bytes = System.Text.Encoding.ASCII.GetBytes(value);
+        writer.WriteGChar((byte)bytes.Length);
+        writer.WriteBytes(bytes);
+    }
+
+    private static string CleanAccountName(string accountName)
+    {
+        var clean = accountName.Trim().TrimEnd('\r', '\n');
+        var slash = Math.Max(clean.LastIndexOf('/'), clean.LastIndexOf('\\'));
+        return slash >= 0 ? clean[(slash + 1)..] : clean;
+    }
+
+    private static bool WildcardMatch(string value, string pattern)
+    {
+        var v = 0;
+        var p = 0;
+        var star = -1;
+        var match = 0;
+        while (v < value.Length)
+        {
+            if (p < pattern.Length && (pattern[p] == '?' || char.ToUpperInvariant(pattern[p]) == char.ToUpperInvariant(value[v])))
+            {
+                v++;
+                p++;
+            }
+            else if (p < pattern.Length && pattern[p] == '*')
+            {
+                star = p++;
+                match = v;
+            }
+            else if (star != -1)
+            {
+                p = star + 1;
+                v = ++match;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        while (p < pattern.Length && pattern[p] == '*')
+            p++;
+        return p == pattern.Length;
+    }
+
     private static string NormalizeFolder(string folder)
     {
         var normalized = folder.Replace('\\', '/').Trim();
@@ -716,6 +998,91 @@ public sealed class LoginAuthBridge(
     }
 
     private sealed record RcFolderRight(string Rights, string Folder, string Wildcard);
+
+    private static readonly IReadOnlyList<PlayerPropertyId> RcPlayerPropertyIds =
+    [
+        PlayerPropertyId.Nickname,
+        PlayerPropertyId.MaxPower,
+        PlayerPropertyId.CurrentPower,
+        PlayerPropertyId.RupeesCount,
+        PlayerPropertyId.ArrowsCount,
+        PlayerPropertyId.BombsCount,
+        PlayerPropertyId.GlovePower,
+        PlayerPropertyId.SwordPower,
+        PlayerPropertyId.ShieldPower,
+        PlayerPropertyId.Gani,
+        PlayerPropertyId.HeadGif,
+        PlayerPropertyId.Colors,
+        PlayerPropertyId.X,
+        PlayerPropertyId.Y,
+        PlayerPropertyId.Status,
+        PlayerPropertyId.CurrentLevel,
+        PlayerPropertyId.ApCounter,
+        PlayerPropertyId.MagicPoints,
+        PlayerPropertyId.KillsCount,
+        PlayerPropertyId.DeathsCount,
+        PlayerPropertyId.OnlineSeconds,
+        PlayerPropertyId.Alignment,
+        PlayerPropertyId.AccountName,
+        PlayerPropertyId.BodyImage,
+        PlayerPropertyId.Rating,
+        PlayerPropertyId.GAttrib1,
+        PlayerPropertyId.GAttrib2,
+        PlayerPropertyId.GAttrib3,
+        PlayerPropertyId.GAttrib4,
+        PlayerPropertyId.GAttrib5
+    ];
+
+    private static PlayerPropertySource BuildPropertySource(AccountFileData account) =>
+        new(
+            Nickname: account.Nickname,
+            MaxPower: account.MaxHitpoints,
+            Hitpoints: account.Hitpoints,
+            Rupees: account.Rupees,
+            Arrows: account.Arrows,
+            Bombs: account.Bombs,
+            GlovePower: account.GlovePower,
+            SwordPower: account.SwordPower,
+            SwordImage: account.SwordImage,
+            ShieldPower: account.ShieldPower,
+            ShieldImage: account.ShieldImage,
+            Gani: account.Gani,
+            HeadImage: account.HeadImage,
+            ChatMessage: "",
+            Colors: account.Colors,
+            PlayerId: 0,
+            X: account.PixelX,
+            Y: account.PixelY,
+            Sprite: account.Sprite,
+            Status: (byte)Math.Clamp(account.Status, 0, byte.MaxValue),
+            CarrySprite: 0,
+            CurrentLevel: account.LevelName,
+            HorseImage: "",
+            HorseBombCount: 0,
+            CarryNpcId: 0,
+            ApCounter: account.ApCounter,
+            MagicPoints: account.MagicPoints,
+            Kills: unchecked((int)account.Kills),
+            Deaths: unchecked((int)account.Deaths),
+            OnlineSeconds: account.OnlineSeconds,
+            AccountIp: account.AccountIp,
+            Alignment: account.Alignment,
+            AdditionalFlags: 0,
+            AccountName: account.AccountName,
+            BodyImage: account.BodyImage,
+            EloRating: (int)account.EloRating,
+            EloDeviation: (int)account.EloDeviation,
+            GaniAttributes: account.GaniAttributes
+                .Select((value, index) => (value, index: index + 1))
+                .Where(entry => !string.IsNullOrEmpty(entry.value))
+                .ToDictionary(entry => entry.index, entry => entry.value),
+            Os: "",
+            TextCodePage: 1252,
+            CommunityName: account.CommunityName,
+            Z: account.PixelZ,
+            BowPower: account.BowPower,
+            BowImage: account.BowImage,
+            Language: account.Language);
 
     private string HandleWeaponAdd(GraalBinaryReader reader, ushort playerId)
     {

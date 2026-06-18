@@ -271,6 +271,67 @@ public sealed class LoginAuthBridgeTests
         Assert.True(IndexOf(DecodeLastSocketPayload(42, rcLogin.OutboundBytes, broadcast.OutboundBytes), RcAddPlayerPrefix(8, "pc:Ruan")) >= 0);
     }
 
+    [Fact]
+    public void RcAccountButtonsReturnDiskAccountPackets()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        var login = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var clientQueue = new GraalFileQueue();
+        clientQueue.SetCodec(EncryptionGeneration.Gen5, 42);
+
+        var list = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcPacketWithGCharStrings(PlayerToServerPacketId.RcAccountListGet, "YOUR%", "")));
+        var account = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcPacket(PlayerToServerPacketId.RcAccountGet, "YOURACCOUNT")));
+        var rights = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcPacket(PlayerToServerPacketId.RcPlayerRightsGet, "YOURACCOUNT")));
+        var comments = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcPacket(PlayerToServerPacketId.RcPlayerCommentsGet, "YOURACCOUNT")));
+        var ban = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcPacket(PlayerToServerPacketId.RcPlayerBanGet, "YOURACCOUNT")));
+
+        Assert.DoesNotContain("pending", list.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        var decoded = DecodeLastSocketPayload(
+            42,
+            login.OutboundBytes,
+            list.OutboundBytes,
+            account.OutboundBytes,
+            rights.OutboundBytes,
+            comments.OutboundBytes,
+            ban.OutboundBytes);
+        Assert.True(IndexOf(decoded, RcNcPackets.PlayerBanGet("YOURACCOUNT", false, "")) >= 0);
+        Assert.NotEmpty(list.OutboundBytes);
+        Assert.NotEmpty(account.OutboundBytes);
+        Assert.NotEmpty(rights.OutboundBytes);
+        Assert.NotEmpty(comments.OutboundBytes);
+        Assert.NotEmpty(ban.OutboundBytes);
+    }
+
+    [Fact]
+    public void RcOpenPlayerByAccountReturnsEditorProps()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.Copy(
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"),
+            Path.Combine(serverRoot.Path, "accounts", "OTHERACCOUNT.txt"),
+            overwrite: true);
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        var login = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(RcPacketWithGCharStrings(PlayerToServerPacketId.RcPlayerPropsGetByAccount, "OTHERACCOUNT"), 42));
+        var decoded = DecodeLastSocketPayload(42, login.OutboundBytes, result.OutboundBytes);
+
+        Assert.True(IndexOf(decoded, RcPlayerPropsPrefix(0, "OTHERACCOUNT")) >= 0);
+    }
+
 
     [Fact]
     public void SecondClientLoginExchangesPlayerPropsWithFirstClient()
@@ -1087,6 +1148,30 @@ public sealed class LoginAuthBridgeTests
         packet.WriteGChar((byte)id);
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(payload));
         packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] RcPacketWithGCharStrings(PlayerToServerPacketId id, params string[] values)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)id);
+        foreach (var value in values)
+        {
+            packet.WriteGChar((byte)value.Length);
+            packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(value));
+        }
+
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] RcPlayerPropsPrefix(ushort playerId, string accountName)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)ServerToPlayerPacketId.RcPlayerPropertiesGet);
+        packet.WriteGShort(playerId);
+        packet.WriteGChar((byte)accountName.Length);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(accountName));
         return packet.ToArray();
     }
 
