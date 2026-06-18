@@ -9,6 +9,7 @@ artifacts/
 tools/**/build/
 tools/dev-server-root/*.log
 server-live.*.log
+logs/
 servers/default/accounts/*.txt
 !servers/default/accounts/(npcserver).txt
 !servers/default/accounts/YOURACCOUNT.txt

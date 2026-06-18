@@ -332,7 +332,11 @@ public sealed class LoginAuthBridgeTests
         Assert.Contains("REALNAME testtool", saved);
         Assert.Contains("IMAGE tool.png", saved);
         Assert.Single(result.Broadcasts);
-        Assert.True(IndexOf(DecodeLastSocketPayload(43, clientLogin.OutboundBytes, result.Broadcasts[0].OutboundBytes), [(byte)ServerToPlayerPacketId.RawData + 32]) >= 0);
+        var clientDecoded = DecodeLastSocketPayload(43, clientLogin.OutboundBytes, result.Broadcasts[0].OutboundBytes);
+        var ncDecoded = DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, result.OutboundBytes);
+        Assert.True(IndexOf(clientDecoded, [(byte)ServerToPlayerPacketId.RawData + 32]) >= 0);
+        Assert.True(IndexOf(clientDecoded, [(byte)ServerToPlayerPacketId.NpcWeaponScript + 32]) >= 0);
+        Assert.Equal(1, CountOf(ncDecoded, RcNcPackets.RcChat("Weapon/GUI-script testtool added by YOURACCOUNT")));
     }
 
     [Fact]
@@ -1327,6 +1331,21 @@ public sealed class LoginAuthBridgeTests
         }
 
         return -1;
+    }
+
+    private static int CountOf(byte[] bytes, byte[] pattern)
+    {
+        var count = 0;
+        for (var i = 0; i <= bytes.Length - pattern.Length; i++)
+        {
+            if (!bytes.AsSpan(i, pattern.Length).SequenceEqual(pattern))
+                continue;
+
+            count++;
+            i += pattern.Length - 1;
+        }
+
+        return count;
     }
 
     private static void AssertPacketId(byte[] decoded, ServerToPlayerPacketId packetId) =>

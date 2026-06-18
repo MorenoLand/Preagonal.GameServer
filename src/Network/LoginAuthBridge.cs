@@ -826,7 +826,7 @@ public sealed class LoginAuthBridge(
         var existed = TryLoadWeapon(weaponName, out _);
         SaveWeapon(new NcWeaponSource(weaponName, imageName, source));
         CompileAndSendClientScript(playerId, "weapon", weaponName, source, touched);
-        BroadcastToControlClients(RcNcPackets.RcChat($"Weapon/GUI-script {weaponName} {(existed ? "updated" : "added")} by {GetAccountName(playerId)}"), touched);
+        BroadcastToNpcControls(RcNcPackets.RcChat($"Weapon/GUI-script {weaponName} {(existed ? "updated" : "added")} by {GetAccountName(playerId)}"), touched);
     }
 
     private void HandleNcWeaponDelete(ushort playerId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
