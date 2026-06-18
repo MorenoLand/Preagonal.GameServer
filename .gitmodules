@@ -7,3 +7,4 @@
 [submodule "external/gs2engine"]
 	path = external/gs2engine
 	url = https://github.com/Preagonal/Preagonal.Scripting.GS2Engine.git
+	branch = dev

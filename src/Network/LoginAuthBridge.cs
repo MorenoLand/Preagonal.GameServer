@@ -533,7 +533,7 @@ public sealed class LoginAuthBridge(
         switch (packetId)
         {
             case PlayerToServerPacketId.RcChat:
-                BroadcastToRemoteControls(RcNcPackets.RcChat($"{sender.AccountName}: {ReadAsciiPayload(payload)}"), touched);
+                HandleRcChat(session.Id, sender.AccountName, ReadAsciiPayload(payload), touched);
                 return true;
             case PlayerToServerPacketId.RcAdminMessage:
                 if (!HasRight(session.Id, AdminMessageRight))
@@ -618,6 +618,57 @@ public sealed class LoginAuthBridge(
                 return true;
             default:
                 return false;
+        }
+    }
+
+    private void HandleRcChat(ushort playerId, string accountName, string message, ISet<ushort> touched)
+    {
+        if (message.Length == 0)
+            return;
+
+        if (!message.StartsWith("/", StringComparison.Ordinal))
+        {
+            BroadcastToRemoteControls(RcNcPackets.RcChat($"{accountName}: {message}"), touched);
+            return;
+        }
+
+        var split = message.IndexOf(' ');
+        var command = (split < 0 ? message : message[..split]).ToLowerInvariant();
+        var argument = split < 0 ? "" : message[(split + 1)..].Trim();
+
+        switch (command)
+        {
+            case "/help":
+                foreach (var line in ReadConfigFile("rchelp.txt").Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                    QueueSelfPacket(playerId, RcNcPackets.RcChat(line.TrimEnd('\r')), touched);
+                return;
+            case "/version":
+                QueueSelfPacket(playerId, RcNcPackets.RcChat("Preagonal.GServer-Sharp"), touched);
+                return;
+            case "/credits":
+                QueueSelfPacket(playerId, RcNcPackets.RcChat("Programmed by Preagonal contributors"), touched);
+                return;
+            case "/open" when argument.Length != 0:
+                HandlePlayerPropsGetByAccount(playerId, GCharPayload(argument), touched);
+                return;
+            case "/openacc" when argument.Length != 0:
+                HandleAccountGet(playerId, argument, touched);
+                return;
+            case "/opencomments" when argument.Length != 0:
+                HandlePlayerCommentsGet(playerId, argument, touched);
+                return;
+            case "/openban" when argument.Length != 0:
+                HandlePlayerBanGet(playerId, argument, touched);
+                return;
+            case "/openrights" when argument.Length != 0:
+                HandlePlayerRightsGet(playerId, argument, touched);
+                return;
+            case "/reset" when argument.Length != 0:
+                QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: Account reset is not implemented yet."), touched);
+                return;
+            default:
+                QueueSelfPacket(playerId, RcNcPackets.RcChat($"Server: Unknown command: {command}"), touched);
+                return;
         }
     }
 
@@ -1162,6 +1213,13 @@ public sealed class LoginAuthBridge(
     {
         var length = reader.ReadGChar();
         return System.Text.Encoding.ASCII.GetString(reader.ReadBytes(length));
+    }
+
+    private static byte[] GCharPayload(string value)
+    {
+        var writer = new GraalBinaryWriter();
+        WriteGCharString(writer, value);
+        return writer.ToArray();
     }
 
     private static void WriteGCharString(GraalBinaryWriter writer, string value)

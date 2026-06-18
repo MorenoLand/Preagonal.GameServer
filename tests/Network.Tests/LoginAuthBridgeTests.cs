@@ -333,6 +333,38 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void RcSlashOpenCommandsDispatchToPanels()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        var login = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var clientQueue = new GraalFileQueue();
+        clientQueue.SetCodec(EncryptionGeneration.Gen5, 42);
+
+        var props = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcChatPacket("/open YOURACCOUNT")));
+        var account = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcChatPacket("/openacc YOURACCOUNT")));
+        var comments = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcChatPacket("/opencomments YOURACCOUNT")));
+        var ban = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcChatPacket("/openban YOURACCOUNT")));
+        var rights = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcChatPacket("/openrights YOURACCOUNT")));
+
+        Assert.True(IndexOf(DecodeLastSocketPayload(42, login.OutboundBytes, props.OutboundBytes), RcPlayerPropsPrefix(7, "YOURACCOUNT")) >= 0);
+        AssertPacketId(DecodeLastSocketPayload(42, login.OutboundBytes, props.OutboundBytes, account.OutboundBytes), ServerToPlayerPacketId.RcAccountGet);
+        AssertPacketId(DecodeLastSocketPayload(42, login.OutboundBytes, props.OutboundBytes, account.OutboundBytes, comments.OutboundBytes), ServerToPlayerPacketId.RcPlayerCommentsGet);
+        AssertPacketId(DecodeLastSocketPayload(42, login.OutboundBytes, props.OutboundBytes, account.OutboundBytes, comments.OutboundBytes, ban.OutboundBytes), ServerToPlayerPacketId.RcPlayerBanGet);
+        AssertPacketId(DecodeLastSocketPayload(42, login.OutboundBytes, props.OutboundBytes, account.OutboundBytes, comments.OutboundBytes, ban.OutboundBytes, rights.OutboundBytes), ServerToPlayerPacketId.RcPlayerRightsGet);
+    }
+
+    [Fact]
     public void RcWriteButtonsPersistAccountChanges()
     {
         using var serverRoot = TestDefaultServerRoot();
@@ -1086,6 +1118,9 @@ public sealed class LoginAuthBridgeTests
 
         return -1;
     }
+
+    private static void AssertPacketId(byte[] decoded, ServerToPlayerPacketId packetId) =>
+        Assert.Equal((byte)packetId + 32, decoded[0]);
 
     private static byte[] ExpectedDisconnectPacket(ushort playerId)
     {
