@@ -83,7 +83,7 @@ public sealed class LoginAuthBridgeTests
         Assert.Equal(7, result.PlayerId);
         Assert.NotEmpty(gateway.SentPlayerAdds);
         Assert.Equal((byte)ServerToListServerPacketId.PlayerAdd + 32, gateway.SentPlayerAdds[0][0]);
-        Assert.True(File.Exists(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt")));
+        Assert.True(File.Exists(Path.Combine(serverRoot.Path, "accounts", "Ruan.txt")));
     }
 
     [Fact]
@@ -173,12 +173,41 @@ public sealed class LoginAuthBridgeTests
             SocketPayload(RcChatPacket("hello"), 42));
 
         Assert.True(result.ContinueSession);
-        var secondLoginBroadcast = Assert.Single(secondLogin.Broadcasts);
-        Assert.Equal(7, secondLoginBroadcast.PlayerId);
-        Assert.True(IndexOf(DecodeLastSocketPayload(42, firstLogin.OutboundBytes, secondLoginBroadcast.OutboundBytes, result.OutboundBytes), RcNcPackets.RcChat("YOURACCOUNT: hello")) >= 0);
+        var firstRcPeerBytes = secondLogin.Broadcasts.Where(packet => packet.PlayerId == 7).Select(packet => packet.OutboundBytes).ToArray();
+        Assert.True(IndexOf(DecodeLastSocketPayload(42, [firstLogin.OutboundBytes, .. firstRcPeerBytes, result.OutboundBytes]), RcNcPackets.RcChat("YOURACCOUNT: hello")) >= 0);
         var broadcast = Assert.Single(result.Broadcasts);
         Assert.Equal(8, broadcast.PlayerId);
         Assert.True(IndexOf(DecodeLastSocketPayload(43, secondLogin.OutboundBytes, broadcast.OutboundBytes), RcNcPackets.RcChat("YOURACCOUNT: hello")) >= 0);
+    }
+
+    [Fact]
+    public void RcLogoffFreesAccount()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+
+        _ = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        _ = bridge.EndClientSession(7);
+        var secondLogin = LoginRc(bridge, "YOURACCOUNT", 8, 43);
+
+        Assert.Equal(ServerListAuthResponseStatus.AcceptedPreWorld, secondLogin.Status);
+        Assert.DoesNotContain(secondLogin.Broadcasts, packet => packet.PlayerId == 7);
+    }
+
+    [Fact]
+    public void DuplicateRcKicksOldSession()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+
+        var firstLogin = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var secondLogin = LoginRc(bridge, "YOURACCOUNT", 8, 43);
+
+        Assert.Equal(ServerListAuthResponseStatus.AcceptedPreWorld, secondLogin.Status);
+        var oldSession = Assert.Single(secondLogin.Broadcasts, packet => packet.PlayerId == 7);
+        Assert.True(IndexOf(
+            DecodeLastSocketPayload(42, firstLogin.OutboundBytes, oldSession.OutboundBytes),
+            OutboundLoginPackets.DisconnectMessage("Someone else has logged into your account.", appendNewline: true)) >= 0);
     }
 
     [Fact]
@@ -320,23 +349,104 @@ public sealed class LoginAuthBridgeTests
         using var serverRoot = TestDefaultServerRoot();
         var runtime = new RuntimeServer();
         var bridge = CreateBridge(serverRoot, runtime);
-        var clientLogin = LoginClient(bridge, "Ruan", 8, 43);
+        var clientLogin = LoginClient(bridge, "YOURACCOUNT", 8, 43);
         _ = LoginNc(bridge, "YOURACCOUNT", 7);
         var clientQueue = Gen3Queue();
 
         var result = bridge.HandleClientFrame(
             new ClientSocketSessionContext(7, "127.0.0.1"),
-            SocketPayload(clientQueue, NcWeaponAddPacket("testtool", "tool.png", "//#CLIENTSIDE\n//#GS2\nfunction onCreated() {\n}")));
+            SocketPayload(clientQueue, NcWeaponAddPacket("-gr_movement", "tool.png", "//#CLIENTSIDE\nplayer.chat = 1;")));
 
-        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "weapons", "weapon-testtool.txt"));
-        Assert.Contains("REALNAME testtool", saved);
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "weapons", "weapon-gr_movement.txt"));
+        Assert.Contains("REALNAME -gr_movement", saved);
         Assert.Contains("IMAGE tool.png", saved);
+        Assert.Contains("//#CLIENTSIDE\nplayer.chat = 1;", saved.Replace("\r", "", StringComparison.Ordinal));
         Assert.Single(result.Broadcasts);
         var clientDecoded = DecodeLastSocketPayload(43, clientLogin.OutboundBytes, result.Broadcasts[0].OutboundBytes);
         var ncDecoded = DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, result.OutboundBytes);
+        Assert.True(IndexOf(clientDecoded, EntityPackets.NpcWeaponDelete("-gr_movement")) >= 0);
+        Assert.True(IndexOf(clientDecoded, EntityPackets.NpcWeaponAdd("-gr_movement", "tool.png", "//#CLIENTSIDE\u00a7player.chat = 1;")) >= 0);
         Assert.True(IndexOf(clientDecoded, [(byte)ServerToPlayerPacketId.RawData + 32]) >= 0);
         Assert.True(IndexOf(clientDecoded, [(byte)ServerToPlayerPacketId.NpcWeaponScript + 32]) >= 0);
-        Assert.Equal(1, CountOf(ncDecoded, RcNcPackets.RcChat("Weapon/GUI-script testtool added by YOURACCOUNT")));
+        Assert.Equal(1, CountOf(ncDecoded, RcNcPackets.RcChat("Weapon/GUI-script -gr_movement updated by YOURACCOUNT")));
+    }
+
+    [Fact]
+    public void ClientLoginSendsCustomWeapons()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.WriteAllText(
+            Path.Combine(serverRoot.Path, "weapons", "weapon-gr_movement.txt"),
+            "GRAWP001\nREALNAME -gr_movement\nIMAGE wbomb1.png\nSCRIPT\n//#CLIENTSIDE\nplayer.chat = 1;\nSCRIPTEND\n");
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+
+        var login = LoginClient(bridge, "YOURACCOUNT", 8, 43);
+        var decoded = DecodeSocketPayload(login.OutboundBytes, 43);
+
+        Assert.True(IndexOf(decoded, EntityPackets.NpcWeaponAdd("-gr_movement", "wbomb1.png", "//#CLIENTSIDE\u00a7player.chat = 1;")) >= 0);
+    }
+
+    [Fact]
+    public void NcReportsClientGs2Errors()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        _ = LoginNc(bridge, "YOURACCOUNT", 7);
+        var clientQueue = Gen3Queue();
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, NcWeaponAddPacket("badclient", "tool.png", "//#CLIENTSIDE\n//#GS2\nfunction onCreated() {\n  player.chat = \"unterminated;\n}")));
+
+        var decoded = DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, result.OutboundBytes);
+        Assert.Empty(result.Broadcasts);
+        Assert.False(File.Exists(Path.Combine(serverRoot.Path, "weapons", "weapon-badclient.txt")));
+        Assert.True(IndexOf(decoded, RcNcPackets.RcChat("Script compiler output for Weapon badclient:")) >= 0);
+        Assert.Contains("error: line", System.Text.Encoding.Latin1.GetString(decoded));
+    }
+
+    [Fact]
+    public void NcReportsServerGs2Errors()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        _ = LoginNc(bridge, "YOURACCOUNT", 7);
+        var clientQueue = Gen3Queue();
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, NcWeaponAddPacket("badserver", "tool.png", "function onCreated() {\n  player.chat = \"unterminated;\n}\n//#CLIENTSIDE\n//#GS2\nfunction onCreated() {\n}")));
+
+        var decoded = DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, result.OutboundBytes);
+        Assert.Empty(result.Broadcasts);
+        Assert.False(File.Exists(Path.Combine(serverRoot.Path, "weapons", "weapon-badserver.txt")));
+        Assert.True(IndexOf(decoded, RcNcPackets.RcChat("Script compiler output for Weapon badserver server-side:")) >= 0);
+        Assert.Contains("error: line", System.Text.Encoding.Latin1.GetString(decoded));
+    }
+
+    [Fact]
+    public void ControlLoginsAnnounceRcAndNc()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.Copy(
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"),
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT2.txt"),
+            overwrite: true);
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+
+        var firstRc = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var secondRc = LoginRc(bridge, "YOURACCOUNT2", 8, 43);
+        var firstNc = LoginNc(bridge, "YOURACCOUNT", 9);
+        var secondNc = LoginNc(bridge, "YOURACCOUNT2", 10);
+
+        Assert.True(IndexOf(DecodeLastSocketPayload(42, firstRc.OutboundBytes), RcNcPackets.RcChat("New RC: YOURACCOUNT")) >= 0);
+        Assert.True(IndexOf(DecodeLastSocketPayload(43, secondRc.OutboundBytes), RcNcPackets.RcChat("New RC: YOURACCOUNT2")) >= 0);
+        var firstRcPeerBytes = secondRc.Broadcasts.Where(packet => packet.PlayerId == 7).Select(packet => packet.OutboundBytes).ToArray();
+        Assert.True(IndexOf(DecodeLastSocketPayload(42, [firstRc.OutboundBytes, .. firstRcPeerBytes]), RcNcPackets.RcChat("New RC: YOURACCOUNT2")) >= 0);
+        Assert.True(IndexOf(DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, secondNc.OutboundBytes), RcNcPackets.RcChat("New NC: YOURACCOUNT")) >= 0);
+        Assert.True(IndexOf(DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, secondNc.OutboundBytes), RcNcPackets.RcChat("New NC: YOURACCOUNT2")) < 0);
+        var firstNcPeerBytes = secondNc.Broadcasts.Where(packet => packet.PlayerId == 9).Select(packet => packet.OutboundBytes).ToArray();
+        Assert.True(IndexOf(DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, [firstNc.OutboundBytes, .. firstNcPeerBytes]), RcNcPackets.RcChat("New NC: YOURACCOUNT2")) >= 0);
     }
 
     [Fact]
@@ -383,7 +493,7 @@ public sealed class LoginAuthBridgeTests
         var rcLogin = LoginRc(bridge, "YOURACCOUNT", 7, 42);
         var decoded = DecodeSocketPayload(rcLogin.OutboundBytes, 42);
 
-        Assert.True(IndexOf(decoded, RcAddPlayerPrefix(8, "pc:Ruan")) >= 0);
+        Assert.True(IndexOf(decoded, RcAddPlayerPrefix(8, "Ruan")) >= 0);
     }
 
     [Fact]
@@ -397,7 +507,7 @@ public sealed class LoginAuthBridgeTests
 
         var broadcast = Assert.Single(clientLogin.Broadcasts);
         Assert.Equal(7, broadcast.PlayerId);
-        Assert.True(IndexOf(DecodeLastSocketPayload(42, rcLogin.OutboundBytes, broadcast.OutboundBytes), RcAddPlayerPrefix(8, "pc:Ruan")) >= 0);
+        Assert.True(IndexOf(DecodeLastSocketPayload(42, rcLogin.OutboundBytes, broadcast.OutboundBytes), RcAddPlayerPrefix(8, "Ruan")) >= 0);
     }
 
     [Fact]
@@ -801,7 +911,7 @@ public sealed class LoginAuthBridgeTests
         var end = bridge.EndClientSession(7);
 
         Assert.NotNull(end.SaveResult);
-        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt"));
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "Ruan.txt"));
         Assert.Contains("WEAPON bow", saved);
     }
 
@@ -945,7 +1055,7 @@ public sealed class LoginAuthBridgeTests
 
         Assert.True(IndexOf(DecodeLastSocketPayload(42, login.OutboundBytes, result.OutboundBytes), OpenedChestPacket(20, 24)) >= 0);
         _ = bridge.EndClientSession(7);
-        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt"));
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "Ruan.txt"));
         Assert.Contains("\r\nCHEST 20:24:onlinestartlocal.nw\r\n", saved, StringComparison.Ordinal);
     }
 
@@ -1132,7 +1242,7 @@ public sealed class LoginAuthBridgeTests
         Assert.NotNull(end.SaveResult);
         Assert.True(end.SaveResult.WriteSucceeded);
         Assert.Equal(ServerListAuthPackets.PlayerRemove(7), Assert.Single(gateway.SentPlayerRemoves));
-        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt"));
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "Ruan.txt"));
         Assert.Contains("\r\nX 35\r\n", saved, StringComparison.Ordinal);
         Assert.Contains("\r\nY 35.5\r\n", saved, StringComparison.Ordinal);
         Assert.Contains("\r\nSTATUS 20\r\n", saved, StringComparison.Ordinal);
@@ -1536,7 +1646,7 @@ public sealed class LoginAuthBridgeTests
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(name));
         packet.WriteGChar((byte)image.Length);
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(image));
-        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(source.Replace('\n', '\u00a7')));
+        packet.WriteBytes(System.Text.Encoding.Latin1.GetBytes(source.Replace('\n', '\u00a7')));
         packet.WriteByte((byte)'\n');
         return packet.ToArray();
     }

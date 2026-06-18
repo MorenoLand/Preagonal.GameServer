@@ -80,16 +80,9 @@ public static class PlayerSendLoginContinuation
                 if (!IsSameDuplicateFamily(session, account.AccountName, activeSession))
                     continue;
 
-                if (activeSession.AgeSinceLastData > TimeSpan.FromSeconds(30))
-                {
-                    duplicateDisconnects.Add(new DuplicateSessionDisconnect(
-                        activeSession.Id,
-                        DuplicateSessionDisconnectMessage));
-                    continue;
-                }
-
-                session.QueueDisconnect("Account is already in use.");
-                return new PlayerSendLoginContinuationResult(false, duplicateDisconnects, loginServerFullStopBlocked);
+                duplicateDisconnects.Add(new DuplicateSessionDisconnect(
+                    activeSession.Id,
+                    DuplicateSessionDisconnectMessage));
             }
 
             session.MarkReadyForWorldEntry();

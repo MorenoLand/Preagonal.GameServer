@@ -19,10 +19,12 @@ public static class LoginWorldEntry
         ClientSessionSkeleton session,
         LoginWorldEntryOptions options,
         out byte[] serverListAddPlayerPacket,
-        out PostLoginPlayerSnapshot snapshot)
+        out PostLoginPlayerSnapshot snapshot,
+        out IReadOnlyList<DuplicateSessionDisconnect> duplicateDisconnects)
     {
         serverListAddPlayerPacket = [];
         snapshot = EmptySnapshot(session);
+        duplicateDisconnects = [];
         var accountLogin = AccountLoginBoundary.Begin(
             session,
             options.AccountFileSystem,
@@ -31,27 +33,30 @@ public static class LoginWorldEntry
         if (!accountLogin.Accepted || accountLogin.Account is null)
             return false;
 
+        duplicateDisconnects = accountLogin.DuplicateDisconnects;
         var account = accountLogin.Account;
         snapshot = BuildSnapshot(session, account, options.AccountLoginOptions.RemoteIp);
         if (IsControl(session.Type))
         {
+            var controlSnapshot = snapshot with
+            {
+                CurrentLevelProperty = GCharString(" "),
+                LoginPropertySource = snapshot.LoginPropertySource with
+                {
+                    Nickname = string.IsNullOrEmpty(snapshot.LoginPropertySource.Nickname)
+                        ? "*" + snapshot.LoginPropertySource.AccountName
+                        : snapshot.LoginPropertySource.Nickname,
+                    CurrentLevel = " ",
+                    HeadImage = options.AccountSettings.GetString("staffhead", "head25.png"),
+                    X = 0,
+                    Y = 0,
+                    Z = 0
+                }
+            };
+            snapshot = controlSnapshot;
             var rcPostLogin = PostLoginWorldEntryBoundary.BeginRemoteControl(
                 session,
-                snapshot with
-                {
-                    CurrentLevelProperty = GCharString(" "),
-                    LoginPropertySource = snapshot.LoginPropertySource with
-                    {
-                        Nickname = string.IsNullOrEmpty(snapshot.LoginPropertySource.Nickname)
-                            ? "*" + snapshot.LoginPropertySource.AccountName
-                            : snapshot.LoginPropertySource.Nickname,
-                        CurrentLevel = " ",
-                        HeadImage = options.AccountSettings.GetString("staffhead", "head25.png"),
-                        X = 0,
-                        Y = 0,
-                        Z = 0
-                    }
-                },
+                controlSnapshot,
                 new PostLoginRemoteControlOptions(
                     options.AccountFileSystem.ServerPath,
                     options.AccountLoginOptions.ServerName,
@@ -70,7 +75,7 @@ public static class LoginWorldEntry
             new PostLoginClientOptions(
                 ResourceFileSystem: null,
                 Maps: [],
-                PlayerWeapons: BuildLoginWeaponPackets(account, options.AccountSettings)));
+                PlayerWeapons: BuildLoginWeaponPackets(account, options.AccountSettings, options.AccountFileSystem.ServerPath)));
         serverListAddPlayerPacket = postLogin.ServerListAddPlayerPacket;
 
         var levelName = string.IsNullOrWhiteSpace(account.LevelName)
@@ -230,7 +235,8 @@ public static class LoginWorldEntry
 
     private static IReadOnlyList<LoginWeaponPacket> BuildLoginWeaponPackets(
         AccountFileData account,
-        IAccountLoadSettings settings)
+        IAccountLoadSettings settings,
+        string serverPath)
     {
         if (!GetBool(settings, "defaultweapons", defaultValue: true))
             return [];
@@ -239,15 +245,59 @@ public static class LoginWorldEntry
         foreach (var weaponName in account.Weapons)
         {
             var itemType = LevelItemCatalog.GetItemId(weaponName);
-            if (itemType == LevelItemType.Invalid)
+            if (itemType != LevelItemType.Invalid)
+            {
+                packets.Add(new LoginWeaponPacket(
+                    weaponName,
+                    EntityPackets.DefaultWeapon((byte)itemType)));
                 continue;
+            }
 
-            packets.Add(new LoginWeaponPacket(
-                weaponName,
-                EntityPackets.DefaultWeapon((byte)itemType)));
+            if (TryLoadServerWeapon(serverPath, weaponName, out var image, out var source))
+                packets.Add(new LoginWeaponPacket(
+                    weaponName,
+                    EntityPackets.NpcWeaponAdd(weaponName, image, source.Replace('\n', '\u00a7'))));
         }
 
         return packets;
+    }
+
+    private static bool TryLoadServerWeapon(string serverPath, string weaponName, out string image, out string source)
+    {
+        image = "";
+        source = "";
+        var safe = Path.GetFileName(weaponName.Replace('\\', '/'));
+        var fileName = safe.StartsWith("-", StringComparison.Ordinal) ? "weapon" + safe + ".txt" : "weapon-" + safe + ".txt";
+        var path = Path.Combine(serverPath, "weapons", fileName);
+        if (!File.Exists(path))
+            return false;
+
+        var sourceBuilder = new StringBuilder();
+        var inScript = false;
+        foreach (var raw in File.ReadAllLines(path))
+        {
+            var line = raw.Replace("\r", "", StringComparison.Ordinal);
+            if (line.Equals("SCRIPT", StringComparison.Ordinal))
+            {
+                inScript = true;
+                continue;
+            }
+
+            if (line.Equals("SCRIPTEND", StringComparison.Ordinal))
+                break;
+
+            if (inScript)
+            {
+                sourceBuilder.Append(line).Append('\n');
+                continue;
+            }
+
+            if (line.StartsWith("IMAGE ", StringComparison.Ordinal))
+                image = line["IMAGE ".Length..].Trim();
+        }
+
+        source = sourceBuilder.ToString().TrimEnd('\r', '\n');
+        return source.Length != 0;
     }
 
     private static bool GetBool(IAccountLoadSettings settings, string key, bool defaultValue)

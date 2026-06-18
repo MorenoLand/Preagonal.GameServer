@@ -40,6 +40,7 @@ public sealed class LoginAuthBridge(
     RuntimeServer? runtimeServer = null)
 {
     private sealed record NpcServerEndpoint(ushort Id, string Host, int Port);
+    private sealed record ScriptCompileFeedback(bool Success, byte[] ClientBytecode);
 
     private readonly Dictionary<(ushort PlayerId, PlayerSessionType Type), ClientSessionSkeleton> _pendingSessions = [];
     private readonly Dictionary<(ushort PlayerId, PlayerSessionType Type), string> _remoteAddresses = [];
@@ -137,16 +138,20 @@ public sealed class LoginAuthBridge(
                     ActiveSessions = BuildActiveSessions(),
                     RemoteIp = _remoteAddresses.GetValueOrDefault(key, worldEntryOptions.AccountLoginOptions.RemoteIp)
                 }
-            }, out var playerAdd, out var snapshot))
+            }, out var playerAdd, out var snapshot, out var duplicateDisconnects))
         {
-            broadcasts = ExchangeLoginPlayerProps(session, snapshot).ToArray();
+            var loginBroadcasts = new List<ClientSessionOutbound>();
+            loginBroadcasts.AddRange(EndDuplicateSessions(duplicateDisconnects, session.Id));
+            loginBroadcasts.AddRange(ExchangeLoginPlayerProps(session, snapshot));
+            broadcasts = loginBroadcasts.ToArray();
             _activeSessions[session.Id] = session;
             _activeSnapshots[session.Id] = snapshot;
             if (snapshot.Account is not null)
-            _activeAccounts[session.Id] = snapshot.Account;
+                _activeAccounts[session.Id] = snapshot.Account;
             ActivateRuntimePlayer(session, snapshot);
             serverList.SendPlayerAdd(playerAdd);
             QueueNpcServerAddress(session, snapshot.Account);
+            broadcasts = [.. broadcasts, .. BuildControlLoginBroadcasts(session, snapshot)];
             _pendingSessions.Remove(key);
             _remoteAddresses.Remove(key);
         }
@@ -819,13 +824,17 @@ public sealed class LoginAuthBridge(
         var reader = new GraalBinaryReader(payload);
         var weaponName = ReadGCharString(reader);
         var imageName = ReadGCharString(reader);
-        var source = ReadAsciiPayload(reader.ReadBytes(reader.BytesLeft)).Replace('\u00a7', '\n');
+        var source = ReadLatin1Payload(reader.ReadBytes(reader.BytesLeft)).Replace('\u00a7', '\n');
         if (weaponName.Length == 0 || IsDefaultWeaponName(weaponName))
             return;
 
         var existed = TryLoadWeapon(weaponName, out _);
+        var compile = CompileScriptForNc(playerId, "weapon", weaponName, source, touched);
+        if (!compile.Success)
+            return;
+
         SaveWeapon(new NcWeaponSource(weaponName, imageName, source));
-        CompileAndSendClientScript(playerId, "weapon", weaponName, source, touched);
+        RefreshWeaponForClients(weaponName, imageName, source, compile.ClientBytecode, touched);
         BroadcastToNpcControls(RcNcPackets.RcChat($"Weapon/GUI-script {weaponName} {(existed ? "updated" : "added")} by {GetAccountName(playerId)}"), touched);
     }
 
@@ -862,8 +871,12 @@ public sealed class LoginAuthBridge(
 
         var path = ResolveServerFile("classes", className + ".txt", createDirectory: true);
         var existed = File.Exists(path);
+        var compile = CompileScriptForNc(playerId, "class", className, source, touched);
+        if (!compile.Success)
+            return;
+
         File.WriteAllText(path, source.Replace("\r", "", StringComparison.Ordinal));
-        CompileAndSendClientScript(playerId, "class", className, source, touched);
+        SendClientScriptBytecode(compile.ClientBytecode, touched);
         if (!existed)
             BroadcastToNpcControls(RcNcPackets.NcClassAdd(className), touched);
         BroadcastToControlClients(RcNcPackets.RcChat($"Script {className} {(existed ? "updated" : "added")} by {GetAccountName(playerId)}"), touched);
@@ -904,26 +917,218 @@ public sealed class LoginAuthBridge(
         QueueSelfPacket(playerId, RcNcPackets.NcLevelList(levels), touched);
     }
 
-    private void CompileAndSendClientScript(ushort playerId, string type, string name, string source, ISet<ushort> touched)
+    private ScriptCompileFeedback CompileScriptForNc(ushort playerId, string type, string name, string source, ISet<ushort> touched)
     {
-        var slices = SourceCodeSlices.Parse(source, gs2Default: false, serverSideVm: true);
-        if (string.IsNullOrWhiteSpace(slices.ClientGs2))
-            return;
-
+        var slices = SourceCodeSlices.Parse(source, gs2Default: true, serverSideVm: true);
         try
         {
-            var result = new Gs2CompilerAdapter().Compile(slices.ClientGs2, type, name);
-            if (!result.Success || result.Bytecode.Length == 0)
+            var compiler = new Gs2CompilerAdapter();
+            var origin = CompilerOrigin(type, name);
+            if (!string.IsNullOrWhiteSpace(slices.ServerSide))
             {
-                BroadcastToControlClients(RcNcPackets.RcChat($"GS2 compile failed for {type} {name}: {result.Error}"), touched);
-                return;
+                if (!TryPreflightGs2(slices.ServerSide, out var serverPreflightError))
+                {
+                    SendCompilerOutputToNc($"{origin} server-side", "error", serverPreflightError, touched);
+                    return new ScriptCompileFeedback(false, []);
+                }
+
+                var serverResult = compiler.Compile(slices.ServerSide, type, name);
+                if (!serverResult.Success)
+                {
+                    SendCompilerOutputToNc($"{origin} server-side", "error", serverResult.Error, touched);
+                    return new ScriptCompileFeedback(false, []);
+                }
             }
 
-            BroadcastToClients(EntityPackets.NpcWeaponScriptRawData(result.Bytecode), touched);
+            if (string.IsNullOrWhiteSpace(slices.ClientGs2))
+                return new ScriptCompileFeedback(true, []);
+
+            if (!TryPreflightGs2(slices.ClientGs2, out var clientPreflightError))
+            {
+                SendCompilerOutputToNc(origin, "error", clientPreflightError, touched);
+                return new ScriptCompileFeedback(false, []);
+            }
+
+            var clientResult = compiler.Compile(slices.ClientGs2, type, name);
+            if (!clientResult.Success || clientResult.Bytecode.Length == 0)
+            {
+                SendCompilerOutputToNc(origin, "error", clientResult.Success ? "compiler did not write bytecode" : clientResult.Error, touched);
+                return new ScriptCompileFeedback(false, []);
+            }
+
+            return new ScriptCompileFeedback(true, clientResult.Bytecode);
         }
         catch (Exception ex)
         {
-            BroadcastToControlClients(RcNcPackets.RcChat($"GS2 compile failed for {type} {name}: {ex.Message}"), touched);
+            SendCompilerOutputToNc(CompilerOrigin(type, name), "error", ex.Message, touched);
+            return new ScriptCompileFeedback(false, []);
+        }
+    }
+
+    private void SendClientScriptBytecode(ReadOnlySpan<byte> bytecode, ISet<ushort> touched)
+    {
+        if (!bytecode.IsEmpty)
+            BroadcastToClients(EntityPackets.NpcWeaponScriptRawData(bytecode), touched);
+    }
+
+    private void RefreshWeaponForClients(string weaponName, string imageName, string source, ReadOnlySpan<byte> bytecode, ISet<ushort> touched)
+    {
+        var addPacket = EntityPackets.NpcWeaponAdd(weaponName, imageName, source.Replace('\n', '\u00a7'));
+        var deletePacket = EntityPackets.NpcWeaponDelete(weaponName);
+        var bytecodePacket = bytecode.IsEmpty ? [] : EntityPackets.NpcWeaponScriptRawData(bytecode);
+        foreach (var (playerId, session) in _activeSessions)
+        {
+            if (!IsClient(session.Type))
+                continue;
+
+            if (_activeAccounts.TryGetValue(playerId, out var account) &&
+                !account.Weapons.Contains(weaponName, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            QueueSelfPacket(playerId, deletePacket, touched);
+            QueueSelfPacket(playerId, addPacket, touched);
+            if (bytecodePacket.Length != 0)
+                QueueSelfPacket(playerId, bytecodePacket, touched);
+        }
+    }
+
+    private void SendCompilerOutputToNc(string origin, string level, string text, ISet<ushort> touched)
+    {
+        BroadcastToNpcControls(RcNcPackets.RcChat($"Script compiler output for {origin}:"), touched);
+        var wroteLine = false;
+        foreach (var rawLine in text.Split('\n'))
+        {
+            var line = NormalizeCompilerOutputLine(rawLine);
+            if (line.Length == 0)
+                continue;
+
+            BroadcastToNpcControls(RcNcPackets.RcChat($"{level}: {line}"), touched);
+            wroteLine = true;
+        }
+
+        if (!wroteLine)
+            BroadcastToNpcControls(RcNcPackets.RcChat($"{level}: compiler failed"), touched);
+    }
+
+    private static string CompilerOrigin(string type, string name) =>
+        $"{char.ToUpperInvariant(type[0])}{type[1..]} {name}";
+
+    private static bool TryPreflightGs2(string source, out string error)
+    {
+        var inString = false;
+        var escaping = false;
+        var inLineComment = false;
+        var inBlockComment = false;
+        var line = 1;
+
+        for (var i = 0; i < source.Length; i++)
+        {
+            var ch = source[i];
+            var next = i + 1 < source.Length ? source[i + 1] : '\0';
+            if (ch == '\n')
+            {
+                if (inString)
+                {
+                    error = $"line {line}: unterminated string literal";
+                    return false;
+                }
+
+                inLineComment = false;
+                line++;
+                continue;
+            }
+
+            if (inLineComment)
+                continue;
+
+            if (inBlockComment)
+            {
+                if (ch == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    i++;
+                }
+
+                continue;
+            }
+
+            if (inString)
+            {
+                if (escaping)
+                {
+                    escaping = false;
+                    continue;
+                }
+
+                if (ch == '\\')
+                {
+                    escaping = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                    inString = false;
+
+                continue;
+            }
+
+            if (ch == '/' && next == '/')
+            {
+                inLineComment = true;
+                i++;
+                continue;
+            }
+
+            if (ch == '/' && next == '*')
+            {
+                inBlockComment = true;
+                i++;
+                continue;
+            }
+
+            if (ch == '"')
+                inString = true;
+        }
+
+        if (inString)
+        {
+            error = $"line {line}: unterminated string literal";
+            return false;
+        }
+
+        if (inBlockComment)
+        {
+            error = $"line {line}: unterminated block comment";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    private static string NormalizeCompilerOutputLine(string line)
+    {
+        line = line.Trim();
+        if (line.StartsWith("->", StringComparison.Ordinal))
+            line = line[2..].Trim();
+
+        while (true)
+        {
+            var lower = line.ToLowerInvariant();
+            if (lower.StartsWith("[error]", StringComparison.Ordinal))
+                line = line["[error]".Length..].Trim();
+            else if (lower.StartsWith("error:", StringComparison.Ordinal))
+                line = line["error:".Length..].Trim();
+            else if (lower.StartsWith("[warning]", StringComparison.Ordinal))
+                line = line["[warning]".Length..].Trim();
+            else if (lower.StartsWith("warning:", StringComparison.Ordinal))
+                line = line["warning:".Length..].Trim();
+            else if (lower.StartsWith("[info]", StringComparison.Ordinal))
+                line = line["[info]".Length..].Trim();
+            else if (lower.StartsWith("info:", StringComparison.Ordinal))
+                line = line["info:".Length..].Trim();
+            else
+                return line;
         }
     }
 
@@ -2108,6 +2313,9 @@ public sealed class LoginAuthBridge(
         return string.Join('\n', lines);
     }
 
+    private static string ReadLatin1Payload(ReadOnlySpan<byte> payload) =>
+        System.Text.Encoding.Latin1.GetString(payload).TrimEnd('\r', '\n');
+
     private static byte[] AppendNewline(byte[] packet) =>
         packet.Length > 0 && packet[^1] == (byte)'\n'
             ? packet
@@ -2355,11 +2563,16 @@ public sealed class LoginAuthBridge(
 
     private IReadOnlyList<ActivePlayerSession> BuildActiveSessions() =>
         _activePlayers.Values
-            .Where(player => player.IsClient)
+            .Where(player => player.Kind != RuntimePlayerKind.NpcServer)
             .Select(player => new ActivePlayerSession(
                 player.Id,
                 player.AccountName,
-                PlayerSessionType.Client3,
+                player.Kind switch
+                {
+                    RuntimePlayerKind.RemoteControl => PlayerSessionType.RemoteControl2,
+                    RuntimePlayerKind.NpcControl => PlayerSessionType.NpcControl,
+                    _ => PlayerSessionType.Client3
+                },
                 TimeSpan.Zero))
             .ToArray();
 
@@ -2530,7 +2743,6 @@ public sealed class LoginAuthBridge(
                     continue;
 
                 otherSession.QueuePacket(BuildRcAddPlayer(joiningSnapshot));
-                otherSession.QueuePacket(RcNcPackets.RcChat($"New RC: {joiningSnapshot.LoginPropertySource.AccountName}"));
                 var outbound = FlushOutboundBytes(otherSession);
                 if (outbound.Length != 0)
                     yield return new ClientSessionOutbound(otherId, outbound);
@@ -2559,6 +2771,74 @@ public sealed class LoginAuthBridge(
             var outbound = FlushOutboundBytes(otherSession);
             if (outbound.Length != 0)
                 yield return new ClientSessionOutbound(otherId, outbound);
+        }
+    }
+
+    private IEnumerable<ClientSessionOutbound> BuildControlLoginBroadcasts(
+        ClientSessionSkeleton joiningSession,
+        PostLoginPlayerSnapshot joiningSnapshot)
+    {
+        if (IsRemoteControl(joiningSession.Type))
+        {
+            foreach (var (playerId, session) in _activeSessions.ToArray())
+            {
+                if (!IsRemoteControl(session.Type))
+                    continue;
+
+                session.QueuePacket(RcNcPackets.RcChat($"New RC: {joiningSnapshot.LoginPropertySource.AccountName}"));
+                if (playerId == joiningSession.Id)
+                    continue;
+
+                var outbound = FlushOutboundBytes(session);
+                if (outbound.Length != 0)
+                    yield return new ClientSessionOutbound(playerId, outbound);
+            }
+
+            yield break;
+        }
+
+        if ((joiningSession.Type & PlayerSessionType.AnyNpcControl) == 0)
+            yield break;
+
+        foreach (var (otherId, otherSnapshot) in _activeSnapshots.ToArray())
+        {
+            if (otherId == joiningSession.Id || (otherSnapshot.Type & PlayerSessionType.AnyNpcControl) == 0)
+                continue;
+
+            joiningSession.QueuePacket(RcNcPackets.RcChat($"New NC: {otherSnapshot.LoginPropertySource.AccountName}"));
+        }
+
+        foreach (var (playerId, session) in _activeSessions.ToArray())
+        {
+            if (playerId == joiningSession.Id || (session.Type & PlayerSessionType.AnyNpcControl) == 0)
+                continue;
+
+            session.QueuePacket(RcNcPackets.RcChat($"New NC: {joiningSnapshot.LoginPropertySource.AccountName}"));
+            var outbound = FlushOutboundBytes(session);
+            if (outbound.Length != 0)
+                yield return new ClientSessionOutbound(playerId, outbound);
+        }
+    }
+
+    private IEnumerable<ClientSessionOutbound> EndDuplicateSessions(
+        IReadOnlyList<DuplicateSessionDisconnect> duplicates,
+        ushort joiningPlayerId)
+    {
+        foreach (var duplicate in duplicates)
+        {
+            if (duplicate.SessionId == joiningPlayerId)
+                continue;
+
+            if (_activeSessions.TryGetValue(duplicate.SessionId, out var duplicateSession))
+            {
+                duplicateSession.QueueDisconnect(duplicate.Message);
+                var outbound = FlushOutboundBytes(duplicateSession);
+                if (outbound.Length != 0)
+                    yield return new ClientSessionOutbound(duplicate.SessionId, outbound);
+            }
+
+            foreach (var broadcast in EndClientSession(duplicate.SessionId).Broadcasts)
+                yield return broadcast;
         }
     }
 

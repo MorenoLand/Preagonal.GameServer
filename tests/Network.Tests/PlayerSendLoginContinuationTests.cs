@@ -13,8 +13,8 @@ public sealed class PlayerSendLoginContinuationTests
         var session = AuthenticatedClient3Session();
         var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
         filesystem.AddExisting(
-            @"C:\GServer\accounts\pc-Ruan.txt",
-            "pc:Ruan.txt",
+            @"C:\GServer\accounts\Ruan.txt",
+            "Ruan.txt",
             string.Join(
                 "\n",
                 "GRACC001",
@@ -72,9 +72,9 @@ public sealed class PlayerSendLoginContinuationTests
         Assert.True(result.Accepted);
         Assert.True(result.AccountLoaded);
         Assert.NotNull(result.CreatedAccountSave);
-        Assert.Equal(@"accounts/pc:Ruan.txt", result.CreatedAccountSave!.AccountFileAdded);
+        Assert.Equal(@"accounts/Ruan.txt", result.CreatedAccountSave!.AccountFileAdded);
         Assert.Contains("LEVEL onlinestartlocal.nw", result.CreatedAccountSave.Contents);
-        Assert.Contains(@"accounts/pc:Ruan.txt", filesystem.AddedFiles);
+        Assert.Contains(@"accounts/Ruan.txt", filesystem.AddedFiles);
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public sealed class PlayerSendLoginContinuationTests
     }
 
     [Fact]
-    public void ActiveDuplicateClientRejectsAfterEarlyClientPackets()
+    public void DuplicateClientKicksOldSession()
     {
         var session = AuthenticatedClient3Session();
         var options = BaseOptions() with
@@ -271,12 +271,14 @@ public sealed class PlayerSendLoginContinuationTests
 
         var result = PlayerSendLoginContinuation.Begin(session, BaseAccount(), options);
 
-        Assert.False(result.Accepted);
-        Assert.Equal(SessionLifecycle.Rejected, session.Lifecycle);
+        Assert.True(result.Accepted);
+        Assert.Equal(SessionLifecycle.ReadyForWorldEntry, session.Lifecycle);
+        var duplicate = Assert.Single(result.DuplicateDisconnects);
+        Assert.Equal(12, duplicate.SessionId);
+        Assert.Equal("Someone else has logged into your account.", duplicate.Message);
         Assert.Equal(
             OutboundLoginPackets.Signature(appendNewline: true)
                 .Concat(OutboundLoginPackets.Unknown168(appendNewline: true))
-                .Concat(OutboundLoginPackets.DisconnectMessage("Account is already in use.", appendNewline: true))
                 .ToArray(),
             session.TakeOutboundBytes());
     }

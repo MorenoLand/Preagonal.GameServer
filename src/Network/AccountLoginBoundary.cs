@@ -37,7 +37,7 @@ public static class AccountLoginBoundary
             throw new InvalidOperationException("Server-list authentication must succeed before account loading.");
 
         var ignoreNickname = IsRemoteControlOrNpcControl(session.Type);
-        var accountName = session.LoginPacket.AccountName;
+        var accountName = NormalizeAccountName(session.LoginPacket.AccountName);
         var load = AccountLoadService.Load(accountName, fileSystem, settings, ignoreNickname, parserOptions);
         if (!load.Success)
         {
@@ -108,6 +108,11 @@ public static class AccountLoginBoundary
 
     private static bool IsRemoteControlOrNpcControl(Protocol.PlayerSessionType type) =>
         (type & (Protocol.PlayerSessionType.AnyRemoteControl | Protocol.PlayerSessionType.AnyNpcControl)) != 0;
+
+    private static string NormalizeAccountName(string accountName) =>
+        accountName.StartsWith("pc:", StringComparison.OrdinalIgnoreCase)
+            ? accountName[3..]
+            : accountName;
 
     private static IReadOnlyList<string> SplitAdminIps(string adminIp)
     {

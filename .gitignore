@@ -11,6 +11,9 @@ tools/dev-server-root/*.log
 server-live.*.log
 logs/
 servers/default/accounts/*.txt
+servers/default/weapons/*.txt
+servers/default/npcs/*.txt
 !servers/default/accounts/(npcserver).txt
 !servers/default/accounts/YOURACCOUNT.txt
 !servers/default/accounts/defaultaccount.txt
+!servers/default/npcs/npcControl-NPC.txt

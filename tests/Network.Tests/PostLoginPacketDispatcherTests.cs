@@ -120,7 +120,7 @@ public sealed class PostLoginPacketDispatcherTests
     }
 
     [Fact]
-    public void DispatchDecodedPacketBlocksParsedStatusBecauseDeathReviveSideEffectsAreNotPorted()
+    public void DispatchDecodedPacketAppliesStatus()
     {
         var player = new RuntimePlayer(2, "pc:Ruan", RuntimePlayerKind.Client);
         var dispatcher = new PostLoginPacketDispatcher(player);
@@ -133,10 +133,11 @@ public sealed class PostLoginPacketDispatcherTests
 
         var result = dispatcher.DispatchDecodedPacket(packet.ToArray());
 
-        Assert.Equal(PostLoginPacketDispatchStatus.Blocked, result.Status);
-        Assert.False(result.ContinueSession);
+        Assert.Equal(PostLoginPacketDispatchStatus.Handled, result.Status);
+        Assert.True(result.ContinueSession);
         Assert.Equal(560, player.PixelX);
-        Assert.Contains("PLPROP_STATUS", result.Message, StringComparison.Ordinal);
+        Assert.Equal(PlayerStatus.Male, player.Status);
+        Assert.Contains("Applied confirmed PLI_PLAYERPROPS subset.", result.Message, StringComparison.Ordinal);
         Assert.Equal(0, dispatcher.InvalidPacketCount);
     }
 
