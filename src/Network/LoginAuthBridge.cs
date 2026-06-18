@@ -57,6 +57,8 @@ public sealed class LoginAuthBridge(
     private const int AdminMessageRight = 0x00200;
     private const int ModifyStaffAccountRight = 0x04000;
     private const int WarpToPlayerRight = 0x00002;
+    private const int SetAttributesRight = 0x00040;
+    private const int SetSelfAttributesRight = 0x00080;
 
     public ClientFrameBridgeResult HandleClientFrame(
         ClientSocketSessionContext context,
@@ -243,6 +245,7 @@ public sealed class LoginAuthBridge(
 
         var decoded = decoder.DecodeSocketFrame(frame);
         var touched = new HashSet<ushort>();
+        var forceEndSessions = new HashSet<ushort>();
         var packetNames = new List<string>();
         var notes = new List<string>
         {
@@ -257,7 +260,7 @@ public sealed class LoginAuthBridge(
             var packetId = reader.ReadGChar();
             packetNames.Add(((PlayerToServerPacketId)packetId).ToString());
             if (IsRemoteControl(session.Type) &&
-                HandleRemoteControlPacket((PlayerToServerPacketId)packetId, packet.Payload.Span[1..], session, player, touched))
+                HandleRemoteControlPacket((PlayerToServerPacketId)packetId, packet.Payload.Span[1..], session, player, touched, forceEndSessions))
             {
                 continue;
             }
@@ -360,6 +363,12 @@ public sealed class LoginAuthBridge(
                 outbound.AddRange(bytes);
             else
                 broadcasts.Add(new ClientSessionOutbound(playerId, bytes));
+        }
+
+        foreach (var playerId in forceEndSessions)
+        {
+            var end = EndClientSession(playerId);
+            broadcasts.AddRange(end.Broadcasts);
         }
 
         var warning = decoded.Warnings.Count == 0 ? "" : string.Join("; ", decoded.Warnings);
@@ -529,7 +538,8 @@ public sealed class LoginAuthBridge(
         ReadOnlySpan<byte> payload,
         ClientSessionSkeleton session,
         RuntimePlayer sender,
-        ISet<ushort> touched)
+        ISet<ushort> touched,
+        ISet<ushort> forceEndSessions)
     {
         switch (packetId)
         {
@@ -581,6 +591,12 @@ public sealed class LoginAuthBridge(
             case PlayerToServerPacketId.RcPlayerPropsGetByAccount:
                 HandlePlayerPropsGetByAccount(session.Id, payload, touched);
                 return true;
+            case PlayerToServerPacketId.RcPlayerPropsSet:
+                HandlePlayerPropsSetById(session.Id, payload, touched);
+                return true;
+            case PlayerToServerPacketId.RcPlayerPropsSetById:
+                HandlePlayerPropsSetByAccount(session.Id, payload, touched);
+                return true;
             case PlayerToServerPacketId.RcPlayerRightsGet:
                 HandlePlayerRightsGet(session.Id, ReadAsciiPayload(payload), touched);
                 return true;
@@ -600,7 +616,7 @@ public sealed class LoginAuthBridge(
                 HandlePlayerBanSet(session.Id, payload, touched);
                 return true;
             case PlayerToServerPacketId.RcDisconnectPlayer:
-                HandleDisconnectPlayer(session.Id, payload, sender.AccountName, touched);
+                HandleDisconnectPlayer(session.Id, payload, sender.AccountName, touched, forceEndSessions);
                 return true;
             case PlayerToServerPacketId.RcWarpPlayer:
                 HandleWarpPlayer(session.Id, payload, touched);
@@ -835,6 +851,94 @@ public sealed class LoginAuthBridge(
         QueueSelfPacket(rcId, RcNcPackets.PlayerPropsGet(0, BuildRcPlayerProps(account)), touched);
     }
 
+    private void HandlePlayerPropsSetById(ushort rcId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (payload.Length < 2)
+            return;
+
+        var reader = new GraalBinaryReader(payload);
+        var targetId = reader.ReadGShort();
+        if (!_activePlayers.TryGetValue(targetId, out var player))
+            return;
+
+        HandlePlayerPropsSet(rcId, player.AccountName, player, reader.ReadBytes(reader.BytesLeft), touched);
+    }
+
+    private void HandlePlayerPropsSetByAccount(ushort rcId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        var reader = new GraalBinaryReader(payload);
+        var accountName = CleanAccountName(ReadGCharString(reader));
+        if (accountName.Length == 0)
+            return;
+
+        var activePlayer = _activePlayers.Values.FirstOrDefault(player =>
+            string.Equals(player.AccountName, accountName, StringComparison.OrdinalIgnoreCase));
+        HandlePlayerPropsSet(rcId, accountName, activePlayer, reader.ReadBytes(reader.BytesLeft), touched);
+    }
+
+    private void HandlePlayerPropsSet(
+        ushort rcId,
+        string accountName,
+        RuntimePlayer? activePlayer,
+        ReadOnlySpan<byte> payload,
+        ISet<ushort> touched)
+    {
+        if (!TryGetAccount(accountName, out var account))
+            return;
+
+        var editingSelf = string.Equals(GetAccountName(rcId), account.AccountName, StringComparison.OrdinalIgnoreCase);
+        if ((editingSelf && !HasRight(rcId, SetSelfAttributesRight)) ||
+            (!editingSelf && !HasRight(rcId, SetAttributesRight)))
+        {
+            QueueSelfPacket(rcId, RcNcPackets.RcChat($"Server: {GetAccountName(rcId)} is not authorized to set the properties of {account.AccountName}"), touched);
+            return;
+        }
+
+        if (!TryReadRcProps(payload, out var propPayload))
+            return;
+
+        var parsed = IncomingPlayerPropsParser.Parse(propPayload, ClientVersionId.Client21);
+        if (!parsed.Success)
+            return;
+
+        if (activePlayer is not null && runtimeServer is not null)
+        {
+            var result = LiveWorldSessionForwarder.TryApplyAndForwardConfirmedPlayerProps(
+                runtimeServer,
+                activePlayer,
+                parsed.Updates,
+                senderSupportsPreciseMovement: true,
+                BuildSinks(),
+                RuntimePlayerPropsOptions.Default with
+                {
+                    NicknamePolicy = RuntimeNicknameUpdatePolicy.WordFilterAllowedNoGuild
+                });
+
+            foreach (var delivery in result.Deliveries)
+                touched.Add(delivery.PlayerId);
+
+            CopyRuntimeToAccount(activePlayer, account);
+        }
+        else if (activePlayer is not null)
+        {
+            RuntimePlayerPropsApplier.ApplyConfirmed(
+                activePlayer,
+                parsed.Updates,
+                RuntimePlayerPropsOptions.Default with
+                {
+                    NicknamePolicy = RuntimeNicknameUpdatePolicy.WordFilterAllowedNoGuild
+                });
+            CopyRuntimeToAccount(activePlayer, account);
+        }
+        else
+        {
+            ApplyOfflineRcProps(account, parsed.Updates);
+        }
+
+        SaveAccount(account);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(rcId)} set the attributes of player {account.AccountName}"), touched);
+    }
+
     private void HandlePlayerRightsGet(ushort playerId, string accountName, ISet<ushort> touched)
     {
         if (!TryGetAccount(CleanAccountName(accountName), out var account))
@@ -938,7 +1042,12 @@ public sealed class LoginAuthBridge(
         BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(playerId)} has set the ban of {accountName}"), touched);
     }
 
-    private void HandleDisconnectPlayer(ushort rcId, ReadOnlySpan<byte> payload, string rcAccountName, ISet<ushort> touched)
+    private void HandleDisconnectPlayer(
+        ushort rcId,
+        ReadOnlySpan<byte> payload,
+        string rcAccountName,
+        ISet<ushort> touched,
+        ISet<ushort> forceEndSessions)
     {
         if (!HasRight(rcId, DisconnectRight))
         {
@@ -953,6 +1062,7 @@ public sealed class LoginAuthBridge(
         message += reason.Length == 0 ? "." : $" for the following reason: {reason}";
         QueueSelfPacket(targetId, OutboundLoginPackets.DisconnectMessage(message, appendNewline: true), touched);
         BroadcastToRemoteControls(RcNcPackets.RcChat($"{rcAccountName} disconnected {GetAccountName(targetId)}"), touched);
+        forceEndSessions.Add(targetId);
     }
 
     private void HandleWarpPlayer(ushort rcId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
@@ -1143,6 +1253,36 @@ public sealed class LoginAuthBridge(
             _activeAccounts[active.Key] = account;
     }
 
+    private static bool TryReadRcProps(ReadOnlySpan<byte> payload, out byte[] props)
+    {
+        props = [];
+        if (payload.Length < 2)
+            return false;
+
+        var reader = new GraalBinaryReader(payload);
+        _ = ReadGCharString(reader);
+        if (reader.BytesLeft <= 0)
+            return false;
+
+        var propLength = reader.ReadGChar();
+        if (propLength > reader.BytesLeft)
+            return false;
+
+        props = reader.ReadBytes(propLength);
+        return true;
+    }
+
+    private static void ApplyOfflineRcProps(
+        AccountFileData account,
+        IReadOnlyList<IncomingPlayerPropertyUpdate> updates)
+    {
+        foreach (var update in updates)
+        {
+            if (update.PropertyId == PlayerPropertyId.Nickname && update.StringValue is { } nickname)
+                account.Nickname = string.IsNullOrWhiteSpace(nickname) ? "unknown" : nickname;
+        }
+    }
+
     private byte[] BuildFileBrowserDir(AccountFileData account, string folder)
     {
         var normalized = NormalizeFolder(folder);
@@ -1197,6 +1337,7 @@ public sealed class LoginAuthBridge(
         var path = root is null ? "" : Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
         if (!File.Exists(path))
         {
+            Console.WriteLine($"RC file download failed: missing path={path}; relative={relativePath}; player={playerId}");
             QueueSelfPacket(playerId, FileTransferPackets.FileSendFailed(safeFileName), touched);
             return;
         }
@@ -1204,6 +1345,7 @@ public sealed class LoginAuthBridge(
         var data = File.ReadAllBytes(path);
         if (data.Length == 0)
         {
+            Console.WriteLine($"RC file download failed: empty path={path}; relative={relativePath}; player={playerId}");
             QueueSelfPacket(playerId, FileTransferPackets.FileSendFailed(safeFileName), touched);
             return;
         }

@@ -430,10 +430,42 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
-    public void RcDisconnectPlayerSendsCppDisconnectMessage()
+    public void RcPlayerPropsSetSavesNickname()
     {
         using var serverRoot = TestDefaultServerRoot();
         var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        var login = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var clientQueue = new GraalFileQueue();
+        clientQueue.SetCodec(EncryptionGeneration.Gen5, 42);
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcSetPlayerPropsPacket("YOURACCOUNT", "NewNick")));
+
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"));
+        Assert.Contains("NICK NewNick", saved);
+        Assert.True(IndexOf(DecodeLastSocketPayload(42, login.OutboundBytes, result.OutboundBytes), RcNcPackets.RcChat("YOURACCOUNT set the attributes of player YOURACCOUNT")) >= 0);
+    }
+
+    [Fact]
+    public void RcDisconnectPlayerSendsCppDisconnectMessage()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            new RuntimeServer());
         _ = LoginRc(bridge, "YOURACCOUNT", 7, 42);
         var clientLogin = LoginClient(bridge, "Ruan", 8, 43);
 
@@ -447,6 +479,7 @@ public sealed class LoginAuthBridgeTests
             OutboundLoginPackets.DisconnectMessage(
                 "One of the server administrators, YOURACCOUNT, has disconnected you for the following reason: testing",
                 appendNewline: true)) >= 0);
+        Assert.Equal(ServerListAuthPackets.PlayerRemove(8), Assert.Single(gateway.SentPlayerRemoves));
     }
 
 
@@ -1314,6 +1347,29 @@ public sealed class LoginAuthBridgeTests
         packet.WriteGChar((byte)PlayerToServerPacketId.RcDisconnectPlayer);
         packet.WriteGShort(playerId);
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(reason));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] RcSetPlayerPropsPacket(string accountName, string nickname)
+    {
+        var props = new GraalBinaryWriter();
+        props.WriteGChar((byte)PlayerPropertyId.Nickname);
+        props.WriteGChar((byte)nickname.Length);
+        props.WriteBytes(System.Text.Encoding.ASCII.GetBytes(nickname));
+        var propBytes = props.ToArray();
+
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.RcPlayerPropsSetById);
+        packet.WriteGChar((byte)accountName.Length);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(accountName));
+        packet.WriteGChar(4);
+        packet.WriteBytes("main"u8);
+        packet.WriteGChar((byte)propBytes.Length);
+        packet.WriteBytes(propBytes);
+        packet.WriteGShort(0);
+        packet.WriteGShort(0);
+        packet.WriteGChar(0);
         packet.WriteByte((byte)'\n');
         return packet.ToArray();
     }
