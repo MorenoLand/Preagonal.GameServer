@@ -49,7 +49,13 @@ public sealed class LoginAuthBridge(
     private readonly Dictionary<string, RuntimeLevel> _levels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ushort, string> _loginFrameDebug = [];
     private readonly Random _rng = new();
+    private const int DisconnectRight = 0x00010;
+    private const int SetRightsRight = 0x00400;
+    private const int BanRight = 0x00800;
+    private const int SetCommentsRight = 0x01000;
     private const int AdminMessageRight = 0x00200;
+    private const int ModifyStaffAccountRight = 0x04000;
+    private const int WarpToPlayerRight = 0x00002;
 
     public ClientFrameBridgeResult HandleClientFrame(
         ClientSocketSessionContext context,
@@ -556,8 +562,17 @@ public sealed class LoginAuthBridge(
             case PlayerToServerPacketId.RcAccountListGet:
                 HandleAccountListGet(session.Id, payload, touched);
                 return true;
+            case PlayerToServerPacketId.RcAccountAdd:
+                HandleAccountAdd(session.Id, payload, touched);
+                return true;
+            case PlayerToServerPacketId.RcAccountDelete:
+                HandleAccountDelete(session.Id, ReadAsciiPayload(payload), touched);
+                return true;
             case PlayerToServerPacketId.RcAccountGet:
                 HandleAccountGet(session.Id, ReadAsciiPayload(payload), touched);
+                return true;
+            case PlayerToServerPacketId.RcAccountSet:
+                HandleAccountSet(session.Id, payload, touched);
                 return true;
             case PlayerToServerPacketId.RcPlayerPropsGetById:
                 HandlePlayerPropsGetById(session.Id, payload, touched);
@@ -568,11 +583,26 @@ public sealed class LoginAuthBridge(
             case PlayerToServerPacketId.RcPlayerRightsGet:
                 HandlePlayerRightsGet(session.Id, ReadAsciiPayload(payload), touched);
                 return true;
+            case PlayerToServerPacketId.RcPlayerRightsSet:
+                HandlePlayerRightsSet(session.Id, payload, touched);
+                return true;
             case PlayerToServerPacketId.RcPlayerCommentsGet:
                 HandlePlayerCommentsGet(session.Id, ReadAsciiPayload(payload), touched);
                 return true;
+            case PlayerToServerPacketId.RcPlayerCommentsSet:
+                HandlePlayerCommentsSet(session.Id, payload, touched);
+                return true;
             case PlayerToServerPacketId.RcPlayerBanGet:
                 HandlePlayerBanGet(session.Id, ReadAsciiPayload(payload), touched);
+                return true;
+            case PlayerToServerPacketId.RcPlayerBanSet:
+                HandlePlayerBanSet(session.Id, payload, touched);
+                return true;
+            case PlayerToServerPacketId.RcDisconnectPlayer:
+                HandleDisconnectPlayer(session.Id, payload, sender.AccountName, touched);
+                return true;
+            case PlayerToServerPacketId.RcWarpPlayer:
+                HandleWarpPlayer(session.Id, payload, touched);
                 return true;
             case PlayerToServerPacketId.RcListRemoteControls:
                 foreach (var snapshot in _activeSnapshots.Values.Where(snapshot => IsRemoteControl(snapshot.Type)))
@@ -613,6 +643,59 @@ public sealed class LoginAuthBridge(
         QueueSelfPacket(playerId, RcNcPackets.AccountListGet(names), touched);
     }
 
+    private void HandleAccountAdd(ushort playerId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (!HasRight(playerId, ModifyStaffAccountRight) || worldEntryOptions is null)
+        {
+            QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: You are not authorized to create new accounts."), touched);
+            return;
+        }
+
+        var reader = new GraalBinaryReader(payload);
+        var accountName = CleanAccountName(ReadGCharString(reader));
+        _ = ReadGCharString(reader);
+        var email = ReadGCharString(reader);
+        var banned = reader.ReadGChar() != 0;
+        var loadOnly = reader.ReadGChar() != 0;
+        _ = reader.ReadGChar();
+        if (accountName.Length == 0)
+            return;
+
+        var account = new AccountFileData
+        {
+            AccountName = accountName,
+            CommunityName = accountName,
+            Email = email,
+            IsBanned = banned,
+            IsLoadOnly = loadOnly
+        };
+        SaveAccount(account);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(playerId)} has created a new account: {accountName}"), touched);
+    }
+
+    private void HandleAccountDelete(ushort playerId, string accountName, ISet<ushort> touched)
+    {
+        if (!HasRight(playerId, ModifyStaffAccountRight))
+        {
+            QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: You are not authorized to delete accounts."), touched);
+            return;
+        }
+
+        var clean = CleanAccountName(accountName);
+        if (string.Equals(clean, "defaultaccount", StringComparison.OrdinalIgnoreCase))
+        {
+            QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: You are not allowed to delete the default account."), touched);
+            return;
+        }
+
+        var path = worldEntryOptions?.AccountFileSystem.FindCaseInsensitive(clean + ".txt");
+        if (path is null)
+            return;
+
+        File.Delete(path);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(playerId)} has deleted the account: {clean}"), touched);
+    }
+
     private void HandleAccountGet(ushort playerId, string accountName, ISet<ushort> touched)
     {
         if (!TryGetAccount(CleanAccountName(accountName), out var account))
@@ -628,6 +711,38 @@ public sealed class LoginAuthBridge(
                 account.BanLength,
                 account.BanReason)),
             touched);
+    }
+
+    private void HandleAccountSet(ushort playerId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (!HasRight(playerId, ModifyStaffAccountRight))
+        {
+            QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: You are not authorized to edit accounts.\n"), touched);
+            return;
+        }
+
+        var reader = new GraalBinaryReader(payload);
+        var accountName = CleanAccountName(ReadGCharString(reader));
+        _ = ReadGCharString(reader);
+        var email = ReadGCharString(reader);
+        var banned = reader.ReadGChar() != 0;
+        var loadOnly = reader.ReadGChar() != 0;
+        _ = reader.ReadGChar();
+        _ = ReadGCharString(reader);
+        var banReason = ReadAsciiPayload(reader.ReadBytes(reader.BytesLeft));
+        if (!TryGetAccount(accountName, out var account))
+            return;
+
+        account.Email = email;
+        account.IsLoadOnly = loadOnly;
+        if (HasRight(playerId, BanRight))
+        {
+            account.IsBanned = banned;
+            account.BanReason = banReason;
+        }
+
+        SaveAccount(account);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(playerId)} has modified the account: {accountName}"), touched);
     }
 
     private void HandlePlayerPropsGetById(ushort rcId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
@@ -679,6 +794,41 @@ public sealed class LoginAuthBridge(
             touched);
     }
 
+    private void HandlePlayerRightsSet(ushort playerId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (!HasRight(playerId, SetRightsRight))
+        {
+            QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: You are not authorized to set player rights."), touched);
+            return;
+        }
+
+        var reader = new GraalBinaryReader(payload);
+        var accountName = CleanAccountName(ReadGCharString(reader));
+        if (!TryGetAccount(accountName, out var account))
+            return;
+
+        var rights = unchecked((int)reader.ReadGInt5());
+        if (!HasRight(playerId, ModifyStaffAccountRight) && _activeAccounts.TryGetValue(playerId, out var rcAccount))
+            rights &= rcAccount.AdminRights;
+
+        account.AdminRights = rights;
+        account.AdminIp = ReadGCharString(reader);
+        var folderLength = reader.ReadGShort();
+        var folderText = GUntokenize(System.Text.Encoding.ASCII.GetString(reader.ReadBytes(folderLength)));
+        account.FolderRights.Clear();
+        foreach (var folder in folderText.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (folder.Contains(':', StringComparison.Ordinal) ||
+                folder.Contains("..", StringComparison.Ordinal) ||
+                folder.Contains(" /*", StringComparison.Ordinal))
+                continue;
+            account.FolderRights.Add(folder);
+        }
+
+        SaveAccount(account);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(playerId)} has set the rights of {accountName}"), touched);
+    }
+
     private void HandlePlayerCommentsGet(ushort playerId, string accountName, ISet<ushort> touched)
     {
         if (!TryGetAccount(CleanAccountName(accountName), out var account))
@@ -687,12 +837,93 @@ public sealed class LoginAuthBridge(
         QueueSelfPacket(playerId, RcNcPackets.PlayerCommentsGet(account.AccountName, account.Comments), touched);
     }
 
+    private void HandlePlayerCommentsSet(ushort playerId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (!HasRight(playerId, SetCommentsRight))
+        {
+            QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: You are not authorized to set player comments."), touched);
+            return;
+        }
+
+        var reader = new GraalBinaryReader(payload);
+        var accountName = CleanAccountName(ReadGCharString(reader));
+        if (!TryGetAccount(accountName, out var account))
+            return;
+
+        account.Comments = ReadAsciiPayload(reader.ReadBytes(reader.BytesLeft));
+        SaveAccount(account);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(playerId)} has set the comments of {accountName}"), touched);
+    }
+
     private void HandlePlayerBanGet(ushort playerId, string accountName, ISet<ushort> touched)
     {
         if (!TryGetAccount(CleanAccountName(accountName), out var account))
             return;
 
         QueueSelfPacket(playerId, RcNcPackets.PlayerBanGet(account.AccountName, account.IsBanned, account.BanReason), touched);
+    }
+
+    private void HandlePlayerBanSet(ushort playerId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (!HasRight(playerId, BanRight))
+        {
+            QueueSelfPacket(playerId, RcNcPackets.RcChat("Server: You are not authorized to set player bans."), touched);
+            return;
+        }
+
+        var reader = new GraalBinaryReader(payload);
+        var accountName = CleanAccountName(ReadGCharString(reader));
+        if (!TryGetAccount(accountName, out var account))
+            return;
+
+        account.IsBanned = reader.ReadGChar() != 0;
+        account.BanReason = ReadAsciiPayload(reader.ReadBytes(reader.BytesLeft));
+        SaveAccount(account);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{GetAccountName(playerId)} has set the ban of {accountName}"), touched);
+    }
+
+    private void HandleDisconnectPlayer(ushort rcId, ReadOnlySpan<byte> payload, string rcAccountName, ISet<ushort> touched)
+    {
+        if (!HasRight(rcId, DisconnectRight))
+        {
+            QueueSelfPacket(rcId, RcNcPackets.RcChat("Server: You are not authorized to disconnect players."), touched);
+            return;
+        }
+
+        var reader = new GraalBinaryReader(payload);
+        var targetId = reader.ReadGShort();
+        var reason = ReadAsciiPayload(reader.ReadBytes(reader.BytesLeft));
+        var message = $"One of the server administrators, {rcAccountName}, has disconnected you";
+        message += reason.Length == 0 ? "." : $" for the following reason: {reason}";
+        QueueSelfPacket(targetId, OutboundLoginPackets.DisconnectMessage(message, appendNewline: true), touched);
+        BroadcastToRemoteControls(RcNcPackets.RcChat($"{rcAccountName} disconnected {GetAccountName(targetId)}"), touched);
+    }
+
+    private void HandleWarpPlayer(ushort rcId, ReadOnlySpan<byte> payload, ISet<ushort> touched)
+    {
+        if (!HasRight(rcId, WarpToPlayerRight))
+        {
+            QueueSelfPacket(rcId, RcNcPackets.RcChat("Server: You are not authorized to warp players.\n"), touched);
+            return;
+        }
+
+        var reader = new GraalBinaryReader(payload);
+        var targetId = reader.ReadGShort();
+        var x = reader.ReadGChar() / 2.0f;
+        var y = reader.ReadGChar() / 2.0f;
+        var level = ReadAsciiPayload(reader.ReadBytes(reader.BytesLeft));
+        if (!_activePlayers.TryGetValue(targetId, out var player))
+            return;
+
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            [
+                IncomingPlayerPropertyUpdate.String(PlayerPropertyId.CurrentLevel, level),
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.X, (byte)(x * 2)),
+                IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.Y, (byte)(y * 2))
+            ]);
+        player.JoinLevel(GetOrCreateLevel(level));
+        QueueSelfPacket(targetId, AppendNewline(WarpPackets.BuildPlayerWarp(x, y, level)), touched);
     }
 
     private void HandlePrivateAdminMessage(
@@ -845,6 +1076,17 @@ public sealed class LoginAuthBridge(
         return root is null ? null : Path.Combine(root, "accounts");
     }
 
+    private void SaveAccount(AccountFileData account)
+    {
+        if (worldEntryOptions is null)
+            return;
+
+        AccountSaveService.Save(account, worldEntryOptions.AccountFileSystem);
+        foreach (var active in _activeAccounts.Where(entry =>
+                     string.Equals(entry.Value.AccountName, account.AccountName, StringComparison.OrdinalIgnoreCase)).ToArray())
+            _activeAccounts[active.Key] = account;
+    }
+
     private byte[] BuildFileBrowserDir(AccountFileData account, string folder)
     {
         var normalized = NormalizeFolder(folder);
@@ -909,6 +1151,13 @@ public sealed class LoginAuthBridge(
     private static string ReadAsciiPayload(ReadOnlySpan<byte> payload) =>
         System.Text.Encoding.ASCII.GetString(payload).TrimEnd('\r', '\n');
 
+    private string GetAccountName(ushort playerId) =>
+        _activeAccounts.TryGetValue(playerId, out var account)
+            ? account.AccountName
+            : _activePlayers.TryGetValue(playerId, out var player)
+                ? player.AccountName
+                : playerId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     private static string ReadGCharString(GraalBinaryReader reader)
     {
         var length = reader.ReadGChar();
@@ -962,6 +1211,61 @@ public sealed class LoginAuthBridge(
             p++;
         return p == pattern.Length;
     }
+
+    private static string GUntokenize(string value)
+    {
+        var lines = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var quoted = false;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var ch = value[i];
+            if (quoted)
+            {
+                if (ch == '"')
+                {
+                    if (i + 1 < value.Length && value[i + 1] == '"')
+                    {
+                        current.Append('"');
+                        i++;
+                    }
+                    else
+                    {
+                        quoted = false;
+                    }
+                }
+                else if (ch == '\\' && i + 1 < value.Length)
+                {
+                    current.Append(value[++i]);
+                }
+                else
+                {
+                    current.Append(ch);
+                }
+            }
+            else if (ch == '"')
+            {
+                quoted = true;
+            }
+            else if (ch == ',')
+            {
+                lines.Add(current.ToString());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(ch);
+            }
+        }
+
+        lines.Add(current.ToString());
+        return string.Join('\n', lines);
+    }
+
+    private static byte[] AppendNewline(byte[] packet) =>
+        packet.Length > 0 && packet[^1] == (byte)'\n'
+            ? packet
+            : [.. packet, (byte)'\n'];
 
     private static string NormalizeFolder(string folder)
     {

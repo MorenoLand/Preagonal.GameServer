@@ -332,6 +332,52 @@ public sealed class LoginAuthBridgeTests
         Assert.True(IndexOf(decoded, RcPlayerPropsPrefix(0, "OTHERACCOUNT")) >= 0);
     }
 
+    [Fact]
+    public void RcWriteButtonsPersistAccountChanges()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.Copy(
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"),
+            Path.Combine(serverRoot.Path, "accounts", "OTHERACCOUNT.txt"),
+            overwrite: true);
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        _ = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var clientQueue = new GraalFileQueue();
+        clientQueue.SetCodec(EncryptionGeneration.Gen5, 42);
+
+        _ = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcSetCommentsPacket("OTHERACCOUNT", "note")));
+        _ = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, RcSetBanPacket("OTHERACCOUNT", true, "reason")));
+
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "OTHERACCOUNT.txt"));
+        Assert.Contains("COMMENTS note", saved);
+        Assert.Contains("BANNED 1", saved);
+        Assert.Contains("BANREASON reason", saved);
+    }
+
+    [Fact]
+    public void RcDisconnectPlayerSendsCppDisconnectMessage()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        _ = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var clientLogin = LoginClient(bridge, "Ruan", 8, 43);
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(RcDisconnectPacket(8, "testing"), 42));
+
+        var clientBroadcast = result.Broadcasts.Single(outbound => outbound.PlayerId == 8);
+        Assert.True(IndexOf(
+            DecodeLastSocketPayload(43, clientLogin.OutboundBytes, clientBroadcast.OutboundBytes),
+            OutboundLoginPackets.DisconnectMessage(
+                "One of the server administrators, YOURACCOUNT, has disconnected you for the following reason: testing",
+                appendNewline: true)) >= 0);
+    }
+
 
     [Fact]
     public void SecondClientLoginExchangesPlayerPropsWithFirstClient()
@@ -1161,6 +1207,39 @@ public sealed class LoginAuthBridgeTests
             packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(value));
         }
 
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] RcSetCommentsPacket(string accountName, string comments)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.RcPlayerCommentsSet);
+        packet.WriteGChar((byte)accountName.Length);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(accountName));
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(comments));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] RcSetBanPacket(string accountName, bool banned, string reason)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.RcPlayerBanSet);
+        packet.WriteGChar((byte)accountName.Length);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(accountName));
+        packet.WriteGChar((byte)(banned ? 1 : 0));
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(reason));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] RcDisconnectPacket(ushort playerId, string reason)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.RcDisconnectPlayer);
+        packet.WriteGShort(playerId);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(reason));
         packet.WriteByte((byte)'\n');
         return packet.ToArray();
     }
