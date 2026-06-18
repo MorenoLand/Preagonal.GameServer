@@ -387,6 +387,28 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void BadGs2KeepsSavedWeapon()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var weaponPath = Path.Combine(serverRoot.Path, "weapons", "weapon-gr_movement.txt");
+        var original = "GRAWP001\nREALNAME -gr_movement\nIMAGE wbomb1.png\nSCRIPT\n//#CLIENTSIDE\n//#GS2\nfunction onCreated() {\n  player.chat = \"ok\";\n}\nSCRIPTEND\n";
+        File.WriteAllText(weaponPath, original);
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        _ = LoginNc(bridge, "YOURACCOUNT", 7);
+        var clientQueue = Gen3Queue();
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, NcWeaponAddPacket("-gr_movement", "wbomb1.png", "//#CLIENTSIDE\n//#GS2\nfunction onCreated() {\n  player.chat = application::version SPC graalversion \n}")));
+
+        var decoded = DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, result.OutboundBytes);
+        Assert.Empty(result.Broadcasts);
+        Assert.Equal(original, File.ReadAllText(weaponPath).Replace("\r", "", StringComparison.Ordinal));
+        Assert.True(IndexOf(decoded, RcNcPackets.RcChat("Script compiler output for Weapon -gr_movement:")) >= 0);
+        Assert.Contains("error:", System.Text.Encoding.Latin1.GetString(decoded));
+    }
+
+    [Fact]
     public void NcReportsClientGs2Errors()
     {
         using var serverRoot = TestDefaultServerRoot();
@@ -494,6 +516,38 @@ public sealed class LoginAuthBridgeTests
         var decoded = DecodeSocketPayload(rcLogin.OutboundBytes, 42);
 
         Assert.True(IndexOf(decoded, RcAddPlayerPrefix(8, "Ruan")) >= 0);
+    }
+
+    [Fact]
+    public void RcPlayerRowsUseDisplayNicknames()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.WriteAllText(
+            Path.Combine(serverRoot.Path, "accounts", "moondeath.txt"),
+            "GRACC001\nNAME moondeath\nNICK moondeath\nCOMMUNITYNAME moondeath\nLEVEL onlinestartlocal.nw\nX 30\nY 30.5\nIPRANGE *.*.*.*\n");
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        _ = LoginClient(bridge, "moondeath", 8, 43);
+
+        var rcLogin = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var decoded = DecodeSocketPayload(rcLogin.OutboundBytes, 42);
+
+        Assert.True(IndexOf(decoded, RcNcPackets.AddPlayer(8, "moondeath", "onlinestartlocal.nw", 0, "*moondeath", "moondeath")) >= 0);
+    }
+
+    [Fact]
+    public void RcLoginUsesSavedNickname()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.WriteAllText(
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"),
+            File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"))
+                .Replace("NICK unknown", "NICK Not Denveous", StringComparison.Ordinal));
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+
+        var rcLogin = LoginRc(bridge, "YOURACCOUNT", 7, 42);
+        var decoded = DecodeSocketPayload(rcLogin.OutboundBytes, 42);
+
+        Assert.True(IndexOf(decoded, RcNcPackets.AddPlayer(7, "YOURACCOUNT", " ", 0, "Not Denveous", "YOURACCOUNT")) >= 0);
     }
 
     [Fact]
@@ -879,6 +933,24 @@ public sealed class LoginAuthBridgeTests
         Assert.Equal(
             ExpectedPrivateMessage(7, "\"Mass message:\",", "\"yo\""),
             DecodeLastSocketPayload(43, secondLogin.OutboundBytes, broadcast.OutboundBytes));
+    }
+
+    [Fact]
+    public void PrivateMessageToNpcServerGetsDefaultReply()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.WriteAllText(Path.Combine(serverRoot.Path, "config", "npcserver.txt"), "enabled = true\nid = 44\nhost = 127.0.0.1\nport = 14950\n");
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        var login = LoginClient(bridge, "YOURACCOUNT", 7, 42);
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(PrivateMessagePacket([44], "\"hello\""), 42));
+
+        Assert.Empty(result.Broadcasts);
+        Assert.Equal(
+            ExpectedNpcServerPrivateMessage(44),
+            DecodeLastSocketPayload(42, login.OutboundBytes, result.OutboundBytes));
     }
 
     [Fact]
@@ -1736,6 +1808,17 @@ public sealed class LoginAuthBridgeTests
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes("\"\","));
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(label));
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(message));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] ExpectedNpcServerPrivateMessage(ushort npcServerId)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)ServerToPlayerPacketId.PrivateMessage);
+        packet.WriteGShort(npcServerId);
+        packet.WriteBytes("\"\","u8);
+        packet.WriteBytes("\"I am the npcserver for\",\"this game server. Almost\",\"all npc actions are controlled\",\"by me.\""u8);
         packet.WriteByte((byte)'\n');
         return packet.ToArray();
     }

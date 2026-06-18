@@ -36,9 +36,8 @@ public static class AccountLoginBoundary
         if (session.Lifecycle != SessionLifecycle.ServerListAuthAcceptedPreWorld)
             throw new InvalidOperationException("Server-list authentication must succeed before account loading.");
 
-        var ignoreNickname = IsRemoteControlOrNpcControl(session.Type);
         var accountName = NormalizeAccountName(session.LoginPacket.AccountName);
-        var load = AccountLoadService.Load(accountName, fileSystem, settings, ignoreNickname, parserOptions);
+        var load = AccountLoadService.Load(accountName, fileSystem, settings, ignoreNickname: false, parserOptions);
         if (!load.Success)
         {
             session.QueueDisconnect("Unable to load account.");
@@ -105,9 +104,6 @@ public static class AccountLoginBoundary
             adminIps,
             isGuest);
     }
-
-    private static bool IsRemoteControlOrNpcControl(Protocol.PlayerSessionType type) =>
-        (type & (Protocol.PlayerSessionType.AnyRemoteControl | Protocol.PlayerSessionType.AnyNpcControl)) != 0;
 
     private static string NormalizeAccountName(string accountName) =>
         accountName.StartsWith("pc:", StringComparison.OrdinalIgnoreCase)

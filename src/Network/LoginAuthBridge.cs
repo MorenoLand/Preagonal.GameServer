@@ -541,7 +541,11 @@ public sealed class LoginAuthBridge(
                 continue;
 
             if (!_activeSessions.ContainsKey(targetId))
+            {
+                if (IsNpcServerTarget(targetId))
+                    QueueSelfPacket(sender.Id, BuildNpcServerPrivateMessagePacket(targetId), touched);
                 continue;
+            }
 
             QueueSelfPacket(targetId, packet, touched);
         }
@@ -1021,6 +1025,7 @@ public sealed class LoginAuthBridge(
         var inBlockComment = false;
         var line = 1;
 
+        var lineStart = 0;
         for (var i = 0; i < source.Length; i++)
         {
             var ch = source[i];
@@ -1034,6 +1039,10 @@ public sealed class LoginAuthBridge(
                 }
 
                 inLineComment = false;
+                if (!ValidateGs2StatementLine(source[lineStart..i], line, out error))
+                    return false;
+
+                lineStart = i + 1;
                 line++;
                 continue;
             }
@@ -1102,9 +1111,78 @@ public sealed class LoginAuthBridge(
             return false;
         }
 
+        return ValidateGs2StatementLine(source[lineStart..], line, out error);
+    }
+
+    private static bool ValidateGs2StatementLine(string lineText, int line, out string error)
+    {
+        var trimmed = StripGs2LineComment(lineText).Trim();
+        if (trimmed.Length == 0 ||
+            trimmed.StartsWith("//#", StringComparison.Ordinal) ||
+            trimmed.StartsWith("function ", StringComparison.Ordinal) ||
+            trimmed.StartsWith("if ", StringComparison.Ordinal) ||
+            trimmed.StartsWith("else", StringComparison.Ordinal) ||
+            trimmed.StartsWith("for ", StringComparison.Ordinal) ||
+            trimmed.StartsWith("while ", StringComparison.Ordinal) ||
+            trimmed.StartsWith("switch ", StringComparison.Ordinal) ||
+            trimmed is "{" or "}")
+        {
+            error = "";
+            return true;
+        }
+
+        if (trimmed.EndsWith(';') ||
+            trimmed.EndsWith('{') ||
+            trimmed.EndsWith('}') ||
+            trimmed.EndsWith(':'))
+        {
+            error = "";
+            return true;
+        }
+
+        if (LooksLikeGs2Statement(trimmed))
+        {
+            error = $"line {line}: expected ';' before end of line";
+            return false;
+        }
+
         error = "";
         return true;
     }
+
+    private static string StripGs2LineComment(string lineText)
+    {
+        var inString = false;
+        var escaping = false;
+        for (var i = 0; i < lineText.Length - 1; i++)
+        {
+            var ch = lineText[i];
+            if (escaping)
+            {
+                escaping = false;
+                continue;
+            }
+
+            if (ch == '\\')
+            {
+                escaping = true;
+                continue;
+            }
+
+            if (ch == '"')
+                inString = !inString;
+
+            if (!inString && ch == '/' && lineText[i + 1] == '/')
+                return lineText[..i];
+        }
+
+        return lineText;
+    }
+
+    private static bool LooksLikeGs2Statement(string trimmed) =>
+        trimmed.Contains('=', StringComparison.Ordinal) ||
+        trimmed.StartsWith("return ", StringComparison.Ordinal) ||
+        trimmed.Contains("(", StringComparison.Ordinal);
 
     private static string NormalizeCompilerOutputLine(string line)
     {
@@ -1784,7 +1862,7 @@ public sealed class LoginAuthBridge(
             accountName,
             worldEntryOptions.AccountFileSystem,
             worldEntryOptions.AccountSettings,
-            ignoreNickname: IsRemoteControl(PlayerSessionType.RemoteControl2));
+            ignoreNickname: false);
         if (!load.Success || load.Account is null)
             return false;
 
@@ -2726,12 +2804,27 @@ public sealed class LoginAuthBridge(
         return writer.ToArray();
     }
 
+    private bool IsNpcServerTarget(ushort targetId) =>
+        LoadNpcServerEndpoint()?.Id == targetId;
+
+    private static byte[] BuildNpcServerPrivateMessagePacket(ushort npcServerId)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToPlayerPacketId.PrivateMessage);
+        writer.WriteGShort(npcServerId);
+        writer.WriteBytes("\"\","u8);
+        writer.WriteBytes("\"I am the npcserver for\",\"this game server. Almost\",\"all npc actions are controlled\",\"by me.\""u8);
+        writer.WriteByte((byte)'\n');
+        return writer.ToArray();
+    }
+
     private IEnumerable<ClientSessionOutbound> ExchangeLoginPlayerProps(
         ClientSessionSkeleton joiningSession,
         PostLoginPlayerSnapshot joiningSnapshot)
     {
         if (IsRemoteControl(joiningSession.Type))
         {
+            joiningSession.QueuePacket(BuildRcAddPlayer(joiningSnapshot));
             foreach (var (otherId, otherSnapshot) in _activeSnapshots.ToArray())
             {
                 if (otherId == joiningSession.Id || otherSnapshot.Type == PlayerSessionType.NpcControl)

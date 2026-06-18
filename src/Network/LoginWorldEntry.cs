@@ -43,9 +43,6 @@ public static class LoginWorldEntry
                 CurrentLevelProperty = GCharString(" "),
                 LoginPropertySource = snapshot.LoginPropertySource with
                 {
-                    Nickname = string.IsNullOrEmpty(snapshot.LoginPropertySource.Nickname)
-                        ? "*" + snapshot.LoginPropertySource.AccountName
-                        : snapshot.LoginPropertySource.Nickname,
                     CurrentLevel = " ",
                     HeadImage = options.AccountSettings.GetString("staffhead", "head25.png"),
                     X = 0,
@@ -184,7 +181,7 @@ public static class LoginWorldEntry
 
     private static PlayerPropertySource BuildPropertySource(ClientSessionSkeleton session, AccountFileData account, string remoteIp) =>
         new(
-            Nickname: account.Nickname,
+            Nickname: DisplayNickname(account.AccountName, account.Nickname),
             MaxPower: account.MaxHitpoints,
             Hitpoints: account.Hitpoints,
             Rupees: account.Rupees,
@@ -308,6 +305,22 @@ public static class LoginWorldEntry
 
     private static bool IsControl(PlayerSessionType type) =>
         (type & PlayerSessionType.AnyControl) != 0;
+
+    private static string DisplayNickname(string accountName, string nickname)
+    {
+        var nick = nickname.Trim();
+        while (nick.StartsWith('*'))
+            nick = nick[1..];
+
+        if (nick.Length == 0 ||
+            nick.Equals("default", StringComparison.OrdinalIgnoreCase) ||
+            nick.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+            nick = accountName;
+
+        return nick.Equals(accountName, StringComparison.OrdinalIgnoreCase)
+            ? "*" + accountName
+            : nick;
+    }
 
     private static byte[] GCharString(string value)
     {
