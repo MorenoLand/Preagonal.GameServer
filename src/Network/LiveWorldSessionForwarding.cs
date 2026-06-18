@@ -111,31 +111,11 @@ public static class LiveWorldSessionForwarder
             selfDeliveries.AddRange(BuildAndDeliverSelfPlayerPropPackets(server, sender, update, sinks));
         }
 
-        var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
-            sender.Id,
-            sender.PixelX,
-            sender.PixelY,
-            sender.PixelZ,
+        var levelDeliveries = BuildAndDeliverLevelPlayerProps(
+            server,
+            sender,
             updateArray,
-            senderSupportsPreciseMovement,
-            appendNewline: true,
-            state: new IncomingPlayerPropsForwardingState(
-                (byte)(sender.Hitpoints * 2.0f),
-                CurrentLevelName: BuildCurrentLevelPropValue(sender),
-                AccountName: sender.AccountName,
-                AccountIp: sender.AccountIp,
-                CommunityName: sender.CommunityName,
-                EloRating: sender.EloRating,
-                EloDeviation: sender.EloDeviation));
-
-        var levelDeliveries = HasPlayerPropsPayload(packet)
-            ? ForwardConfirmedLevelAreaPacket(
-                server,
-                sender,
-                packet,
-                sinks,
-                new HashSet<ushort> { sender.Id })
-            : [];
+            sinks);
 
         var deliveries = new List<LiveWorldForwardingDelivery>(directDeliveries.Count + levelDeliveries.Count + selfDeliveries.Count);
         deliveries.AddRange(directDeliveries);
@@ -143,6 +123,59 @@ public static class LiveWorldSessionForwarder
         deliveries.AddRange(selfDeliveries);
 
         return LiveWorldPlayerPropsForwardingResult.Delivered(deliveries);
+    }
+
+    private static IReadOnlyList<LiveWorldForwardingDelivery> BuildAndDeliverLevelPlayerProps(
+        RuntimeServer server,
+        RuntimePlayer sender,
+        IReadOnlyList<IncomingPlayerPropertyUpdate> updates,
+        IReadOnlyDictionary<ushort, ILiveWorldSessionSink> sinks)
+    {
+        var recipients = LiveWorldForwardingSelector.SelectLevelAreaRecipients(
+            server,
+            sender,
+            new HashSet<ushort> { sender.Id });
+        if (recipients.Count == 0)
+            return [];
+
+        var deliveries = new List<LiveWorldForwardingDelivery>();
+        var state = new IncomingPlayerPropsForwardingState(
+            (byte)(sender.Hitpoints * 2.0f),
+            CurrentLevelName: BuildCurrentLevelPropValue(sender),
+            AccountName: sender.AccountName,
+            AccountIp: sender.AccountIp,
+            CommunityName: sender.CommunityName,
+            EloRating: sender.EloRating,
+            EloDeviation: sender.EloDeviation);
+
+        foreach (var recipientId in recipients)
+        {
+            var recipient = server.GetPlayer(recipientId);
+            if (recipient is null)
+                continue;
+
+            var packet = IncomingPlayerPropsForwarding.BuildOtherPlayerPropsPacket(
+                sender.Id,
+                sender.PixelX,
+                sender.PixelY,
+                sender.PixelZ,
+                updates,
+                recipient.ClientVersion >= ClientVersionId.Client23,
+                appendNewline: true,
+                senderClientVersion: sender.ClientVersion,
+                state: state);
+
+            if (!HasPlayerPropsPayload(packet))
+                continue;
+
+            if (!sinks.TryGetValue(recipientId, out var sink))
+                continue;
+
+            sink.QueuePacket(packet);
+            deliveries.Add(new LiveWorldForwardingDelivery(recipientId, packet));
+        }
+
+        return deliveries;
     }
 
     private static IReadOnlyList<LiveWorldForwardingDelivery> BuildAndDeliverDirectPlayerPropPackets(

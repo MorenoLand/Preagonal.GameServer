@@ -3,6 +3,7 @@ AGENTS.md
 docs/superpowers/
 bin/
 obj/
+artifacts/
 **/bin/
 **/obj/
 tools/**/build/

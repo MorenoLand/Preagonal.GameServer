@@ -36,7 +36,8 @@ public sealed class LiveWorldSessionForwardingTests
         var server = new RuntimeServer();
         var level = new RuntimeLevel("start.nw");
         var sender = Add(server, 7, RuntimePlayerKind.Client, level);
-        Add(server, 8, RuntimePlayerKind.Client, level);
+        var recipient = Add(server, 8, RuntimePlayerKind.Client, level);
+        recipient.ClientVersion = ClientVersionId.Client23;
         var sinks = CreateSinks(7, 8);
         var updates = new[]
         {
@@ -66,6 +67,35 @@ public sealed class LiveWorldSessionForwardingTests
                 10
             },
             sinks[8].Packets.Single());
+    }
+
+    [Fact]
+    public void MovementUsesRecipientVersion()
+    {
+        var server = new RuntimeServer();
+        var level = new RuntimeLevel("start.nw");
+        var sender = Add(server, 7, RuntimePlayerKind.Client, level);
+        sender.ClientVersion = ClientVersionId.Client6037;
+        var oldClient = Add(server, 8, RuntimePlayerKind.Client, level);
+        oldClient.ClientVersion = ClientVersionId.Client222;
+        var newClient = Add(server, 9, RuntimePlayerKind.Client, level);
+        newClient.ClientVersion = ClientVersionId.Client6037;
+        var sinks = CreateSinks(7, 8, 9);
+        var updates = new[]
+        {
+            IncomingPlayerPropertyUpdate.GShort(PlayerPropertyId.X2, 1120)
+        };
+
+        var deliveries = LiveWorldSessionForwarder.ApplyAndForwardConfirmedPlayerProps(
+            server,
+            sender,
+            updates,
+            senderSupportsPreciseMovement: true,
+            AsSinks(sinks));
+
+        Assert.Equal([8, 9], deliveries.Select(delivery => delivery.PlayerId));
+        Assert.Equal((byte)PlayerPropertyId.X2 + 32, sinks[8].Packets.Single()[3]);
+        Assert.Equal((byte)PlayerPropertyId.X + 32, sinks[9].Packets.Single()[3]);
     }
 
     [Fact]

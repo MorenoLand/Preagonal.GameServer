@@ -79,6 +79,11 @@ public static class AccountLoadService
 
         if (loadedFromDefault)
             ApplyDefaultAccountBehavior(accountName, account, settings);
+        else
+        {
+            ClearTransientStatus(account);
+            RepairDefaultWeaponStatus(account, settings);
+        }
 
         var shouldSaveCreatedAccount = loadedFromDefault && !account.IsLoadOnly;
         return new AccountLoadResult(
@@ -108,6 +113,26 @@ public static class AccountLoadService
             account.CommunityName = accountName;
     }
 
+    private static void RepairDefaultWeaponStatus(AccountFileData account, IAccountLoadSettings settings)
+    {
+        if (account.Status != 0)
+            return;
+
+        if (!GetBool(settings, "defaultweapons", defaultValue: true))
+            return;
+
+        if (account.SwordPower == 0 && account.Weapons.Count == 0)
+            return;
+
+        account.Status = 20;
+    }
+
+    private static void ClearTransientStatus(AccountFileData account)
+    {
+        const int paused = 0x01;
+        account.Status &= ~paused;
+    }
+
     private static string BuildDefaultAccountPath(string serverPath)
     {
         var trimmed = serverPath.TrimEnd('/', '\\');
@@ -123,4 +148,10 @@ public static class AccountLoadService
 
     private static bool IsGuest(string accountName) =>
         string.Equals(accountName, "guest", StringComparison.OrdinalIgnoreCase);
+
+    private static bool GetBool(IAccountLoadSettings settings, string key, bool defaultValue)
+    {
+        var value = settings.GetString(key, defaultValue ? "true" : "false");
+        return value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
+    }
 }

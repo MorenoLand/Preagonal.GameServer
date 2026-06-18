@@ -29,6 +29,21 @@ public sealed class RuntimePlayerPropsMutationTests
     }
 
     [Fact]
+    public void MovementClearsPaused()
+    {
+        var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            [IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.Status, (byte)(PlayerStatus.Paused | PlayerStatus.Male))]);
+
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            [IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.X, 70)]);
+
+        Assert.Equal(PlayerStatus.Male, player.Status);
+    }
+
+    [Fact]
     public void AppliesConfirmedPreciseMovementAndStringProps()
     {
         var player = new RuntimePlayer(7, "pc:Ruan", RuntimePlayerKind.Client);
@@ -103,6 +118,7 @@ public sealed class RuntimePlayerPropsMutationTests
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.MagicPoints, 200),
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.AdditionalFlags, 77),
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.Alignment, 120),
+            IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.Status, 33),
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.CarrySprite, 12),
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.HorseBushes, 6),
             IncomingPlayerPropertyUpdate.GChar(PlayerPropertyId.PlayerStatusMessage, 4),
@@ -122,6 +138,7 @@ public sealed class RuntimePlayerPropsMutationTests
         Assert.Equal(100, player.MagicPoints);
         Assert.Equal(77, player.AdditionalFlags);
         Assert.Equal(100, player.Alignment);
+        Assert.Equal((PlayerStatus)33, player.Status);
         Assert.Equal(12, player.CarrySprite);
         Assert.Equal(6, player.HorseBombCount);
         Assert.Equal(4, player.StatusMessage);

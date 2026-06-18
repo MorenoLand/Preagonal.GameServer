@@ -25,7 +25,8 @@ public interface IClientSocketFrameHandler
 public enum ClientTcpSessionStopReason
 {
     ClientDisconnected,
-    HandlerStopped
+    HandlerStopped,
+    Crashed
 }
 
 public sealed record ClientTcpSessionResult(
@@ -63,8 +64,9 @@ public sealed class ClientTcpServer : IDisposable
     public async Task<ClientTcpSessionResult> AcceptOneAsync(CancellationToken cancellationToken)
     {
         using var client = await _listener.AcceptTcpClientAsync(cancellationToken);
-        var playerId = _nextPlayerId++;
-        return await RunSessionAsync(client, playerId, cancellationToken);
+        var session = CreateSession(client, _nextPlayerId++);
+        _accepted?.Invoke(session);
+        return await RunSessionAsync(client, session, cancellationToken);
     }
 
     public async Task RunAsync(CancellationToken cancellationToken, Action<ClientTcpSessionResult>? onSessionEnded = null)
@@ -80,15 +82,22 @@ public sealed class ClientTcpServer : IDisposable
             {
                 return;
             }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                Console.WriteLine($"Client accept loop error: {ex.GetType().Name}: {ex.Message}");
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                continue;
+            }
 
-            var playerId = _nextPlayerId++;
-            _ = RunSessionDisposingAsync(client, playerId, cancellationToken, onSessionEnded);
+            var session = CreateSession(client, _nextPlayerId++);
+            _accepted?.Invoke(session);
+            _ = RunSessionDisposingAsync(client, session, cancellationToken, onSessionEnded);
         }
     }
 
     private async Task RunSessionDisposingAsync(
         TcpClient client,
-        ushort playerId,
+        ClientSocketSessionContext session,
         CancellationToken cancellationToken,
         Action<ClientTcpSessionResult>? onSessionEnded)
     {
@@ -96,28 +105,29 @@ public sealed class ClientTcpServer : IDisposable
         {
             try
             {
-                var result = await RunSessionAsync(client, playerId, cancellationToken);
+                var result = await RunSessionAsync(client, session, cancellationToken);
                 onSessionEnded?.Invoke(result);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Client session {playerId} crashed: {ex.GetType().Name}: {ex.Message}");
-                throw;
+                Console.WriteLine($"Client session {session.PlayerId} crashed: {ex.GetType().Name}: {ex.Message}");
+                onSessionEnded?.Invoke(new ClientTcpSessionResult(
+                    session.PlayerId,
+                    ClientTcpSessionStopReason.Crashed,
+                    $"{ex.GetType().Name}: {ex.Message}"));
             }
         }
     }
 
-    private async Task<ClientTcpSessionResult> RunSessionAsync(TcpClient client, ushort playerId, CancellationToken cancellationToken)
+    private async Task<ClientTcpSessionResult> RunSessionAsync(
+        TcpClient client,
+        ClientSocketSessionContext session,
+        CancellationToken cancellationToken)
     {
         client.NoDelay = true;
-        var remoteAddress = client.Client.RemoteEndPoint is IPEndPoint remote
-            ? remote.Address.ToString()
-            : string.Empty;
-        var session = new ClientSocketSessionContext(playerId, remoteAddress);
-        _accepted?.Invoke(session);
         var receiveBuffer = new SocketReceiveBuffer();
         await using var stream = client.GetStream();
-        _connectionRegistry?.Register(playerId, stream);
+        _connectionRegistry?.Register(session.PlayerId, stream);
         var readBuffer = new byte[0x8000];
         var lastDiagnostic = "";
         var firstReadDebug = "";
@@ -132,7 +142,7 @@ public sealed class ClientTcpServer : IDisposable
                 if (read == 0)
                 {
                     lastDiagnostic = AppendDisconnectDiagnostic(lastDiagnostic, bytesRead, framesHandled, receiveBuffer);
-                    return new ClientTcpSessionResult(playerId, ClientTcpSessionStopReason.ClientDisconnected, lastDiagnostic);
+                    return new ClientTcpSessionResult(session.PlayerId, ClientTcpSessionStopReason.ClientDisconnected, lastDiagnostic);
                 }
 
                 bytesRead += read;
@@ -153,16 +163,16 @@ public sealed class ClientTcpServer : IDisposable
                     if (!result.ContinueSession)
                     {
                         lastDiagnostic = AppendReadDebug(lastDiagnostic, firstReadDebug);
-                        return new ClientTcpSessionResult(playerId, ClientTcpSessionStopReason.HandlerStopped, lastDiagnostic);
+                        return new ClientTcpSessionResult(session.PlayerId, ClientTcpSessionStopReason.HandlerStopped, lastDiagnostic);
                     }
                 }
             }
 
-            return new ClientTcpSessionResult(playerId, ClientTcpSessionStopReason.ClientDisconnected, lastDiagnostic);
+            return new ClientTcpSessionResult(session.PlayerId, ClientTcpSessionStopReason.ClientDisconnected, lastDiagnostic);
         }
         finally
         {
-            _connectionRegistry?.Unregister(playerId);
+            _connectionRegistry?.Unregister(session.PlayerId);
         }
     }
 
@@ -170,6 +180,15 @@ public sealed class ClientTcpServer : IDisposable
 
     private static TcpListener CreateListener(IPAddress address, int port) =>
         new(address, port);
+
+    private static ClientSocketSessionContext CreateSession(TcpClient client, ushort playerId)
+    {
+        var remoteAddress = client.Client.RemoteEndPoint is IPEndPoint remote
+            ? remote.Address.ToString()
+            : string.Empty;
+
+        return new ClientSocketSessionContext(playerId, remoteAddress);
+    }
 
     private static string BuildReadDebug(ReadOnlySpan<byte> bytes)
     {

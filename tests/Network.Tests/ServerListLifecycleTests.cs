@@ -42,9 +42,9 @@ public sealed class ServerListLifecycleTests
                 "codec:Gen2:0",
                 "send:7secret\n",
                 "send:6'Classic$Desc'English*3.0.9-beta4http://example.test/$AUTO%14900(10.0.0.5\n",
-                "send:8#\n",
-                "send:?Listserver,settings,allowedversions,G3D0311C\n",
-                "send:'\n"
+                "sendNow:8#\n",
+                "sendNow:?Listserver,settings,allowedversions,G3D0311C\n",
+                "sendNow:'\n"
             ],
             socket.Events);
     }

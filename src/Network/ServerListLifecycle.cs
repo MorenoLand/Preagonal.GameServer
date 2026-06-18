@@ -70,9 +70,9 @@ public sealed class ServerListLifecycle
             options.ServerIp,
             options.ServerPort,
             localIp));
-        _socket.SendPacket(ServerListAuthPackets.ServerHqLevel(options.OnlyStaff, options.HqLevel));
-        _socket.SendPacket(ServerListAuthPackets.AllowedVersionsText(options.AllowedVersions));
-        _socket.SendPacket(ServerListAuthPackets.SetPlayers());
+        _socket.SendPacket(ServerListAuthPackets.ServerHqLevel(options.OnlyStaff, options.HqLevel), sendNow: true);
+        _socket.SendPacket(ServerListAuthPackets.AllowedVersionsText(options.AllowedVersions), sendNow: true);
+        _socket.SendPacket(ServerListAuthPackets.SetPlayers(), sendNow: true);
 
         return new ServerListConnectResult(_socket.IsConnected);
     }

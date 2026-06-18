@@ -87,22 +87,22 @@ public sealed class ServerListTcpSocket : IServerListSocket, IServerListGateway,
 
     public void SendLoginPacketForPlayer(byte[] packetBody)
     {
-        SendPacket(packetBody);
+        SendPacket(packetBody, sendNow: true);
     }
 
     public void SendPlayerAdd(byte[] packetBody)
     {
-        SendPacket(packetBody);
+        SendPacket(packetBody, sendNow: true);
     }
 
     public void SendPlayerRemove(byte[] packetBody)
     {
-        SendPacket(packetBody);
+        SendPacket(packetBody, sendNow: true);
     }
 
     public void SendServerInfoForPlayer(byte[] packetBody)
     {
-        SendPacket(packetBody);
+        SendPacket(packetBody, sendNow: true);
     }
 
     public async ValueTask<IReadOnlyList<byte[]>> ReceivePacketsAsync(CancellationToken cancellationToken)

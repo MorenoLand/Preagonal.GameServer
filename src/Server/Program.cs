@@ -68,7 +68,8 @@ if (!config.Enabled)
                 ServerName: serverListOptions.Name,
                 ActiveSessions: [],
                 StaffAccounts: staffAccounts,
-                RemoteIp: "")),
+                RemoteIp: "",
+                GuestIdentitySelector: new RandomGuestIdentitySelector(Random.Shared))),
         runtimeServer);
     var clientConnections = new TcpClientConnectionRegistry();
     runtime.LevelTimedEventsHandler = () =>

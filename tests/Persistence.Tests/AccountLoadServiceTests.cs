@@ -63,6 +63,36 @@ public sealed class AccountLoadServiceTests
     }
 
     [Fact]
+    public void LoadRepairsCorruptedDefaultWeaponStatus()
+    {
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        filesystem.AddExisting(
+            @"C:\GServer\accounts\pc-ruan.txt",
+            "pc-ruan.txt",
+            "GRACC001\nSTATUS 0\nSWORDP 1\nWEAPON bomb\nWEAPON bow");
+
+        var result = AccountLoadService.Load("pc-ruan", filesystem, AccountLoadSettings.Empty);
+
+        Assert.True(result.Success);
+        Assert.Equal(20, result.Account!.Status);
+    }
+
+    [Fact]
+    public void LoadClearsPausedStatus()
+    {
+        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        filesystem.AddExisting(
+            @"C:\GServer\accounts\pc-ruan.txt",
+            "pc-ruan.txt",
+            "GRACC001\nSTATUS 21");
+
+        var result = AccountLoadService.Load("pc-ruan", filesystem, AccountLoadSettings.Empty);
+
+        Assert.True(result.Success);
+        Assert.Equal(20, result.Account!.Status);
+    }
+
+    [Fact]
     public void LoadRejectsMissingOrMalformedResolvedFileWithoutSideEffects()
     {
         var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");

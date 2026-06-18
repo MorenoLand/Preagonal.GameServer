@@ -33,3 +33,18 @@ public sealed class CandidateGuestIdentitySelector(IEnumerable<int> candidates) 
         return "pc:" + text[..length];
     }
 }
+
+public sealed class RandomGuestIdentitySelector(Random random, int maxAttempts = 100) : IGuestIdentitySelector
+{
+    public GuestIdentitySelectionResult TrySelect(Func<string, bool> activeAccountExists)
+    {
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var accountName = "pc:" + random.Next(0, 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
+            if (!activeAccountExists(accountName))
+                return new GuestIdentitySelectionResult(true, accountName);
+        }
+
+        return GuestIdentitySelectionResult.Blocked;
+    }
+}

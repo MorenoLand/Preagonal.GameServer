@@ -10,7 +10,9 @@ public sealed class LoginSocketFrameHandler(
         CancellationToken cancellationToken)
     {
         var result = bridge.HandleClientFrame(session, frame.Span);
-        if (!string.IsNullOrEmpty(result.Diagnostic) && result.Diagnostic.StartsWith("active packets=", StringComparison.Ordinal))
+        if (!string.IsNullOrEmpty(result.Diagnostic) &&
+            (result.Diagnostic.StartsWith("active packets=", StringComparison.Ordinal) ||
+             result.Diagnostic.StartsWith("frame=", StringComparison.Ordinal)))
             Console.WriteLine($"Client session {session.PlayerId}: {result.Diagnostic}");
         if (connections is not null)
         {

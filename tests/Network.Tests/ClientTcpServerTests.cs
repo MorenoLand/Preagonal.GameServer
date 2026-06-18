@@ -84,6 +84,34 @@ public sealed class ClientTcpServerTests
     }
 
     [Fact]
+    public async Task RunAsyncLogsAcceptBeforeRead()
+    {
+        var accepted = new TaskCompletionSource<ClientSocketSessionContext>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new RecordingFrameHandler(expectedFrames: 1);
+        using var server = new ClientTcpServer(
+            IPAddress.Loopback,
+            port: 0,
+            handler,
+            accepted: session => accepted.TrySetResult(session));
+        server.Start();
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var serverStop = new CancellationTokenSource();
+        var runTask = server.RunAsync(serverStop.Token);
+
+        using var client = new TcpClient();
+        await client.ConnectAsync(IPAddress.Loopback, server.Port, timeout.Token);
+
+        var session = await accepted.Task.WaitAsync(timeout.Token);
+        Assert.Equal(2, session.PlayerId);
+        Assert.Empty(handler.Frames);
+
+        client.Close();
+        serverStop.Cancel();
+        await runTask.WaitAsync(timeout.Token);
+    }
+
+    [Fact]
     public async Task AcceptOneAsyncRegistersClientConnectionUntilSessionEnds()
     {
         var handler = new RecordingFrameHandler(expectedFrames: 1);

@@ -186,6 +186,224 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void ShowImgForwardsToLevelPeer()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(8, "127.0.0.1"), Client3LoginPacket("Z", key: 43));
+        var secondLogin = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Z", 8, PlayerSessionType.Client3, "SUCCESS"));
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(ShowImgPacket([0x21, 0x22, (byte)'i', (byte)'m', (byte)'g']), 42));
+
+        var broadcast = Assert.Single(result.Broadcasts);
+        Assert.Equal(8, broadcast.PlayerId);
+        Assert.Equal(
+            ExpectedShowImgPacket(7, [0x21, 0x22, (byte)'i', (byte)'m', (byte)'g']),
+            DecodeLastSocketPayload(43, secondLogin.OutboundBytes, broadcast.OutboundBytes));
+    }
+
+    [Fact]
+    public void PrivateMessageForwardsToTarget()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(8, "127.0.0.1"), Client3LoginPacket("Z", key: 43));
+        var secondLogin = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Z", 8, PlayerSessionType.Client3, "SUCCESS"));
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(PrivateMessagePacket([8], "\"hi\""), 42));
+
+        var broadcast = Assert.Single(result.Broadcasts);
+        Assert.Equal(8, broadcast.PlayerId);
+        Assert.Equal(
+            ExpectedPrivateMessage(7, "\"Private message:\",", "\"hi\""),
+            DecodeLastSocketPayload(43, secondLogin.OutboundBytes, broadcast.OutboundBytes));
+    }
+
+    [Fact]
+    public void MassMessageUsesMassLabel()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(8, "127.0.0.1"), Client3LoginPacket("Z", key: 43));
+        var secondLogin = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Z", 8, PlayerSessionType.Client3, "SUCCESS"));
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(PrivateMessagePacket([7, 8], "\"yo\""), 42));
+
+        var broadcast = Assert.Single(result.Broadcasts);
+        Assert.Equal(8, broadcast.PlayerId);
+        Assert.Equal(
+            ExpectedPrivateMessage(7, "\"Mass message:\",", "\"yo\""),
+            DecodeLastSocketPayload(43, secondLogin.OutboundBytes, broadcast.OutboundBytes));
+    }
+
+    [Fact]
+    public void WeaponAddSavesDefaultWeapon()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+
+        _ = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(WeaponAddPacket(LevelItemType.Bow), 42));
+        var end = bridge.EndClientSession(7);
+
+        Assert.NotNull(end.SaveResult);
+        var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt"));
+        Assert.Contains("WEAPON bow", saved);
+    }
+
+    [Fact]
+    public void NickPropKeepsSessionAlive()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(8, "127.0.0.1"), Client3LoginPacket("Z", key: 43));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Z", 8, PlayerSessionType.Client3, "SUCCESS"));
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(NicknamePacket("Ruan"), 42));
+
+        Assert.True(result.ContinueSession);
+        Assert.Contains(result.Broadcasts, broadcast => broadcast.PlayerId == 8);
+    }
+
+    [Fact]
+    public void PendingFrameKeepsCipherAligned()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            AuthOptions(),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(Path.Combine(serverRoot.Path, "config", "serveroptions.txt")),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+        var clientQueue = new GraalFileQueue();
+        clientQueue.SetCodec(EncryptionGeneration.Gen5, 42);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42));
+        _ = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, PlayerPropsPacket(PlayerPropertyId.X, 69, PlayerPropertyId.Y, 70)));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(8, "127.0.0.1"), Client3LoginPacket("Z", key: 43));
+        _ = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Z", 8, PlayerSessionType.Client3, "SUCCESS"));
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, PlayerPropsPacket(PlayerPropertyId.X, 70, PlayerPropertyId.Y, 71)));
+
+        var broadcast = Assert.Single(result.Broadcasts);
+        Assert.Equal(8, broadcast.PlayerId);
+    }
+
+    [Fact]
     public void ItemAddForwardsToLevelPeer()
     {
         using var serverRoot = TestDefaultServerRoot();
@@ -303,6 +521,46 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void BoardModifyDropsBushItemForOldClient()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var optionsPath = Path.Combine(serverRoot.Path, "config", "serveroptions.txt");
+        File.WriteAllText(
+            optionsPath,
+            File.ReadAllText(optionsPath).Replace("tiledroprate = 50", "tiledroprate = 100", StringComparison.Ordinal));
+
+        var resources = ServerResourceFileSystems.LoadFolderConfig(
+            serverRoot.Path,
+            File.ReadAllText(Path.Combine(serverRoot.Path, "config", "foldersconfig.txt")));
+        var levelLoader = new NwLevelFileLoader(resources.Get(ServerFileSystemKind.All));
+        var loaded = levelLoader.TryLoad("onlinestartlocal.nw");
+        var (tileX, tileY) = FindDropTile(loaded.Level);
+        var runtimeServer = new RuntimeServer();
+        var gateway = new RecordingGateway { IsConnected = true };
+        var bridge = new LoginAuthBridge(
+            gateway,
+            new PreWorldAuthOptions(128, 0, false, true, ["G3D03014"], "3.0.9"),
+            new LoginWorldEntryOptions(
+                new DiskAccountFileSystem(serverRoot.Path),
+                Gs2Settings.LoadFile(optionsPath),
+                levelLoader,
+                new FileLevelLookup(levelLoader),
+                new AccountLoginOptions(false, "My Server", [], ["YOURACCOUNT"], "")),
+            runtimeServer);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(7, "127.0.0.1"), Client3LoginPacket("Ruan", key: 42, versionToken: "G3D03014"));
+        var login = bridge.HandleVerifyAccount2(VerifyAccount2Payload("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS"));
+
+        var payload = BoardModifyPayload((byte)tileX, (byte)tileY, 1, 1, 0);
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(BundlePacket(BoardModifyPacket(payload)), 42));
+
+        var decoded = DecodeLastSocketPayload(42, login.OutboundBytes, result.OutboundBytes);
+        Assert.True(IndexOf(decoded, [WrappedGChar((byte)ServerToPlayerPacketId.ItemAdd), WrappedGChar((byte)(tileX * 2)), WrappedGChar((byte)(tileY * 2))]) >= 0);
+    }
+
+    [Fact]
     public void ServerWarpRequestsListserver()
     {
         using var serverRoot = TestDefaultServerRoot();
@@ -402,6 +660,7 @@ public sealed class LoginAuthBridgeTests
         var saved = File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "pc_Ruan.txt"));
         Assert.Contains("\r\nX 35\r\n", saved, StringComparison.Ordinal);
         Assert.Contains("\r\nY 35.5\r\n", saved, StringComparison.Ordinal);
+        Assert.Contains("\r\nSTATUS 20\r\n", saved, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -446,12 +705,12 @@ public sealed class LoginAuthBridgeTests
             AllowedVersions: ["G3D0311C"],
             AllowedVersionText: "6.037");
 
-    private static byte[] Client3LoginPacket(string account = "Ruan", byte key = 42)
+    private static byte[] Client3LoginPacket(string account = "Ruan", byte key = 42, string versionToken = "G3D0311C")
     {
         var packet = new GraalBinaryWriter();
         packet.WriteGChar(5);
         packet.WriteGChar(key);
-        packet.WriteBytes("G3D0311C"u8);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(versionToken));
         packet.WriteGChar((byte)account.Length);
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(account));
         packet.WriteGChar(2);
@@ -485,6 +744,12 @@ public sealed class LoginAuthBridgeTests
 
     private static byte[] SocketPayload(byte[] raw, byte key) =>
         SocketFrame(raw, key)[2..];
+
+    private static byte[] SocketPayload(GraalFileQueue queue, byte[] raw)
+    {
+        queue.AddRawPacket(raw);
+        return queue.FlushSocket(forceSendFiles: true)[2..];
+    }
 
     private static byte[] DecodeSocketPayload(byte[] socketFrame, byte key) =>
         new InboundPacketDecoder(EncryptionGeneration.Gen5, key)
@@ -553,6 +818,70 @@ public sealed class LoginAuthBridgeTests
         return packet.ToArray();
     }
 
+    private static byte[] ShowImgPacket(byte[] body)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar(24);
+        packet.WriteBytes(body);
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] ExpectedShowImgPacket(ushort playerId, byte[] body)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar(32);
+        packet.WriteGShort(playerId);
+        packet.WriteBytes(body);
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] PrivateMessagePacket(IReadOnlyList<ushort> targets, string message)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.PrivateMessage);
+        packet.WriteGShort((ushort)targets.Count);
+        foreach (var target in targets)
+            packet.WriteGShort(target);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(message));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] ExpectedPrivateMessage(ushort senderId, string label, string message)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)ServerToPlayerPacketId.PrivateMessage);
+        packet.WriteGShort(senderId);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes("\"\","));
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(label));
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(message));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] WeaponAddPacket(LevelItemType itemType)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.WeaponAdd);
+        packet.WriteGChar(0);
+        packet.WriteGChar((byte)itemType);
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
+    private static byte[] NicknamePacket(string nickname)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)PlayerToServerPacketId.PlayerProps);
+        packet.WriteGChar((byte)PlayerPropertyId.Nickname);
+        packet.WriteGChar((byte)nickname.Length);
+        packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(nickname));
+        packet.WriteByte((byte)'\n');
+        return packet.ToArray();
+    }
+
     private static byte[] ItemAddPacket(byte encodedX, byte encodedY, byte itemType)
     {
         var packet = new GraalBinaryWriter();
@@ -613,6 +942,20 @@ public sealed class LoginAuthBridgeTests
         }
 
         throw new InvalidOperationException("Default level must contain a C++ respawning tile.");
+    }
+
+    private static (int X, int Y) FindDropTile(NwLevelSnapshot level)
+    {
+        for (var y = 0; y < 64; y++)
+        {
+            for (var x = 0; x < 64; x++)
+            {
+                if (level.GetTile(0, x, y) is 2 or 0x1a4 or 0x1ff or 0x3ff)
+                    return (x, y);
+            }
+        }
+
+        throw new InvalidOperationException("Default level must contain a C++ bush drop tile.");
     }
 
     private static byte[] ServerWarpPacket(string serverName)

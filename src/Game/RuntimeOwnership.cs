@@ -28,6 +28,8 @@ public sealed class RuntimePlayer
     public string CommunityName { get; set; } = string.Empty;
     public int EloRating { get; set; } = 1500;
     public int EloDeviation { get; set; } = 350;
+    public Preagonal.GServer.Protocol.ClientVersionId ClientVersion { get; set; } =
+        Preagonal.GServer.Protocol.ClientVersionId.Client21;
     public RuntimePlayerKind Kind { get; }
     public RuntimeLevel? Level { get; private set; }
     public string? Group { get; set; }
@@ -210,6 +212,10 @@ public static class RuntimePlayerPropsApplier
                     player.TouchTestRequested = true;
                     break;
 
+                case Preagonal.GServer.Protocol.PlayerPropertyId.Status:
+                    player.Status = (PlayerStatus)update.GCharValue.GetValueOrDefault();
+                    break;
+
                 case Preagonal.GServer.Protocol.PlayerPropertyId.ArrowsCount:
                     player.Arrows = Math.Min(update.GCharValue.GetValueOrDefault(), (byte)99);
                     break;
@@ -363,6 +369,7 @@ public static class RuntimePlayerPropsApplier
 
     private static void MarkMovement(RuntimePlayer player)
     {
+        player.Status &= ~PlayerStatus.Paused;
         player.MovementUpdated = true;
         player.TouchTestRequested = true;
     }

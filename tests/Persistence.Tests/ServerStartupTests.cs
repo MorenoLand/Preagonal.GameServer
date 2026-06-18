@@ -76,4 +76,19 @@ public sealed class ServerStartupTests
         Assert.False(result.Success);
         Assert.Equal(ServerStartupSource.None, result.Source);
     }
+
+    [Fact]
+    public void DefaultAllowedVersionsMatchCpp()
+    {
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var snapshot = ServerStartupLoader.Load(
+            repoRoot,
+            ServerStartupOverrides.Empty with { Server = "default" });
+
+        Assert.Equal(36, snapshot.EffectiveAllowedVersions.Count);
+        Assert.Contains("G3D04048", snapshot.EffectiveAllowedVersions);
+        Assert.Contains("G3D18010", snapshot.EffectiveAllowedVersions);
+        Assert.Contains("G3D29090", snapshot.EffectiveAllowedVersions);
+        Assert.Contains("G3D2504D", snapshot.EffectiveAllowedVersions);
+    }
 }

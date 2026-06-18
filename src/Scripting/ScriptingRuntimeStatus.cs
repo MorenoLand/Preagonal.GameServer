@@ -6,6 +6,9 @@ public static class ScriptingRuntimeStatus
     public const string Gs2CompilerRepositoryUrl = "https://github.com/xtjoeytx/gs2-parser.git";
     public const string RecoveredGs2CompilerCommit = "4fa0a26ca75ac5238fe34a1d90ef9a459b02c2f9";
     public const bool IsExactOriginalGs2CompilerCommitProven = false;
+    public const string ServerSideVmRepositoryUrl = "https://github.com/Preagonal/Preagonal.Scripting.GS2Engine.git";
+    public const string ServerSideVmSubmodulePath = "external/Preagonal.Scripting.GS2Engine";
+    public const bool IsServerSideVmWired = false;
     public const string Blocker =
-        "Original scripting is gated by V8NPCSERVER and gs2compiler behavior; exact original gs2compiler submodule commit is still unproven.";
+        "Client script packets remain gated by C++ V8NPCSERVER and gs2compiler behavior; server-side VM support is recovered under external/Preagonal.Scripting.GS2Engine but not wired yet.";
 }

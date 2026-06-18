@@ -21,6 +21,14 @@ public sealed class ScriptingBoundaryTests
     }
 
     [Fact]
+    public void DependencyStatusDocumentsServerSideVmSubmodule()
+    {
+        Assert.Equal("https://github.com/Preagonal/Preagonal.Scripting.GS2Engine.git", ScriptingRuntimeStatus.ServerSideVmRepositoryUrl);
+        Assert.Equal("external/Preagonal.Scripting.GS2Engine", ScriptingRuntimeStatus.ServerSideVmSubmodulePath);
+        Assert.False(ScriptingRuntimeStatus.IsServerSideVmWired);
+    }
+
+    [Fact]
     public void NonV8SourceTreatsAllCodeAsClientSideAndDefaultsToGs1()
     {
         var slices = SourceCodeSlices.Parse("echo(\"hi\");", gs2Default: false, v8NpcServer: false);

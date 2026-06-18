@@ -72,16 +72,22 @@ public sealed class LoginAuthBridge(
         ReadOnlySpan<byte> loginFrame)
     {
         if (HasPendingSession(context.PlayerId))
+        {
+            AdvancePendingDecoder(context.PlayerId, loginFrame);
             return new ClientLoginAuthResult(
                 Accepted: true,
                 Lifecycle: SessionLifecycle.WaitingForServerListAuth,
                 OutboundBytes: [],
                 Diagnostic: $"login frame ignored while auth pending; {BuildFrameDebug(loginFrame)}");
+        }
 
         var session = new ClientSessionSkeleton(context.PlayerId);
         _loginFrameDebug[context.PlayerId] = BuildFrameDebug(loginFrame);
         if (!session.ReceiveLoginPacket(loginFrame))
             return Finish(session, accepted: false);
+
+        if (session.LoginPacket is not null)
+            Console.WriteLine($"Client session {context.PlayerId}: login type={session.Type}; key={session.LoginPacket.EncryptionKey?.ToString() ?? "none"}; version={session.LoginPacket.VersionToken}; versionId={session.LoginPacket.VersionId}; account={session.LoginPacket.AccountName}; login={BuildFrameDebug(loginFrame)}; {session.LoginPacket.DebugInfo}");
 
         var auth = new ServerListAuthBoundary(serverList, options);
         var result = auth.Begin(session);
@@ -91,6 +97,7 @@ public sealed class LoginAuthBridge(
         var key = (session.Id, session.Type);
         _pendingSessions[key] = session;
         _remoteAddresses[key] = context.RemoteAddress;
+        EnsureDecoder(session);
         return Finish(session, accepted: true);
     }
 
@@ -109,6 +116,7 @@ public sealed class LoginAuthBridge(
             {
                 AccountLoginOptions = worldEntryOptions.AccountLoginOptions with
                 {
+                    ActiveSessions = BuildActiveSessions(),
                     RemoteIp = _remoteAddresses.GetValueOrDefault(key, worldEntryOptions.AccountLoginOptions.RemoteIp)
                 }
             }, out var playerAdd, out var snapshot))
@@ -226,6 +234,13 @@ public sealed class LoginAuthBridge(
         var decoded = decoder.DecodeSocketFrame(frame);
         var touched = new HashSet<ushort>();
         var packetNames = new List<string>();
+        var notes = new List<string>
+        {
+            $"frame={frame.Length}",
+            $"comp=0x{(frame.Length == 0 ? 0 : frame[0]):X2}",
+            $"decoded={decoded.DecodedPayload.Length}",
+            $"hex={HexPreview(decoded.DecodedPayload, 24)}"
+        };
         foreach (var packet in framer.Parse(decoded.DecodedPayload))
         {
             var reader = new GraalBinaryReader(packet.Payload.Span);
@@ -240,7 +255,7 @@ public sealed class LoginAuthBridge(
 
             if (packetId == (byte)PlayerToServerPacketId.BoardModify)
             {
-                HandleBoardModify(packet.Payload.Span[1..], player, touched);
+                HandleBoardModify(packet.Payload.Span[1..], player, session.LoginPacket?.VersionId ?? ClientVersionId.Client21, touched);
                 continue;
             }
 
@@ -258,7 +273,31 @@ public sealed class LoginAuthBridge(
 
             if (packetId == (byte)PlayerToServerPacketId.OpenChest)
             {
-                HandleOpenChest(reader, context.PlayerId, player, session, touched);
+                notes.Add(HandleOpenChest(reader, context.PlayerId, player, session, touched));
+                continue;
+            }
+
+            if (packetId == (byte)PlayerToServerPacketId.ShowImg)
+            {
+                HandleShowImg(packet.Payload.Span[1..], player, touched);
+                continue;
+            }
+
+            if (packetId == (byte)PlayerToServerPacketId.PrivateMessage)
+            {
+                HandlePrivateMessage(reader, player, touched);
+                continue;
+            }
+
+            if (packetId == (byte)PlayerToServerPacketId.WeaponAdd)
+            {
+                notes.Add(HandleWeaponAdd(reader, context.PlayerId));
+                continue;
+            }
+
+            if (packetId == (byte)PlayerToServerPacketId.NpcWeaponDelete)
+            {
+                notes.Add(HandleNpcWeaponDelete(reader, context.PlayerId));
                 continue;
             }
 
@@ -267,18 +306,25 @@ public sealed class LoginAuthBridge(
 
             var parsed = IncomingPlayerPropsParser.Parse(packet.Payload.Span[1..], session.LoginPacket?.VersionId ?? ClientVersionId.Client21);
             if (!parsed.Success)
+            {
+                notes.Add($"props=unsupported:{parsed.UnsupportedPropertyId}");
                 continue;
+            }
 
             var result = LiveWorldSessionForwarder.TryApplyAndForwardConfirmedPlayerProps(
                 runtimeServer,
                 player,
                 parsed.Updates,
-                senderSupportsPreciseMovement: session.LoginPacket?.VersionId >= ClientVersionId.Client21,
-                BuildSinks());
+                senderSupportsPreciseMovement: session.LoginPacket?.VersionId >= ClientVersionId.Client23,
+                BuildSinks(),
+                new RuntimePlayerPropsOptions(
+                    session.LoginPacket?.VersionId ?? ClientVersionId.Client21,
+                    NicknamePolicy: RuntimeNicknameUpdatePolicy.WordFilterAllowedNoGuild));
 
             if (result.Status == LiveWorldPlayerPropsForwardingStatus.Blocked)
                 return new ClientFrameBridgeResult(false, [], [], result.Message);
 
+            notes.Add($"props={parsed.Updates.Count}:deliveries={result.Deliveries.Count}");
             foreach (var delivery in result.Deliveries)
                 touched.Add(delivery.PlayerId);
         }
@@ -302,11 +348,16 @@ public sealed class LoginAuthBridge(
 
         var warning = decoded.Warnings.Count == 0 ? "" : string.Join("; ", decoded.Warnings);
         var packetTrace = packetNames.Count == 0 ? "" : $"active packets={string.Join(",", packetNames)}";
-        var diagnostic = string.IsNullOrEmpty(warning) ? packetTrace : string.Join("; ", packetTrace, warning);
+        var noteTrace = string.Join("; ", notes.Where(note => !string.IsNullOrWhiteSpace(note)));
+        var diagnostic = string.Join("; ", new[] { packetTrace, noteTrace, warning }.Where(part => !string.IsNullOrEmpty(part)));
         return new ClientFrameBridgeResult(true, outbound.ToArray(), broadcasts, diagnostic);
     }
 
-    private void HandleBoardModify(ReadOnlySpan<byte> payload, RuntimePlayer player, ISet<ushort> touched)
+    private void HandleBoardModify(
+        ReadOnlySpan<byte> payload,
+        RuntimePlayer player,
+        ClientVersionId clientVersion,
+        ISet<ushort> touched)
     {
         if (runtimeServer is null || player.Level is not { } level || payload.Length < 4)
             return;
@@ -343,6 +394,8 @@ public sealed class LoginAuthBridge(
         var state = RuntimePlayerInventoryState.Capture(player);
         var result = LevelItemRuntime.SpawnLevelItem(level, (byte)(x * 2), (byte)(y * 2), (byte)drop, playerDrop: false, state);
         QueueLevelPacket(player, result.ForwardPacket, touched);
+        if (clientVersion <= ClientVersionId.Client512)
+            QueueSelfPacket(player.Id, result.ForwardPacket, touched);
     }
 
     private void HandleItemAdd(GraalBinaryReader reader, RuntimePlayer player, ISet<ushort> touched)
@@ -383,7 +436,7 @@ public sealed class LoginAuthBridge(
         QueueSelfPacket(player.Id, PlayerPropertySerializer.BuildPlayerPropsPacket(result.PlayerPropsPayload, appendNewline: true), touched);
     }
 
-    private void HandleOpenChest(
+    private string HandleOpenChest(
         GraalBinaryReader reader,
         ushort playerId,
         RuntimePlayer player,
@@ -391,7 +444,7 @@ public sealed class LoginAuthBridge(
         ISet<ushort> touched)
     {
         if (worldEntryOptions is null || !_activeAccounts.TryGetValue(playerId, out var account))
-            return;
+            return "chest=missing-account";
 
         var x = reader.ReadGChar();
         var y = reader.ReadGChar();
@@ -400,12 +453,12 @@ public sealed class LoginAuthBridge(
             : player.CurrentLevelName;
         var loaded = worldEntryOptions.LevelLoader.TryLoad(levelName);
         if (!loaded.Success)
-            return;
+            return $"chest={x},{y}:load-failed:{levelName}";
 
         var opened = new HashSet<string>(account.Chests, StringComparer.Ordinal);
         var result = LevelInteraction.TryOpenChest(loaded.Level, loaded.LevelName, x, y, opened);
         if (!result.Opened)
-            return;
+            return $"chest={x},{y}:not-opened:{loaded.LevelName}:known={loaded.Level.Chests.Count}";
 
         account.Chests.Add(result.ChestKey);
         var state = RuntimePlayerInventoryState.Capture(player);
@@ -415,6 +468,83 @@ public sealed class LoginAuthBridge(
         QueueSelfPacket(player.Id, result.Packet, touched);
         if (payload.Length != 0)
             QueueSelfPacket(player.Id, PlayerPropertySerializer.BuildPlayerPropsPacket(payload, appendNewline: true), touched);
+        return $"chest={x},{y}:opened:{result.ItemType}";
+    }
+
+    private void HandleShowImg(
+        ReadOnlySpan<byte> body,
+        RuntimePlayer player,
+        ISet<ushort> touched)
+    {
+        var packet = new GraalBinaryWriter();
+        packet.WriteGChar((byte)ServerToPlayerPacketId.ShowImg);
+        packet.WriteGShort(player.Id);
+        packet.WriteBytes(body);
+        packet.WriteByte((byte)'\n');
+        QueueLevelPacket(player, packet.ToArray(), touched);
+    }
+
+    private void HandlePrivateMessage(
+        GraalBinaryReader reader,
+        RuntimePlayer sender,
+        ISet<ushort> touched)
+    {
+        var targetCount = reader.ReadGShort();
+        var targets = new List<ushort>(targetCount);
+        for (var i = 0; i < targetCount; i++)
+            targets.Add(reader.ReadGShort());
+
+        var message = reader.ReadBytes(reader.BytesLeft);
+        var packet = BuildPrivateMessagePacket(sender.Id, targetCount > 1, message);
+        foreach (var targetId in targets)
+        {
+            if (targetId == sender.Id)
+                continue;
+
+            if (!_activeSessions.ContainsKey(targetId))
+                continue;
+
+            QueueSelfPacket(targetId, packet, touched);
+        }
+    }
+
+    private string HandleWeaponAdd(GraalBinaryReader reader, ushort playerId)
+    {
+        if (!_activeAccounts.TryGetValue(playerId, out var account))
+            return "weaponadd=missing-account";
+
+        var type = reader.ReadGChar();
+        if (type != 0)
+            return "weaponadd=npc-unported";
+
+        var itemType = LevelItemCatalog.GetItemId(reader.ReadGChar());
+        var weaponName = LevelItemCatalog.GetItemName(itemType);
+        if (string.IsNullOrEmpty(weaponName))
+            return "weaponadd=invalid-default";
+
+        if (!account.Weapons.Contains(weaponName, StringComparer.Ordinal))
+            account.Weapons.Add(weaponName);
+
+        return $"weaponadd={weaponName}";
+    }
+
+    private string HandleNpcWeaponDelete(GraalBinaryReader reader, ushort playerId)
+    {
+        if (!_activeAccounts.TryGetValue(playerId, out var account))
+            return "weapondel=missing-account";
+
+        var weaponName = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(reader.BytesLeft));
+        account.Weapons.RemoveAll(weapon => weapon == weaponName);
+        return $"weapondel={weaponName}";
+    }
+
+    private static string HexPreview(ReadOnlySpan<byte> bytes, int maxBytes)
+    {
+        if (bytes.IsEmpty)
+            return "";
+
+        var length = Math.Min(bytes.Length, maxBytes);
+        return Convert.ToHexString(bytes[..length]);
     }
 
     private void QueueLevelPacket(RuntimePlayer player, byte[] packet, ISet<ushort> touched)
@@ -497,6 +627,16 @@ public sealed class LoginAuthBridge(
             entry => entry.Key,
             entry => (ILiveWorldSessionSink)new ClientSessionSink(entry.Value));
 
+    private IReadOnlyList<ActivePlayerSession> BuildActiveSessions() =>
+        _activePlayers.Values
+            .Where(player => player.IsClient)
+            .Select(player => new ActivePlayerSession(
+                player.Id,
+                player.AccountName,
+                PlayerSessionType.Client3,
+                TimeSpan.Zero))
+            .ToArray();
+
     private void ActivateRuntimePlayer(ClientSessionSkeleton session, PostLoginPlayerSnapshot snapshot)
     {
         if (runtimeServer is null)
@@ -510,6 +650,7 @@ public sealed class LoginAuthBridge(
             _ => RuntimePlayerKind.Client
         };
         var player = new RuntimePlayer(session.Id, snapshot.LoginPropertySource.AccountName, kind);
+        player.ClientVersion = session.LoginPacket?.VersionId ?? ClientVersionId.Client21;
         player.InitializeFromLogin(snapshot.LoginPropertySource);
         runtimeServer.AddPlayer(player, session.Id);
         var levelName = string.IsNullOrWhiteSpace(player.CurrentLevelName)
@@ -517,8 +658,26 @@ public sealed class LoginAuthBridge(
             : player.CurrentLevelName;
         player.JoinLevel(GetOrCreateLevel(levelName));
         _activePlayers[session.Id] = player;
-        _activeDecoders[session.Id] = new InboundPacketDecoder(session.InboundEncryptionGeneration, session.LoginPacket?.EncryptionKey ?? 0);
+        EnsureDecoder(session);
         _activeFramers[session.Id] = new ClientPacketStreamFramer(new ClientPacketParseOptions(StripRawDataTrailingNewline: true));
+    }
+
+    private void EnsureDecoder(ClientSessionSkeleton session)
+    {
+        if (_activeDecoders.ContainsKey(session.Id))
+            return;
+
+        _activeDecoders[session.Id] = new InboundPacketDecoder(session.InboundEncryptionGeneration, session.LoginPacket?.EncryptionKey ?? 0);
+    }
+
+    private void AdvancePendingDecoder(ushort playerId, ReadOnlySpan<byte> frame)
+    {
+        if (!_activeDecoders.TryGetValue(playerId, out var decoder))
+            return;
+
+        var decoded = decoder.DecodeSocketFrame(frame);
+        var warning = decoded.Warnings.Count == 0 ? "" : $"; {string.Join("; ", decoded.Warnings)}";
+        Console.WriteLine($"Client session {playerId}: pending frame consumed; frame={frame.Length}; comp=0x{(frame.Length == 0 ? 0 : frame[0]):X2}; decoded={decoded.DecodedPayload.Length}; hex={HexPreview(decoded.DecodedPayload, 24)}{warning}");
     }
 
     private RuntimeLevel GetOrCreateLevel(string levelName)
@@ -555,7 +714,7 @@ public sealed class LoginAuthBridge(
         account.SwordImage = player.SwordImage;
         account.ShieldImage = player.ShieldImage;
         account.Sprite = player.Sprite;
-        account.Status = player.StatusMessage;
+        account.Status = (int)player.Status;
         account.MagicPoints = player.MagicPoints;
         account.Alignment = player.Alignment;
         account.ApCounter = (byte)Math.Min(player.ApCounter, byte.MaxValue);
@@ -603,6 +762,18 @@ public sealed class LoginAuthBridge(
         var writer = new GraalBinaryWriter();
         writer.WriteGChar((byte)ServerToPlayerPacketId.ServerWarp);
         writer.WriteBytes(serverPacket);
+        writer.WriteByte((byte)'\n');
+        return writer.ToArray();
+    }
+
+    private static byte[] BuildPrivateMessagePacket(ushort senderId, bool massMessage, ReadOnlySpan<byte> message)
+    {
+        var writer = new GraalBinaryWriter();
+        writer.WriteGChar((byte)ServerToPlayerPacketId.PrivateMessage);
+        writer.WriteGShort(senderId);
+        writer.WriteBytes("\"\","u8);
+        writer.WriteBytes(massMessage ? "\"Mass message:\","u8 : "\"Private message:\","u8);
+        writer.WriteBytes(message);
         writer.WriteByte((byte)'\n');
         return writer.ToArray();
     }
