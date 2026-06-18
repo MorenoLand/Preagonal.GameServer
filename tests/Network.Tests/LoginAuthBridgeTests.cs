@@ -447,6 +447,25 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void NcWeaponEchoes()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        _ = LoginNc(bridge, "YOURACCOUNT", 7);
+        var clientQueue = Gen3Queue();
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(7, "127.0.0.1"),
+            SocketPayload(clientQueue, NcWeaponAddPacket(
+                "-gr_movement",
+                "tool.png",
+                "echo(1);\n//#CLIENTSIDE\n//#GS2\nfunction onCreated() {\n}")));
+
+        var decoded = DecodeLastSocketPayload(EncryptionGeneration.Gen3, 0, result.OutboundBytes);
+        Assert.True(IndexOf(decoded, RcNcPackets.RcChat("GS2 -gr_movement: 1")) >= 0);
+    }
+
+    [Fact]
     public void ControlLoginsAnnounceRcAndNc()
     {
         using var serverRoot = TestDefaultServerRoot();

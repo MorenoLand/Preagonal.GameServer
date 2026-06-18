@@ -80,6 +80,26 @@ public sealed class ScriptingBoundaryTests
     }
 
     [Fact]
+    public async Task ServerScriptRunsCreatedAndCapturesEcho()
+    {
+        var host = new Gs2ServerScriptHost();
+        var compile = new Gs2CompilerAdapter().Compile(
+            "//#CLIENTSIDE\n//#GS2\nfunction onCreated() {\n  echo(1);\n}",
+            "weapon",
+            "-gr_movement");
+        Assert.True(compile.Success, compile.Error);
+
+        var load = host.LoadWeapon("-gr_movement", compile.Bytecode);
+        Assert.True(load.Success, load.Error);
+        Assert.Contains("oncreated", host.FunctionNames("-gr_movement"));
+
+        var run = await host.Call("-gr_movement", "onCreated");
+
+        Assert.True(run.Success, run.Error);
+        Assert.Equal(["1"], run.Output);
+    }
+
+    [Fact]
     public void ApiCatalogTracksGs2EngineBindings()
     {
         var apis = ScriptVisibleApiCatalog.All;
@@ -90,6 +110,7 @@ public sealed class ScriptingBoundaryTests
         Assert.Contains(apis, api => api.Name == "level" && api.SourceFile == "GS2Engine");
         Assert.Contains(apis, api => api.Name == "weapon" && api.SourceFile == "GS2Engine");
         Assert.Contains(apis, api => api.Name == "environment" && api.SourceFile == "GS2Engine");
-        Assert.All(apis, api => Assert.False(api.IsImplemented));
+        Assert.Contains(apis, api => api.Name == "echo" && api.IsImplemented);
+        Assert.All(apis.Where(api => api.Name != "echo"), api => Assert.False(api.IsImplemented));
     }
 }

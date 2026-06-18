@@ -13,6 +13,7 @@ public static class ScriptVisibleApiCatalog
 
     public static IReadOnlyList<ScriptVisibleApiStatus> All { get; } =
     [
+        Implemented("echo", "GS2Engine"),
         Blocked("global", "GS2Engine"),
         Blocked("environment", "GS2Engine"),
         Blocked("server", "GS2Engine"),
@@ -40,4 +41,7 @@ public static class ScriptVisibleApiCatalog
 
     private static ScriptVisibleApiStatus Blocked(string name, string sourceFile) =>
         new(name, sourceFile, IsImplemented: false, RuntimeBlocker);
+
+    private static ScriptVisibleApiStatus Implemented(string name, string sourceFile) =>
+        new(name, sourceFile, IsImplemented: true, "");
 }

@@ -51,6 +51,7 @@ public sealed class LoginAuthBridge(
     private readonly Dictionary<ushort, InboundPacketDecoder> _activeDecoders = [];
     private readonly Dictionary<ushort, ClientPacketStreamFramer> _activeFramers = [];
     private readonly Dictionary<ushort, GraalFileQueue> _outboundQueues = [];
+    private readonly Gs2ServerScriptHost _serverScripts = new();
     private Dictionary<string, string>? _serverFlags;
     private readonly Dictionary<string, RuntimeLevel> _levels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ushort, string> _loginFrameDebug = [];
@@ -936,10 +937,27 @@ public sealed class LoginAuthBridge(
                     return new ScriptCompileFeedback(false, []);
                 }
 
-                var serverResult = compiler.Compile(slices.ServerSide, type, name);
+                var serverResult = compiler.Compile(NormalizeServerGs2(slices.ServerSide), type, name);
                 if (!serverResult.Success)
                 {
                     SendCompilerOutputToNc($"{origin} server-side", "error", serverResult.Error, touched);
+                    return new ScriptCompileFeedback(false, []);
+                }
+
+                var load = _serverScripts.LoadWeapon(name, serverResult.Bytecode);
+                if (!load.Success)
+                {
+                    SendCompilerOutputToNc($"{origin} server-side", "error", load.Error, touched);
+                    return new ScriptCompileFeedback(false, []);
+                }
+
+                var run = _serverScripts.Call(name, "onCreated").GetAwaiter().GetResult();
+                foreach (var line in run.Output)
+                    BroadcastToNpcControls(RcNcPackets.RcChat($"GS2 {name}: {line}"), touched);
+
+                if (!run.Success)
+                {
+                    SendCompilerOutputToNc($"{origin} server-side", "error", run.Error, touched);
                     return new ScriptCompileFeedback(false, []);
                 }
             }
@@ -1016,6 +1034,17 @@ public sealed class LoginAuthBridge(
 
     private static string CompilerOrigin(string type, string name) =>
         $"{char.ToUpperInvariant(type[0])}{type[1..]} {name}";
+
+    private static string NormalizeServerGs2(string source)
+    {
+        var body = source.TrimStart().StartsWith("function ", StringComparison.Ordinal)
+            ? source
+            : "function onCreated() {\n" + source.TrimEnd() + "\n}";
+
+        return body.Contains("//#CLIENTSIDE", StringComparison.Ordinal)
+            ? body
+            : "//#CLIENTSIDE\n//#GS2\n" + body;
+    }
 
     private static bool TryPreflightGs2(string source, out string error)
     {
