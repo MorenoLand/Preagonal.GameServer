@@ -263,6 +263,45 @@ public static class RcNcPackets
         return WithTrailingNewline(writer);
     }
 
+    public static byte[] NcNpcScript(uint npcId, string source)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.NcNpcScript);
+        writer.WriteGInt(npcId);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(GTokenize(source)));
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] NcNpcAttributes(uint npcId, string name, string type, string owner, string levelName, string x, string y)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.NcNpcAttributes);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(GTokenize(string.Join('\n', [
+            $"id={npcId}",
+            $"name={name}",
+            $"type={type}",
+            $"scripter={owner}",
+            $"level={levelName}",
+            $"x={x}",
+            $"y={y}",
+            ""
+        ]))));
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] NcNpcDelete(uint npcId)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.NcNpcDelete);
+        writer.WriteGInt(npcId);
+        return WithTrailingNewline(writer);
+    }
+
+    public static byte[] NcNpcFlags(uint npcId, string flags)
+    {
+        var writer = NewServerPacket(ServerToPlayerPacketId.NcNpcFlags);
+        writer.WriteGInt(npcId);
+        writer.WriteBytes(Encoding.ASCII.GetBytes(GTokenize(flags)));
+        return WithTrailingNewline(writer);
+    }
+
     public static byte[] NpcServerAddress(ushort npcServerId, string ip, int port)
     {
         var writer = NewServerPacket(ServerToPlayerPacketId.NpcServerAddress);
