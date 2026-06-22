@@ -59,6 +59,7 @@ public sealed class LoginAuthBridge(
     private readonly Dictionary<string, RuntimeLevel> _levels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ushort, string> _loginFrameDebug = [];
     private readonly Random _rng = new();
+    private bool _serverScriptsLoaded;
     private const int DisconnectRight = 0x00010;
     private const int SetRightsRight = 0x00400;
     private const int BanRight = 0x00800;
@@ -139,6 +140,7 @@ public sealed class LoginAuthBridge(
             session is not null &&
             worldEntryOptions is not null &&
             EnsureNpcServerPlayer() &&
+            EnsureServerScriptsLoaded(new HashSet<ushort>()) &&
             LoginWorldEntry.Complete(session, worldEntryOptions with
             {
                 AccountSettings = EffectiveAccountSettings(),
@@ -579,6 +581,7 @@ public sealed class LoginAuthBridge(
 
         var weaponName = action.Tokens[1];
         var args = action.Tokens.Skip(2).ToArray();
+        EnsureServerScriptsLoaded(touched);
         _serverScripts.SetEnvironment(BuildScriptServerFlags(), BuildScriptServerOptions());
         _serverScripts.SetPlayer(player.AccountName, player.Nickname, player.CurrentLevelName);
         var run = _serverScripts.Call(weaponName, "onActionServerSide", args).GetAwaiter().GetResult();
@@ -1351,6 +1354,61 @@ public sealed class LoginAuthBridge(
             SendCompilerOutputToNc(CompilerOrigin(type, name), "error", ex.Message, touched);
             return new ScriptCompileFeedback(false, []);
         }
+    }
+
+    private bool EnsureServerScriptsLoaded(ISet<ushort> touched)
+    {
+        if (_serverScriptsLoaded)
+            return true;
+
+        _serverScriptsLoaded = true;
+        foreach (var weaponName in ListWeaponNames())
+        {
+            if (!TryLoadWeapon(weaponName, out var weapon))
+                continue;
+
+            var slices = SourceCodeSlices.Parse(weapon.Source, gs2Default: true, serverSideVm: true);
+            if (string.IsNullOrWhiteSpace(slices.ServerSide))
+                continue;
+
+            var origin = CompilerOrigin("weapon", weapon.Name);
+            try
+            {
+                if (!TryPreflightGs2(slices.ServerSide, out var preflightError))
+                {
+                    BroadcastToRemoteControls(RcNcPackets.RcChat($"{origin} server-side error: {preflightError}"), touched);
+                    continue;
+                }
+
+                var result = new Gs2CompilerAdapter().Compile(Gs2ServerScriptHost.NormalizeServerSource(slices.ServerSide), "weapon", weapon.Name);
+                if (!result.Success)
+                {
+                    BroadcastToRemoteControls(RcNcPackets.RcChat($"{origin} server-side error: {result.Error}"), touched);
+                    continue;
+                }
+
+                var load = _serverScripts.LoadWeapon(weapon.Name, result.Bytecode);
+                if (!load.Success)
+                {
+                    BroadcastToRemoteControls(RcNcPackets.RcChat($"{origin} server-side error: {load.Error}"), touched);
+                    continue;
+                }
+
+                _serverScripts.SetEnvironment(BuildScriptServerFlags(), BuildScriptServerOptions());
+                var run = _serverScripts.Call(weapon.Name, "onCreated").GetAwaiter().GetResult();
+                foreach (var line in run.Output)
+                    BroadcastToRemoteControls(RcNcPackets.RcChat(FormatScriptOutput(weapon.Name, line)), touched);
+                ApplyScriptSideEffects(run, NpcServerPlayerId, touched);
+                if (!run.Success)
+                    BroadcastToRemoteControls(RcNcPackets.RcChat($"{origin} server-side error: {run.Error}"), touched);
+            }
+            catch (Exception ex)
+            {
+                BroadcastToRemoteControls(RcNcPackets.RcChat($"{origin} server-side error: {ex.Message}"), touched);
+            }
+        }
+
+        return true;
     }
 
     private void SendClientScriptBytecode(ReadOnlySpan<byte> bytecode, ISet<ushort> touched)

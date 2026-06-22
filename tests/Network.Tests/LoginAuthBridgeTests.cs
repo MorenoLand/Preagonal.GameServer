@@ -886,6 +886,27 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void LoginPreloadsServerWeaponScripts()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        const string source = "function onActionServerSide() {\n  triggerclient(\"gui\", name, \"kek\");\n}\n//#CLIENTSIDE\n//#GS2\nfunction onActionClientside() {\n}";
+        File.WriteAllText(
+            Path.Combine(serverRoot.Path, "weapons", "weapon-gr_movement.txt"),
+            "GRAWP001\nREALNAME -gr_movement\nIMAGE wbomb1.png\nSCRIPT\n" + source + "\nSCRIPTEND\n");
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        var clientLogin = LoginClient(bridge, "YOURACCOUNT", 8, 43);
+        var clientQueue = new GraalFileQueue();
+        clientQueue.SetCodec(EncryptionGeneration.Gen5, 43);
+
+        var result = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(8, "127.0.0.1"),
+            SocketPayload(clientQueue, TriggerActionPacket("serverside,-gr_movement,from clientside,1")));
+        var decoded = DecodeLastSocketPayload(43, clientLogin.OutboundBytes, result.OutboundBytes);
+
+        Assert.True(IndexOf(decoded, TriggerActionPackets.BuildClient(0, 0, 0, 0, "clientside,-gr_movement,kek")) >= 0);
+    }
+
+    [Fact]
     public void ServerOptionsSetReloadsScriptCall()
     {
         using var serverRoot = TestDefaultServerRoot();
