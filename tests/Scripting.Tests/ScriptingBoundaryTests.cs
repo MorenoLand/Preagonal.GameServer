@@ -299,7 +299,7 @@ public sealed class ScriptingBoundaryTests
         var run = await host.Call("-gr_movement", "onCreated");
 
         Assert.True(run.Success, run.Error);
-        Assert.Empty(run.Output);
+        Assert.Equal(["ok"], run.Output);
     }
 
     [Fact]

@@ -331,6 +331,19 @@ public sealed class LoginAuthBridgeTests
     }
 
     [Fact]
+    public void ClientLoginReplacesSameAccountRc()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+
+        _ = LoginRc(bridge, "moondeath", 2, 42);
+        var login = LoginClient(bridge, "moondeath", 3, 43);
+        var decoded = DecodeSocketPayload(login.OutboundBytes, 43);
+
+        Assert.Equal(0, CountOf(decoded, RcNcPackets.AddPlayer(2, "moondeath", " ", 0, "*moondeath", "moondeath")));
+    }
+
+    [Fact]
     public void RcDoesNotShowNpcControlAsPlayer()
     {
         using var serverRoot = TestDefaultServerRoot();
@@ -649,10 +662,13 @@ public sealed class LoginAuthBridgeTests
     public void NcUpdatesWeaponScripts()
     {
         using var serverRoot = TestDefaultServerRoot();
+        File.Copy(
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"),
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT2.txt"));
         var runtime = new RuntimeServer();
         var bridge = CreateBridge(serverRoot, runtime);
         var clientLogin = LoginClient(bridge, "YOURACCOUNT", 8, 43);
-        var rcLogin = LoginRc(bridge, "YOURACCOUNT", 9, 42);
+        var rcLogin = LoginRc(bridge, "YOURACCOUNT2", 9, 42);
         var rcLoginClientBroadcast = Assert.Single(rcLogin.Broadcasts, packet => packet.PlayerId == 8);
         var ncLogin = LoginNc(bridge, "YOURACCOUNT", 7);
         var ncLoginRcBroadcast = Assert.Single(ncLogin.Broadcasts, packet => packet.PlayerId == 9);

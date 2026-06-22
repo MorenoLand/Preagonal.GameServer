@@ -379,6 +379,8 @@ public sealed class Gs2ServerScriptHost
             if (normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 obj.AddOrUpdate(normalized[prefix.Length..], ValueEntry(value));
         }
+        if (!obj.ContainsVariable("poopybutthole"))
+            obj.AddOrUpdate("poopybutthole", ValueEntry(""));
 
         return obj;
     }
@@ -388,6 +390,8 @@ public sealed class Gs2ServerScriptHost
         var obj = new ScriptVariable();
         foreach (var (key, value) in values)
             obj.AddOrUpdate(key.Trim().ToLowerInvariant(), ValueEntry(value));
+        if (!obj.ContainsVariable("staff"))
+            obj.AddOrUpdate("staff", ValueEntry(""));
 
         return obj;
     }
