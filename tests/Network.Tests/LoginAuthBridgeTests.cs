@@ -326,8 +326,32 @@ public sealed class LoginAuthBridgeTests
         var relog = LoginRc(bridge, "YOURACCOUNT", 3, 43);
         var decoded = DecodeSocketPayload(relog.OutboundBytes, 43);
 
+        Assert.True(IndexOf(decoded, RcNcPackets.DeletePlayer(2)) >= 0);
         Assert.Equal(0, CountOf(decoded, RcNcPackets.AddPlayer(2, "YOURACCOUNT", " ", 0, "*YOURACCOUNT", "YOURACCOUNT")));
         Assert.Equal(1, CountOf(decoded, RcNcPackets.AddPlayer(3, "YOURACCOUNT", " ", 0, "*YOURACCOUNT", "YOURACCOUNT")));
+    }
+
+    [Fact]
+    public void PendingRcNicknameAppliesBeforeAddPlayer()
+    {
+        using var serverRoot = TestDefaultServerRoot();
+        File.WriteAllText(
+            Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"),
+            File.ReadAllText(Path.Combine(serverRoot.Path, "accounts", "YOURACCOUNT.txt"))
+                .Replace("NICK unknown", "NICK guest", StringComparison.Ordinal));
+        var bridge = CreateBridge(serverRoot, new RuntimeServer());
+        var queue = new GraalFileQueue();
+        queue.SetCodec(EncryptionGeneration.Gen5, 42);
+
+        _ = bridge.HandleClientFrame(new ClientSocketSessionContext(2, "127.0.0.1"), Rc2LoginPacket("YOURACCOUNT", 42));
+        _ = bridge.HandleClientFrame(
+            new ClientSocketSessionContext(2, "127.0.0.1"),
+            SocketPayload(queue, NicknamePacket("Denveous")));
+        var login = bridge.HandleVerifyAccount2(VerifyAccount2Payload("YOURACCOUNT", 2, PlayerSessionType.RemoteControl2, "SUCCESS"));
+        var decoded = DecodeSocketPayload(login.OutboundBytes, 42);
+
+        Assert.Equal(1, CountOf(decoded, RcNcPackets.AddPlayer(2, "YOURACCOUNT", " ", 0, "Denveous", "YOURACCOUNT")));
+        Assert.Equal(0, CountOf(decoded, RcNcPackets.AddPlayer(2, "YOURACCOUNT", " ", 0, "guest", "YOURACCOUNT")));
     }
 
     [Fact]

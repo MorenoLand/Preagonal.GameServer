@@ -51,6 +51,7 @@ public sealed class LoginAuthBridge(
     private readonly Dictionary<ushort, RuntimePlayer> _activePlayers = [];
     private readonly Dictionary<ushort, InboundPacketDecoder> _activeDecoders = [];
     private readonly Dictionary<ushort, ClientPacketStreamFramer> _activeFramers = [];
+    private readonly Dictionary<ushort, List<IncomingPlayerPropertyUpdate>> _pendingPlayerProps = [];
     private readonly Dictionary<ushort, GraalFileQueue> _outboundQueues = [];
     private readonly Gs2ServerScriptHost _serverScripts = new();
     private readonly Dictionary<uint, DatabaseNpc> _databaseNpcs = [];
@@ -151,8 +152,14 @@ public sealed class LoginAuthBridge(
                 }
             }, out var playerAdd, out var snapshot, out var duplicateDisconnects))
         {
+            snapshot = ApplyPendingLoginProps(session, snapshot);
             var loginBroadcasts = new List<ClientSessionOutbound>();
             loginBroadcasts.AddRange(EndDuplicateSessions(duplicateDisconnects, session.Id));
+            if (IsRemoteControl(session.Type))
+            {
+                foreach (var duplicate in duplicateDisconnects)
+                    session.QueuePacket(RcNcPackets.DeletePlayer(duplicate.SessionId));
+            }
             loginBroadcasts.AddRange(ExchangeLoginPlayerProps(session, snapshot));
             broadcasts = loginBroadcasts.ToArray();
             _activeSessions[session.Id] = session;
@@ -166,6 +173,7 @@ public sealed class LoginAuthBridge(
             broadcasts = [.. broadcasts, .. BuildControlLoginBroadcasts(session, snapshot)];
             _pendingSessions.Remove(key);
             _remoteAddresses.Remove(key);
+            _pendingPlayerProps.Remove(session.Id);
         }
 
         var outbound = session is null ? [] : FlushOutboundBytes(session);
@@ -174,6 +182,8 @@ public sealed class LoginAuthBridge(
         {
             _pendingSessions.Remove(key);
             _remoteAddresses.Remove(key);
+            if (session is not null)
+                _pendingPlayerProps.Remove(session.Id);
         }
 
         return new ServerListLoginResponseResult(
@@ -260,6 +270,8 @@ public sealed class LoginAuthBridge(
 
         foreach (var key in _remoteAddresses.Keys.Where(key => key.PlayerId == playerId).ToArray())
             _remoteAddresses.Remove(key);
+
+        _pendingPlayerProps.Remove(playerId);
     }
 
     private ClientFrameBridgeResult HandleActiveClientFrame(
@@ -3497,8 +3509,47 @@ public sealed class LoginAuthBridge(
             return;
 
         var decoded = decoder.DecodeSocketFrame(frame);
+        foreach (var packet in PacketFramer.ParseClientPackets(decoded.DecodedPayload, new ClientPacketParseOptions(StripRawDataTrailingNewline: true)))
+        {
+            if (packet.Id != PlayerToServerPacketId.PlayerProps)
+                continue;
+
+            var parsed = IncomingPlayerPropsParser.Parse(packet.Payload.Span[1..]);
+            if (!parsed.Success)
+                continue;
+
+            if (!_pendingPlayerProps.TryGetValue(playerId, out var props))
+                _pendingPlayerProps[playerId] = props = [];
+            props.AddRange(parsed.Updates);
+        }
         var warning = decoded.Warnings.Count == 0 ? "" : $"; {string.Join("; ", decoded.Warnings)}";
         Console.WriteLine($"Client session {playerId}: pending frame consumed; frame={frame.Length}; comp=0x{(frame.Length == 0 ? 0 : frame[0]):X2}; decoded={decoded.DecodedPayload.Length}; hex={HexPreview(decoded.DecodedPayload, 24)}{warning}");
+    }
+
+    private PostLoginPlayerSnapshot ApplyPendingLoginProps(ClientSessionSkeleton session, PostLoginPlayerSnapshot snapshot)
+    {
+        if (!IsRemoteControl(session.Type) || !_pendingPlayerProps.TryGetValue(session.Id, out var props))
+            return snapshot;
+
+        var player = new RuntimePlayer(session.Id, snapshot.LoginPropertySource.AccountName, RuntimePlayerKind.RemoteControl);
+        player.InitializeFromLogin(snapshot.LoginPropertySource);
+        RuntimePlayerPropsApplier.ApplyConfirmed(
+            player,
+            props.Where(static update => update.PropertyId is PlayerPropertyId.Nickname or PlayerPropertyId.PlayerStatusMessage),
+            RuntimePlayerPropsOptions.Default with
+            {
+                NicknamePolicy = RuntimeNicknameUpdatePolicy.WordFilterAllowedNoGuild
+            });
+
+        return snapshot with
+        {
+            LoginPropertySource = snapshot.LoginPropertySource with
+            {
+                Nickname = player.Nickname,
+                StatusMessage = player.StatusMessage
+            },
+            NicknameProperty = GCharString(player.Nickname)
+        };
     }
 
     private RuntimeLevel GetOrCreateLevel(string levelName)
