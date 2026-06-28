@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Persistence;
+namespace Preagonal.GameServer.Persistence;
 
 public sealed class DiskAccountFileSystem(string serverPath) : IAccountPersistenceFileSystem
 {

@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using ICSharpCode.SharpZipLib.BZip2;
 
-namespace Preagonal.GServer.Protocol;
+namespace Preagonal.GameServer.Network.Protocol;
 
 public sealed record InboundFrameDecodeResult(byte[] DecodedPayload, IReadOnlyList<string> Warnings);
 public sealed record InboundPacketDecodeResult(byte[] DecodedPayload, IReadOnlyList<byte[]> Packets, IReadOnlyList<string> Warnings);

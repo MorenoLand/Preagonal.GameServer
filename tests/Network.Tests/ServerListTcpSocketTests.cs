@@ -1,11 +1,11 @@
+using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
-using System.IO.Compression;
 using Preagonal.GameServer.Network;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 using Xunit;
 
-namespace Preagonal.GServer.Network.Tests;
+namespace Network.Tests;
 
 public sealed class ServerListTcpSocketTests
 {

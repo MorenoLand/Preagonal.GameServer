@@ -1,6 +1,6 @@
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 public enum RuntimePlayerKind
 {
@@ -28,8 +28,8 @@ public sealed class RuntimePlayer
     public string CommunityName { get; set; } = string.Empty;
     public int EloRating { get; set; } = 1500;
     public int EloDeviation { get; set; } = 350;
-    public Preagonal.GServer.Protocol.ClientVersionId ClientVersion { get; set; } =
-        Preagonal.GServer.Protocol.ClientVersionId.Client21;
+    public ClientVersionId ClientVersion { get; set; } =
+        ClientVersionId.Client21;
     public RuntimePlayerKind Kind { get; }
     public RuntimeLevel? Level { get; private set; }
     public string? Group { get; set; }
@@ -108,7 +108,7 @@ public sealed class RuntimePlayer
         Level = null;
     }
 
-    public void InitializeFromLogin(Preagonal.GServer.Protocol.PlayerPropertySource source)
+    public void InitializeFromLogin(PlayerPropertySource source)
     {
         Nickname = source.Nickname;
         CommunityName = source.CommunityName;
@@ -166,7 +166,7 @@ public static class RuntimePlayerPropsApplier
 {
     public static void ApplyConfirmed(
         RuntimePlayer player,
-        IEnumerable<Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate> updates,
+        IEnumerable<IncomingPlayerPropertyUpdate> updates,
         RuntimePlayerPropsOptions? options = null)
     {
         options ??= RuntimePlayerPropsOptions.Default;
@@ -174,7 +174,7 @@ public static class RuntimePlayerPropsApplier
         {
             switch (update.PropertyId)
             {
-                case Preagonal.GServer.Protocol.PlayerPropertyId.MaxPower:
+                case PlayerPropertyId.MaxPower:
                     player.MaxPower = (byte)Math.Clamp(
                         (int)update.GCharValue.GetValueOrDefault(),
                         0,
@@ -182,110 +182,110 @@ public static class RuntimePlayerPropsApplier
                     player.Hitpoints = player.MaxPower;
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.CurrentPower:
+                case PlayerPropertyId.CurrentPower:
                     var power = update.GCharValue.GetValueOrDefault() / 2.0f;
                     if (player.Alignment >= 40 || power <= player.Hitpoints)
                         player.Hitpoints = Math.Clamp(power, 0.0f, player.MaxPower);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.RupeesCount:
+                case PlayerPropertyId.RupeesCount:
                     player.Rupees = Math.Clamp(update.GIntValue.GetValueOrDefault(), 0, 9_999_999);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.X:
+                case PlayerPropertyId.X:
                     player.PixelX = update.GCharValue.GetValueOrDefault() * 8;
                     MarkMovement(player);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Y:
+                case PlayerPropertyId.Y:
                     player.PixelY = update.GCharValue.GetValueOrDefault() * 8;
                     MarkMovement(player);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Z:
+                case PlayerPropertyId.Z:
                     player.PixelZ = (update.GCharValue.GetValueOrDefault() - 50) * 8;
                     MarkMovement(player);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Sprite:
+                case PlayerPropertyId.Sprite:
                     player.Sprite = update.GCharValue.GetValueOrDefault();
                     player.TouchTestRequested = true;
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Status:
+                case PlayerPropertyId.Status:
                     player.Status = (PlayerStatus)update.GCharValue.GetValueOrDefault();
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.ArrowsCount:
+                case PlayerPropertyId.ArrowsCount:
                     player.Arrows = Math.Min(update.GCharValue.GetValueOrDefault(), (byte)99);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.BombsCount:
+                case PlayerPropertyId.BombsCount:
                     player.Bombs = Math.Min(update.GCharValue.GetValueOrDefault(), (byte)99);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.GlovePower:
+                case PlayerPropertyId.GlovePower:
                     player.GlovePower = Math.Min(update.GCharValue.GetValueOrDefault(), (byte)3);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.BombPower:
+                case PlayerPropertyId.BombPower:
                     player.BombPower = Math.Min(update.GCharValue.GetValueOrDefault(), (byte)3);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.SwordPower:
+                case PlayerPropertyId.SwordPower:
                     ApplySwordPower(player, update, options);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.ShieldPower:
+                case PlayerPropertyId.ShieldPower:
                     ApplyShieldPower(player, update, options);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.ApCounter:
+                case PlayerPropertyId.ApCounter:
                     player.ApCounter = update.GShortValue.GetValueOrDefault();
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.MagicPoints:
+                case PlayerPropertyId.MagicPoints:
                     player.MagicPoints = Math.Min(update.GCharValue.GetValueOrDefault(), (byte)100);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Alignment:
+                case PlayerPropertyId.Alignment:
                     player.Alignment = Math.Min(update.GCharValue.GetValueOrDefault(), (byte)100);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.AdditionalFlags:
+                case PlayerPropertyId.AdditionalFlags:
                     player.AdditionalFlags = update.GCharValue.GetValueOrDefault();
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.CarrySprite:
+                case PlayerPropertyId.CarrySprite:
                     player.CarrySprite = update.GCharValue.GetValueOrDefault();
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.HorseBushes:
+                case PlayerPropertyId.HorseBushes:
                     player.HorseBombCount = update.GCharValue.GetValueOrDefault();
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Nickname:
+                case PlayerPropertyId.Nickname:
                     ApplyNickname(player, update, options);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.PlayerStatusMessage:
+                case PlayerPropertyId.PlayerStatusMessage:
                     player.StatusMessage = update.GCharValue.GetValueOrDefault();
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.UdpPort:
+                case PlayerPropertyId.UdpPort:
                     player.UdpPort = unchecked((uint)update.GIntValue.GetValueOrDefault());
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.AttachNpc:
+                case PlayerPropertyId.AttachNpc:
                     player.AttachedNpcId = GetUnsignedInt(update);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.CurrentLevel:
+                case PlayerPropertyId.CurrentLevel:
                     player.CurrentLevelName = update.StringValue ?? string.Empty;
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Gani:
-                    if (options.ClientVersion < Preagonal.GServer.Protocol.ClientVersionId.Client21)
+                case PlayerPropertyId.Gani:
+                    if (options.ClientVersion < ClientVersionId.Client21)
                     {
                         ApplyLegacyBowGani(player, update);
                         break;
@@ -294,65 +294,65 @@ public static class RuntimePlayerPropsApplier
                     player.Gani = update.StringValue ?? string.Empty;
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.HeadGif:
+                case PlayerPropertyId.HeadGif:
                     if (update.StringValue is not null)
                         player.HeadImage = LimitString(update.StringValue, 123);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.HorseGif:
+                case PlayerPropertyId.HorseGif:
                     player.HorseImage = update.StringValue ?? string.Empty;
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.CurrentChat:
+                case PlayerPropertyId.CurrentChat:
                     player.ChatMessage = LimitString(update.StringValue ?? string.Empty, 223);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.BodyImage:
+                case PlayerPropertyId.BodyImage:
                     player.BodyImage = LimitString(update.StringValue ?? string.Empty, 223);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Colors:
+                case PlayerPropertyId.Colors:
                     ApplyColors(player, update.BytesValue ?? []);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.PlayerLanguage:
+                case PlayerPropertyId.PlayerLanguage:
                     player.Language = update.StringValue ?? string.Empty;
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.OsType:
+                case PlayerPropertyId.OsType:
                     player.Os = update.StringValue ?? string.Empty;
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.TextCodePage:
+                case PlayerPropertyId.TextCodePage:
                     player.TextCodePage = unchecked((uint)update.GIntValue.GetValueOrDefault());
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.X2:
+                case PlayerPropertyId.X2:
                     player.PixelX = DecodePreciseCoordinate(update.GShortValue.GetValueOrDefault());
                     MarkMovement(player);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Y2:
+                case PlayerPropertyId.Y2:
                     player.PixelY = DecodePreciseCoordinate(update.GShortValue.GetValueOrDefault());
                     MarkMovement(player);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Z2:
+                case PlayerPropertyId.Z2:
                     player.PixelZ = DecodePreciseCoordinate(update.GShortValue.GetValueOrDefault());
                     MarkMovement(player);
                     break;
 
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Id:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.KillsCount:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.DeathsCount:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.OnlineSeconds:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.IpAddress:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.AccountName:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Rating:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.JoinLeaveLevel:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.PlayerConnected:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.Unknown81:
-                case Preagonal.GServer.Protocol.PlayerPropertyId.CommunityName:
+                case PlayerPropertyId.Id:
+                case PlayerPropertyId.KillsCount:
+                case PlayerPropertyId.DeathsCount:
+                case PlayerPropertyId.OnlineSeconds:
+                case PlayerPropertyId.IpAddress:
+                case PlayerPropertyId.AccountName:
+                case PlayerPropertyId.Rating:
+                case PlayerPropertyId.JoinLeaveLevel:
+                case PlayerPropertyId.PlayerConnected:
+                case PlayerPropertyId.Unknown81:
+                case PlayerPropertyId.CommunityName:
                     break;
 
                 default:
@@ -382,7 +382,7 @@ public static class RuntimePlayerPropsApplier
 
     private static void ApplySwordPower(
         RuntimePlayer player,
-        Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate update,
+        IncomingPlayerPropertyUpdate update,
         RuntimePlayerPropsOptions options)
     {
         if (update.GCharValue is not { } raw)
@@ -393,7 +393,7 @@ public static class RuntimePlayerPropsApplier
         if (raw <= 4)
         {
             power = Math.Clamp(raw, 0, options.SwordLimit);
-            image = "sword" + power + (options.ClientVersion < Preagonal.GServer.Protocol.ClientVersionId.Client21 ? ".gif" : ".png");
+            image = "sword" + power + (options.ClientVersion < ClientVersionId.Client21 ? ".gif" : ".png");
         }
         else
         {
@@ -407,7 +407,7 @@ public static class RuntimePlayerPropsApplier
 
     private static void ApplyShieldPower(
         RuntimePlayer player,
-        Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate update,
+        IncomingPlayerPropertyUpdate update,
         RuntimePlayerPropsOptions options)
     {
         if (update.GCharValue is not { } raw)
@@ -418,7 +418,7 @@ public static class RuntimePlayerPropsApplier
         if (raw <= 3)
         {
             power = Math.Clamp(raw, 0, options.ShieldLimit);
-            image = "shield" + power + (options.ClientVersion < Preagonal.GServer.Protocol.ClientVersionId.Client21 ? ".gif" : ".png");
+            image = "shield" + power + (options.ClientVersion < ClientVersionId.Client21 ? ".gif" : ".png");
         }
         else
         {
@@ -434,7 +434,7 @@ public static class RuntimePlayerPropsApplier
 
     private static void ApplyLegacyBowGani(
         RuntimePlayer player,
-        Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate update)
+        IncomingPlayerPropertyUpdate update)
     {
         if (update.StringValue is { Length: > 0 } image)
         {
@@ -449,7 +449,7 @@ public static class RuntimePlayerPropsApplier
 
     private static void ApplyNickname(
         RuntimePlayer player,
-        Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate update,
+        IncomingPlayerPropertyUpdate update,
         RuntimePlayerPropsOptions options)
     {
         if (options.NicknamePolicy != RuntimeNicknameUpdatePolicy.WordFilterAllowedNoGuild)
@@ -479,10 +479,10 @@ public static class RuntimePlayerPropsApplier
         return (encoded & 0x0001) != 0 ? -value : value;
     }
 
-    private static uint GetUnsignedInt(Preagonal.GServer.Protocol.IncomingPlayerPropertyUpdate update) =>
+    private static uint GetUnsignedInt(IncomingPlayerPropertyUpdate update) =>
         update.GUIntValue ?? unchecked((uint)update.GIntValue.GetValueOrDefault());
 
-    private static bool TryGetGaniAttributeIndex(Preagonal.GServer.Protocol.PlayerPropertyId propertyId, out int index)
+    private static bool TryGetGaniAttributeIndex(PlayerPropertyId propertyId, out int index)
     {
         var raw = (byte)propertyId;
         index = raw switch
@@ -498,7 +498,7 @@ public static class RuntimePlayerPropsApplier
 }
 
 public sealed record RuntimePlayerPropsOptions(
-    Preagonal.GServer.Protocol.ClientVersionId ClientVersion = Preagonal.GServer.Protocol.ClientVersionId.Client21,
+    ClientVersionId ClientVersion = ClientVersionId.Client21,
     int SwordLimit = 3,
     int ShieldLimit = 3,
     RuntimeNicknameUpdatePolicy NicknamePolicy = RuntimeNicknameUpdatePolicy.Blocked)

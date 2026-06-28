@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Preagonal.GServer.Persistence;
+namespace Preagonal.GameServer.Persistence;
 
 public sealed class Gs2Settings : IAccountLoadSettings
 {

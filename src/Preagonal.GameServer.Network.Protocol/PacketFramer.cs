@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Protocol;
+namespace Preagonal.GameServer.Network.Protocol;
 
 public readonly record struct FramedPacket(PlayerToServerPacketId? Id, ReadOnlyMemory<byte> Payload);
 public readonly record struct ClientPacketParseOptions(bool StripRawDataTrailingNewline);

@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Scripting;
+namespace Preagonal.GameServer.Scripting;
 
 public sealed record SourceCodeSlices(
     string Source,

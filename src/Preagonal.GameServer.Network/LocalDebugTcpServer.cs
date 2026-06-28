@@ -3,16 +3,9 @@ using System.Net.Sockets;
 
 namespace Preagonal.GameServer.Network;
 
-public sealed class LocalDebugTcpServer : IDisposable
+public sealed class LocalDebugTcpServer(IPAddress address, int port, LocalDebugSessionPipeline pipeline) : IDisposable
 {
-    private readonly TcpListener _listener;
-    private readonly LocalDebugSessionPipeline _pipeline;
-
-    public LocalDebugTcpServer(IPAddress address, int port, LocalDebugSessionPipeline pipeline)
-    {
-        _listener = new(address, port);
-        _pipeline = pipeline;
-    }
+    private readonly TcpListener               _listener = new(address, port);
 
     public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
 
@@ -22,7 +15,7 @@ public sealed class LocalDebugTcpServer : IDisposable
     {
         using var client = await _listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
         using var stream = client.GetStream();
-        var connection = _pipeline.CreateConnection();
+        var connection = pipeline.CreateConnection();
         LocalDebugSessionResult? result = null;
 
         while (!cancellationToken.IsCancellationRequested)

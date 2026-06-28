@@ -1,4 +1,4 @@
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 

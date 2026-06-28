@@ -1,4 +1,4 @@
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 
@@ -23,25 +23,15 @@ public enum ServerTimingAction
     CleanupEmptyInstancedGroupLevels
 }
 
-public sealed class ServerTimingScheduler
+public sealed class ServerTimingScheduler(TimeSpan start, bool gs2NpcServerEnabled = false)
 {
-    private TimeSpan _lastTimer;
-    private TimeSpan _lastNewWorldTimer;
-    private TimeSpan _lastOneMinuteTimer;
-    private TimeSpan _lastThreeMinuteTimer;
-    private TimeSpan _lastFiveMinuteTimer;
+    private TimeSpan _lastTimer            = start;
+    private TimeSpan _lastNewWorldTimer    = start;
+    private TimeSpan _lastOneMinuteTimer   = start;
+    private TimeSpan _lastThreeMinuteTimer = start;
+    private TimeSpan _lastFiveMinuteTimer  = start;
 
-    public ServerTimingScheduler(TimeSpan start, bool gs2NpcServerEnabled = false)
-    {
-        _lastTimer = start;
-        _lastNewWorldTimer = start;
-        _lastOneMinuteTimer = start;
-        _lastThreeMinuteTimer = start;
-        _lastFiveMinuteTimer = start;
-        Gs2NpcServerEnabled = gs2NpcServerEnabled;
-    }
-
-    public bool Gs2NpcServerEnabled { get; }
+    public bool Gs2NpcServerEnabled { get; } = gs2NpcServerEnabled;
 
     public IReadOnlyList<ServerTimingAction> Tick(TimeSpan currentTimer)
     {

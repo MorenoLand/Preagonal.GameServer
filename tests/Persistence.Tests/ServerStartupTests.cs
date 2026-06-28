@@ -1,7 +1,7 @@
-using Preagonal.GServer.Persistence;
+using Preagonal.GameServer.Persistence;
 using Xunit;
 
-namespace Preagonal.GServer.Persistence.Tests;
+namespace Persistence.Tests;
 
 public sealed class ServerStartupTests
 {

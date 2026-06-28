@@ -1,8 +1,8 @@
 using Preagonal.GameServer.Network;
-using Preagonal.GServer.Persistence;
+using Preagonal.GameServer.Persistence;
 using Xunit;
 
-namespace Preagonal.GServer.Network.Tests;
+namespace Network.Tests;
 
 public sealed class ServerListStartupOptionsTests
 {

@@ -1,6 +1,6 @@
-using Preagonal.GServer.Game;
+using Preagonal.GameServer.Game;
 
-namespace Preagonal.GServer.Game.Tests;
+namespace Game.Tests;
 
 public sealed class NwLevelPacketBuilderTests
 {

@@ -1,6 +1,6 @@
 using System.Text;
-using Preagonal.GServer.Persistence;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
+using Preagonal.GameServer.Persistence;
 
 namespace Preagonal.GameServer.Network;
 

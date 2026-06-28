@@ -1,7 +1,7 @@
 using System.Text;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 public sealed record RuntimeLevelItem(float X, float Y, LevelItemType ItemType);
 
@@ -402,7 +402,7 @@ public sealed class RuntimeBaddy
         props.WriteGChar(Ani);
         props.WriteGChar((byte)BaddyPropId.Dir);
         props.WriteGChar(Direction);
-        for (byte propId = (byte)BaddyPropId.VerseSight; propId <= (byte)BaddyPropId.VerseAttack; propId++)
+        for (var propId = (byte)BaddyPropId.VerseSight; propId <= (byte)BaddyPropId.VerseAttack; propId++)
         {
             props.WriteGChar(propId);
             props.WriteGChar(0);

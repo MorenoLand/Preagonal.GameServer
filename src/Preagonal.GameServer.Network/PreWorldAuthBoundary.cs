@@ -1,4 +1,4 @@
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 
@@ -12,33 +12,26 @@ public sealed record PreWorldAuthOptions(
 
 public sealed record PreWorldAuthResult(bool Accepted, byte[] ServerListRequest);
 
-public sealed class PreWorldAuthBoundary
+public sealed class PreWorldAuthBoundary(PreWorldAuthOptions options)
 {
-    private readonly PreWorldAuthOptions _options;
-
-    public PreWorldAuthBoundary(PreWorldAuthOptions options)
-    {
-        _options = options;
-    }
-
-    public PreWorldAuthResult Begin(ClientSessionSkeleton session)
+	public PreWorldAuthResult Begin(ClientSessionSkeleton session)
     {
         if (session.LoginPacket is null)
             throw new InvalidOperationException("Login packet must be parsed before pre-world authentication.");
 
-        if (_options.CurrentPlayerCount >= _options.MaxPlayers)
+        if (options.CurrentPlayerCount >= options.MaxPlayers)
             return Reject(session, "This server has reached its player limit.");
 
-        if (_options.IsIpBanned)
+        if (options.IsIpBanned)
             return Reject(session, "You have been banned from this server.");
 
         if (IsClient(session.Type) &&
-            !AllowedVersionPolicy.IsAllowed(session.LoginPacket.VersionId, _options.AllowedVersions))
+            !AllowedVersionPolicy.IsAllowed(session.LoginPacket.VersionId, options.AllowedVersions))
         {
-            return Reject(session, $"Your client version is not allowed on this server.\rAllowed: {_options.AllowedVersionText}");
+            return Reject(session, $"Your client version is not allowed on this server.\rAllowed: {options.AllowedVersionText}");
         }
 
-        if (!_options.IsServerListConnected)
+        if (!options.IsServerListConnected)
             return Reject(session, "The login server is offline.  Try again later.");
 
         session.MarkWaitingForServerListAuth();

@@ -1,8 +1,8 @@
-using Preagonal.GServer.Admin;
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Persistence;
-using Preagonal.GServer.Protocol;
-using Preagonal.GServer.Scripting;
+using Preagonal.GameServer.Admin;
+using Preagonal.GameServer.Game;
+using Preagonal.GameServer.Network.Protocol;
+using Preagonal.GameServer.Persistence;
+using Preagonal.GameServer.Scripting;
 
 namespace Preagonal.GameServer.Network;
 

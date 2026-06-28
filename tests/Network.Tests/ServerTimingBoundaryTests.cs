@@ -1,9 +1,7 @@
 using Preagonal.GameServer.Network;
-using Preagonal.GServer.Network;
-using Preagonal.GServer.Protocol;
 using Xunit;
 
-namespace Preagonal.GServer.Network.Tests;
+namespace Network.Tests;
 
 public sealed class ServerTimingBoundaryTests
 {
@@ -185,14 +183,9 @@ public sealed class ServerTimingBoundaryTests
         Assert.Equal(new byte[] { 74, 32, 32, 32, 33 }, packet);
     }
 
-    private sealed class SequenceJitterSource : IServerListReconnectJitterSource
+    private sealed class SequenceJitterSource(params int[] values) : IServerListReconnectJitterSource
     {
-        private readonly Queue<int> _values;
-
-        public SequenceJitterSource(params int[] values)
-        {
-            _values = new(values);
-        }
+        private readonly Queue<int> _values = new(values);
 
         public int NextJitterSeconds()
         {

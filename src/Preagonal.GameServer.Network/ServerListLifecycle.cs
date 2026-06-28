@@ -1,4 +1,4 @@
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 
@@ -32,36 +32,29 @@ public interface IServerListSocket
     void SendPacket(byte[] packetBody, bool sendNow = false);
 }
 
-public sealed class ServerListLifecycle
+public sealed class ServerListLifecycle(IServerListSocket socket)
 {
-    private readonly IServerListSocket _socket;
-
-    public ServerListLifecycle(IServerListSocket socket)
+	public ServerListConnectResult ConnectServer(ServerListConnectOptions options)
     {
-        _socket = socket;
-    }
-
-    public ServerListConnectResult ConnectServer(ServerListConnectOptions options)
-    {
-        if (_socket.IsConnected)
+        if (socket.IsConnected)
             return new(true);
 
-        if (!_socket.Initialize(options.ListIp, options.ListPort))
+        if (!socket.Initialize(options.ListIp, options.ListPort))
             return new(false);
 
-        if (!_socket.Connect())
+        if (!socket.Connect())
             return new(false);
 
-        _socket.Register();
+        socket.Register();
 
-        var localIp = ResolveLocalIp(options.LocalIp, _socket.LocalIp);
+        var localIp = ResolveLocalIp(options.LocalIp, socket.LocalIp);
 
-        _socket.ClearOutgoingBuffers();
-        _socket.SetCodec(EncryptionGeneration.Gen1, key: 0);
-        _socket.SendPacket(ServerListAuthPackets.RegisterV3(options.Version), sendNow: true);
-        _socket.SetCodec(EncryptionGeneration.Gen2, key: 0);
-        _socket.SendPacket(ServerListAuthPackets.ServerHqPass(options.HqPassword));
-        _socket.SendPacket(ServerListAuthPackets.NewServer(
+        socket.ClearOutgoingBuffers();
+        socket.SetCodec(EncryptionGeneration.Gen1, key: 0);
+        socket.SendPacket(ServerListAuthPackets.RegisterV3(options.Version), sendNow: true);
+        socket.SetCodec(EncryptionGeneration.Gen2, key: 0);
+        socket.SendPacket(ServerListAuthPackets.ServerHqPass(options.HqPassword));
+        socket.SendPacket(ServerListAuthPackets.NewServer(
             options.Name,
             options.Description,
             options.Language,
@@ -70,11 +63,11 @@ public sealed class ServerListLifecycle
             options.ServerIp,
             options.ServerPort,
             localIp));
-        _socket.SendPacket(ServerListAuthPackets.ServerHqLevel(options.OnlyStaff, options.HqLevel), sendNow: true);
-        _socket.SendPacket(ServerListAuthPackets.AllowedVersionsText(options.AllowedVersions), sendNow: true);
-        _socket.SendPacket(ServerListAuthPackets.SetPlayers(), sendNow: true);
+        socket.SendPacket(ServerListAuthPackets.ServerHqLevel(options.OnlyStaff, options.HqLevel), sendNow: true);
+        socket.SendPacket(ServerListAuthPackets.AllowedVersionsText(options.AllowedVersions), sendNow: true);
+        socket.SendPacket(ServerListAuthPackets.SetPlayers(), sendNow: true);
 
-        return new(_socket.IsConnected);
+        return new(socket.IsConnected);
     }
 
     private static string ResolveLocalIp(string configuredLocalIp, string socketLocalIp)

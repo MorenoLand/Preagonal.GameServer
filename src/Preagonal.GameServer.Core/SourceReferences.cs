@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Core;
+namespace Preagonal.GameServer.Core;
 
 public static class SourceReferences
 {

@@ -1,11 +1,11 @@
+using Preagonal.GameServer.Game;
 using Preagonal.GameServer.Network;
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Persistence;
-using Preagonal.GServer.Protocol;
-using Preagonal.GServer.Scripting;
+using Preagonal.GameServer.Network.Protocol;
+using Preagonal.GameServer.Persistence;
+using Preagonal.GameServer.Scripting;
 using Xunit;
 
-namespace Preagonal.GServer.Network.Tests;
+namespace Network.Tests;
 
 public sealed class LoginAuthBridgeTests
 {

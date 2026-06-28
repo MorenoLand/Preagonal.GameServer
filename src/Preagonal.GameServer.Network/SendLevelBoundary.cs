@@ -1,5 +1,5 @@
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Game;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 

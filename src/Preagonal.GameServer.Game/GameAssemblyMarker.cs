@@ -1,3 +1,3 @@
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 public static class GameAssemblyMarker;

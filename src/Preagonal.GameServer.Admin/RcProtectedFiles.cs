@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Admin;
+namespace Preagonal.GameServer.Admin;
 
 public sealed record RcProtectedFileDecision(bool Allowed, string? Message);
 

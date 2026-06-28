@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 public enum LevelFileFormat
 {

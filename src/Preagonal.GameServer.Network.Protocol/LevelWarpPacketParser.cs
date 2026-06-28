@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Preagonal.GServer.Protocol;
+namespace Preagonal.GameServer.Network.Protocol;
 
 public sealed record LevelWarpPacket(
     PlayerToServerPacketId PacketId,

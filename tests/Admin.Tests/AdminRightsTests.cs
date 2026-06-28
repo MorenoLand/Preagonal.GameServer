@@ -1,7 +1,7 @@
-using Preagonal.GServer.Admin;
+using Preagonal.GameServer.Admin;
 using Xunit;
 
-namespace Preagonal.GServer.Admin.Tests;
+namespace Admin.Tests;
 
 public sealed class AdminRightsTests
 {

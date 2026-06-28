@@ -1,12 +1,11 @@
 using System.Runtime.CompilerServices;
 using System.Text;
-using Preagonal.Scripting.GS2Engine.Extensions;
 using Preagonal.Scripting.GS2Compiler;
+using Preagonal.Scripting.GS2Engine.Extensions;
 using Preagonal.Scripting.GS2Engine.GS2.Script;
 using Preagonal.Scripting.GS2Engine.Models;
-using Preagonal.Scripting.GS2Engine.Models.Properties;
 
-namespace Preagonal.GServer.Scripting;
+namespace Preagonal.GameServer.Scripting;
 
 public sealed record Gs2CompileResult(bool Success, byte[] Bytecode, string Error)
 {

@@ -1,20 +1,15 @@
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 public interface ICombatRandom
 {
     int Next(int maxExclusive);
 }
 
-public sealed class DefaultCombatRandom : ICombatRandom
+public sealed class DefaultCombatRandom(int? seed = null) : ICombatRandom
 {
-    private readonly Random _rng;
-
-    public DefaultCombatRandom(int? seed = null)
-    {
-        _rng = seed.HasValue ? new(seed.Value) : Random.Shared;
-    }
+    private readonly Random _rng = seed.HasValue ? new(seed.Value) : Random.Shared;
 
     public int Next(int maxExclusive) => _rng.Next(maxExclusive);
 }
@@ -33,15 +28,15 @@ public static class CombatDropRuntime
         if (maxDrop <= 0)
             return 0;
 
-        int dropGralats = rng.Next(maxDrop) % maxDrop;
+        var dropGralats = rng.Next(maxDrop) % maxDrop;
         dropGralats = Math.Clamp(dropGralats, minDrop, maxDrop);
         return Math.Min(dropGralats, currentRupees);
     }
 
     public static int ComputeDroppedArrows(byte currentArrows, ICombatRandom rng)
     {
-        int droppedArrows = rng.Next(DropArrowsBombsRange) % DropArrowsBombsRange;
-        int candidate = droppedArrows * 5;
+        var droppedArrows = rng.Next(DropArrowsBombsRange) % DropArrowsBombsRange;
+        var candidate = droppedArrows * 5;
         if (candidate > currentArrows)
             candidate = (currentArrows / 5) * 5;
 
@@ -50,8 +45,8 @@ public static class CombatDropRuntime
 
     public static int ComputeDroppedBombs(byte currentBombs, ICombatRandom rng)
     {
-        int droppedBombs = rng.Next(DropArrowsBombsRange) % DropArrowsBombsRange;
-        int candidate = droppedBombs * 5;
+        var droppedBombs = rng.Next(DropArrowsBombsRange) % DropArrowsBombsRange;
+        var candidate = droppedBombs * 5;
         if (candidate > currentBombs)
             candidate = (currentBombs / 5) * 5;
 
@@ -95,7 +90,7 @@ public static class CombatDropRuntime
 
     public static bool TryRollBaddyDrop(ICombatRandom rng, out LevelItemType itemType)
     {
-        int roll = rng.Next(BaddyDropRange) % BaddyDropRange;
+        var roll = rng.Next(BaddyDropRange) % BaddyDropRange;
         itemType = roll switch
         {
             0 => LevelItemType.GreenRupee,
@@ -158,8 +153,8 @@ public static class CombatDropRuntime
 
     public static (byte EncodedX, byte EncodedY) ComputeDropCoords(float originX, float originY, ICombatRandom rng)
     {
-        float x = originX + 1.5f + rng.Next(8) - 2.0f;
-        float y = originY + 2.0f + rng.Next(8) - 2.0f;
+        var x = originX + 1.5f + rng.Next(8) - 2.0f;
+        var y = originY + 2.0f + rng.Next(8) - 2.0f;
         return ((byte)(x * 2), (byte)(y * 2));
     }
 

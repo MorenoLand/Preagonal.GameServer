@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 [Flags]
 public enum PlayerStatus : byte

@@ -1,5 +1,5 @@
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Game;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 
@@ -44,16 +44,9 @@ public sealed record PostLoginPacketDispatchResult(
             OutboundLoginPackets.DisconnectMessage("Disconnected for sending invalid packets.", appendNewline: true));
 }
 
-public sealed class PostLoginPacketDispatcher
+public sealed class PostLoginPacketDispatcher(RuntimePlayer player)
 {
-    private readonly RuntimePlayer _player;
-
-    public PostLoginPacketDispatcher(RuntimePlayer player)
-    {
-        _player = player;
-    }
-
-    public int InvalidPacketCount { get; private set; }
+	public int InvalidPacketCount { get; private set; }
 
     public PostLoginPacketDispatchResult DispatchDecodedPacket(ReadOnlySpan<byte> packet)
     {
@@ -105,7 +98,7 @@ public sealed class PostLoginPacketDispatcher
         {
             try
             {
-                RuntimePlayerPropsApplier.ApplyConfirmed(_player, [update]);
+                RuntimePlayerPropsApplier.ApplyConfirmed(player, [update]);
             }
             catch (NotSupportedException ex)
             {

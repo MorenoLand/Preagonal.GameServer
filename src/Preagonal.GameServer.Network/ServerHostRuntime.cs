@@ -1,4 +1,4 @@
-using Preagonal.GServer.Game;
+using Preagonal.GameServer.Game;
 
 namespace Preagonal.GameServer.Network;
 
@@ -28,11 +28,10 @@ public interface IServerHostRuntime
     void Cleanup();
 }
 
-public sealed class ServerHostRuntime : IServerHostRuntime
+public sealed class ServerHostRuntime(RuntimeServer? runtimeServer = null, bool gs2NpcServerEnabled = false)
+	: IServerHostRuntime
 {
-    private readonly RuntimeServer? _runtimeServer;
-
-    public bool Gs2NpcServerEnabled { get; }
+	public bool Gs2NpcServerEnabled { get; } = gs2NpcServerEnabled;
 
     public Action SocketManagerUpdateHandler { get; set; } = () => { };
     public Action RunScriptsHandler { get; set; } = () => { };
@@ -58,14 +57,6 @@ public sealed class ServerHostRuntime : IServerHostRuntime
     public Func<RuntimeServer, bool> IsScriptAwareCleanupAllowed { get; set; } = _ => true;
     public Action<RuntimePlayer>? ScriptObjectReferencedCallback { get; set; }
     public Action<RuntimePlayer>? BeforeRuntimePlayerDeleteCallback { get; set; }
-
-    public ServerHostRuntime(
-        RuntimeServer? runtimeServer = null,
-        bool gs2NpcServerEnabled = false)
-    {
-        _runtimeServer = runtimeServer;
-        Gs2NpcServerEnabled = gs2NpcServerEnabled;
-    }
 
     public void UpdateSockets() => SocketManagerUpdateHandler();
 
@@ -107,14 +98,14 @@ public sealed class ServerHostRuntime : IServerHostRuntime
 
     public void CleanupDeletedPlayers()
     {
-        if (_runtimeServer is null)
+        if (runtimeServer is null)
             return;
 
-        var scriptObjectRefGate = IsScriptAwareCleanupAllowed(_runtimeServer)
+        var scriptObjectRefGate = IsScriptAwareCleanupAllowed(runtimeServer)
             ? ScriptObjectReferenceGate
             : null;
 
-        _runtimeServer.CleanupDeletedPlayers(
+        runtimeServer.CleanupDeletedPlayers(
             scriptObjectRefGate,
             scriptObjectRefGate is null ? null : ScriptObjectReferencedCallback,
             BeforeRuntimePlayerDeleteCallback);

@@ -1,4 +1,4 @@
-using Preagonal.GServer.Persistence;
+using Preagonal.GameServer.Persistence;
 
 namespace Preagonal.GameServer.Network;
 

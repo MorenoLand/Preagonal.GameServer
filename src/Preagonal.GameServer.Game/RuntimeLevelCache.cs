@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 public sealed record RuntimeLevelMapBinding(RuntimeMap Map, MapFileSnapshot Snapshot)
 {

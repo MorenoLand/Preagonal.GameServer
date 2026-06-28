@@ -1,12 +1,11 @@
 using System.Net;
 using System.Net.Sockets;
+using Preagonal.GameServer.Game;
 using Preagonal.GameServer.Network;
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Network;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 using Xunit;
 
-namespace Preagonal.GServer.Network.Tests;
+namespace Network.Tests;
 
 public sealed class ClientTcpServerTests
 {

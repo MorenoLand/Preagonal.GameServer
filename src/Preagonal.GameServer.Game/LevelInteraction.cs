@@ -1,8 +1,8 @@
-using Preagonal.GServer.Protocol;
 using System.Globalization;
 using System.Text;
+using Preagonal.GameServer.Network.Protocol;
 
-namespace Preagonal.GServer.Game;
+namespace Preagonal.GameServer.Game;
 
 public sealed record LevelChestOpenResult(
     bool Opened,

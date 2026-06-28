@@ -1,8 +1,7 @@
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Protocol;
-using Xunit;
+using Preagonal.GameServer.Game;
+using Preagonal.GameServer.Network.Protocol;
 
-namespace Preagonal.GServer.Game.Tests;
+namespace Game.Tests;
 
 public sealed class RuntimePlayerPropsMutationTests
 {

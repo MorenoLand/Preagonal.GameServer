@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text;
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Persistence;
-using Preagonal.GServer.Protocol;
-using Preagonal.GServer.Scripting;
+using Preagonal.GameServer.Game;
+using Preagonal.GameServer.Network.Protocol;
+using Preagonal.GameServer.Persistence;
+using Preagonal.GameServer.Scripting;
 
 namespace Preagonal.GameServer.Network;
 

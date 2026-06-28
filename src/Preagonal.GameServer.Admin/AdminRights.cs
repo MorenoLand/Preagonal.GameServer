@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Admin;
+namespace Preagonal.GameServer.Admin;
 
 [Flags]
 public enum AdminRight

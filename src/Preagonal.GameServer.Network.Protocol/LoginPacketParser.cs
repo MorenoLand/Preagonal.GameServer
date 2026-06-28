@@ -1,7 +1,7 @@
-using System.Text;
 using System.IO.Compression;
+using System.Text;
 
-namespace Preagonal.GServer.Protocol;
+namespace Preagonal.GameServer.Network.Protocol;
 
 public sealed record LoginPacket(
     PlayerSessionType Type,

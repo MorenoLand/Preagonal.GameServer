@@ -1,25 +1,19 @@
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Game;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 
-public sealed class PostLoginFrameHandler : IClientSocketFrameHandler
+public sealed class PostLoginFrameHandler(
+	RuntimePlayer player,
+	EncryptionGeneration inboundGeneration,
+	byte key,
+	Action<string>? log = null
+) : IClientSocketFrameHandler
 {
-    private readonly InboundPacketDecoder      _decoder;
-    private readonly ClientPacketStreamFramer  _framer = new(new(StripRawDataTrailingNewline: true));
-    private readonly PostLoginPacketDispatcher _dispatcher;
-    private readonly Action<string>            _log;
-
-    public PostLoginFrameHandler(
-        RuntimePlayer player,
-        EncryptionGeneration inboundGeneration,
-        byte key,
-        Action<string>? log = null)
-    {
-        _decoder    = new(inboundGeneration, key);
-        _dispatcher = new(player);
-        _log        = log ?? (_ => { });
-    }
+    private readonly InboundPacketDecoder      _decoder    = new(inboundGeneration, key);
+    private readonly ClientPacketStreamFramer  _framer     = new(new(StripRawDataTrailingNewline: true));
+    private readonly PostLoginPacketDispatcher _dispatcher = new(player);
+    private readonly Action<string>            _log        = log ?? (_ => { });
 
     public ValueTask<ClientSocketFrameResult> HandleFrameAsync(
         ClientSocketSessionContext session,

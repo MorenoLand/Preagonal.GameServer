@@ -1,21 +1,17 @@
-namespace Preagonal.GServer.Game.Tests;
+using Preagonal.GameServer.Game;
+using Preagonal.GameServer.Network.Protocol;
+
+namespace Game.Tests;
 
 public sealed class CombatDropRuntimeTests
 {
-    private sealed class SequenceCombatRandom : ICombatRandom
+    private sealed class SequenceCombatRandom(params int[] values) : ICombatRandom
     {
-        private readonly int[] _values;
-        private int _index;
-
-        public SequenceCombatRandom(params int[] values)
-        {
-            _values = values;
-            _index = 0;
-        }
+	    private          int   _index  = 0;
 
         public int Next(int maxExclusive)
         {
-            var value = _values[_index % _values.Length];
+            var value = values[_index % values.Length];
             _index++;
             return value;
         }
@@ -134,7 +130,7 @@ public sealed class CombatDropRuntimeTests
 
         Assert.Equal(
             [
-                (byte)Preagonal.GServer.Protocol.ServerToPlayerPacketId.ItemAdd + 32,
+                (byte)ServerToPlayerPacketId.ItemAdd + 32,
                 (byte)(1.25f * 2 + 32),
                 (byte)(4.75f * 2 + 32),
                 (byte)(LevelItemType.RedRupee + 32),

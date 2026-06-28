@@ -1,21 +1,16 @@
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
 
-public sealed class ClientSessionSkeleton
+public sealed class ClientSessionSkeleton(ushort id)
 {
     private readonly MemoryStream _outbound = new();
 
-    public ClientSessionSkeleton(ushort id)
-    {
-        Id = id;
-    }
-
-    public ushort Id { get; }
-    public PlayerSessionType Type { get; private set; } = PlayerSessionType.Await;
+    public ushort               Id                          { get; }              = id;
+    public PlayerSessionType    Type                        { get; private set; } = PlayerSessionType.Await;
     public EncryptionGeneration InboundEncryptionGeneration { get; private set; } = EncryptionGeneration.Gen3;
-    public SessionLifecycle Lifecycle { get; private set; } = SessionLifecycle.AwaitingLoginPrelude;
-    public LoginPacket? LoginPacket { get; private set; }
+    public SessionLifecycle     Lifecycle                   { get; private set; } = SessionLifecycle.AwaitingLoginPrelude;
+    public LoginPacket?         LoginPacket                 { get; private set; }
 
     public void ReceiveLoginPrelude(ReadOnlySpan<byte> payload)
     {

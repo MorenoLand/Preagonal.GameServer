@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Persistence;
+namespace Preagonal.GameServer.Persistence;
 
 public interface IAccountPersistenceFileSystem : IAccountFileSystem
 {

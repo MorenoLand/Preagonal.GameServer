@@ -1,8 +1,8 @@
 using System.Net;
+using Preagonal.GameServer.Game;
 using Preagonal.GameServer.Network;
-using Preagonal.GServer.Game;
-using Preagonal.GServer.Persistence;
-using Preagonal.GServer.Protocol;
+using Preagonal.GameServer.Network.Protocol;
+using Preagonal.GameServer.Persistence;
 
 var config = LocalDebugCommandLine.Parse(args);
 if (!config.Enabled)

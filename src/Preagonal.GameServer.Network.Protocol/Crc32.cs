@@ -1,4 +1,4 @@
-namespace Preagonal.GServer.Protocol;
+namespace Preagonal.GameServer.Network.Protocol;
 
 public static class Crc32
 {
