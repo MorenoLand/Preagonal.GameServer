@@ -32,7 +32,7 @@ public sealed class ClientTcpServerTests
 
         Assert.Equal(2, result.PlayerId);
         Assert.Equal(2, handler.Sessions.Single());
-        Assert.Equal([new byte[] { 65, 66, 67 }, new byte[] { 68 }], handler.Frames);
+        Assert.Equal([[65, 66, 67], [68]], handler.Frames);
         Assert.Equal(ClientTcpSessionStopReason.ClientDisconnected, result.StopReason);
     }
 

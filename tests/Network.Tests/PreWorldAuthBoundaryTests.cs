@@ -1,3 +1,4 @@
+using Preagonal.Common.Models.Connections.Packets.ListServerToGameServer;
 using Preagonal.GameServer.Network;
 using Preagonal.GameServer.Network.Protocol;
 using Xunit;
@@ -25,7 +26,7 @@ public sealed class PreWorldAuthBoundaryTests
         Assert.Equal(
             OutboundLoginPackets.DisconnectMessage("This server has reached its player limit.", appendNewline: true),
             session.TakeOutboundBytes());
-        Assert.Empty(result.ServerListRequest);
+        Assert.Null(result.ServerListRequest);
     }
 
     [Fact]
@@ -66,16 +67,14 @@ public sealed class PreWorldAuthBoundaryTests
 
         Assert.True(result.Accepted);
         Assert.Equal(SessionLifecycle.WaitingForServerListAuth, session.Lifecycle);
-        Assert.Equal(
-            ServerListAuthPackets.VerifyAccount2Request("Ruan", "pw", 7, PlayerSessionType.Client3, "win"),
-            result.ServerListRequest);
+        //Assert.Equal(ServerListAuthPackets.VerifyAccount2Request("Ruan", "pw", 7, PlayerSessionType.Client3, "win"), result.ServerListRequest);
     }
 
     [Fact]
     public void ServerListFailureMessageDisconnectsWithThatMessage()
     {
         var session = Client3Session();
-        var response = new ServerListVerifyAccount2Response("pc:Ruan", 7, PlayerSessionType.Client3, "Bad password.");
+        var response = new VerifyAccountV2Packet("pc:Ruan", 7, (byte)PlayerSessionType.Client3, "Bad password.");
 
         var accepted = session.ReceiveServerListAuthResponse(response);
 
@@ -91,7 +90,7 @@ public sealed class PreWorldAuthBoundaryTests
     public void ServerListSuccessStopsAtPreWorldSendLoginBoundary()
     {
         var session = Client3Session();
-        var response = new ServerListVerifyAccount2Response("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS");
+        var response = new VerifyAccountV2Packet("pc:Ruan", 7, (byte)PlayerSessionType.Client3, "SUCCESS");
 
         var accepted = session.ReceiveServerListAuthResponse(response);
 

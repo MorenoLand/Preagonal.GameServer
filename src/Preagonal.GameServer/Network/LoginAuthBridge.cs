@@ -1,8 +1,16 @@
+using Preagonal.Common.Extensions;
+using Preagonal.Common.Models.Connections.Packets.GameServerToClient;
+using Preagonal.Common.Models.Connections.Packets.GameServerToListServer;
+using Preagonal.Common.Models.Connections.Packets.ListServerToGameServer;
+using Preagonal.Common.Serializers;
 using Preagonal.GameServer.Admin;
+using Preagonal.GameServer.Connections.ListServer;
 using Preagonal.GameServer.Game;
 using Preagonal.GameServer.Network.Protocol;
 using Preagonal.GameServer.Persistence;
 using Preagonal.GameServer.Scripting;
+using Preagonal.GameServer.Services;
+using VerifyAccountV2Packet = Preagonal.Common.Models.Connections.Packets.ListServerToGameServer.VerifyAccountV2Packet;
 
 namespace Preagonal.GameServer.Network;
 
@@ -34,7 +42,7 @@ public sealed record ClientSessionEndResult(
 public sealed record ListServerInfoResult(ushort PlayerId, byte[] OutboundBytes, string Diagnostic = "");
 
 public sealed class LoginAuthBridge(
-    IServerListGateway serverList,
+    IGameServerService gameServerService,
     PreWorldAuthOptions options,
     LoginWorldEntryOptions? worldEntryOptions = null,
     RuntimeServer? runtimeServer = null)
@@ -117,7 +125,7 @@ public sealed class LoginAuthBridge(
         if (session.LoginPacket is not null)
             Console.WriteLine($"Client session {context.PlayerId}: login type={session.Type}; key={session.LoginPacket.EncryptionKey?.ToString() ?? "none"}; version={session.LoginPacket.VersionToken}; versionId={session.LoginPacket.VersionId}; account={session.LoginPacket.AccountName}; login={BuildFrameDebug(loginFrame)}; {session.LoginPacket.DebugInfo}");
 
-        var auth = new ServerListAuthBoundary(serverList, options);
+        var auth = new ServerListAuthBoundary(gameServerService, options);
         var result = auth.Begin(session);
         if (!result.Accepted)
             return Finish(session, accepted: false);
@@ -129,15 +137,14 @@ public sealed class LoginAuthBridge(
         return Finish(session, accepted: true);
     }
 
-    public ServerListLoginResponseResult HandleVerifyAccount2(ReadOnlySpan<byte> payloadWithoutPacketId)
+    public ServerListLoginResponseResult HandleVerifyAccount2(VerifyAccountV2Packet payloadWithoutPacketId)
     {
-        var handler = new ServerListAuthResponseHandler(FindSession);
-        var result = handler.HandleVerifyAccount2(payloadWithoutPacketId);
-        var response = result.Response;
-        var key = (response.PlayerId, response.Type);
-        var session = FindSession(response.PlayerId, response.Type);
+        var handler    = new ServerListAuthResponseHandler(FindSession);
+        var (serverListAuthResponseStatus, response) = handler.HandleVerifyAccount2(payloadWithoutPacketId);
+        var key        = (response.Id, (PlayerSessionType)response.Type);
+        var session    = FindSession(response.Id, (PlayerSessionType)response.Type);
         var broadcasts = Array.Empty<ClientSessionOutbound>();
-        if (result.Status == ServerListAuthResponseStatus.AcceptedPreWorld &&
+        if (serverListAuthResponseStatus == ServerListAuthResponseStatus.AcceptedPreWorld &&
             session is not null &&
             worldEntryOptions is not null &&
             EnsureNpcServerPlayer() &&
@@ -168,7 +175,7 @@ public sealed class LoginAuthBridge(
                 _activeAccounts[session.Id] = snapshot.Account;
             ActivateRuntimePlayer(session, snapshot);
             if (IsClient(session.Type))
-                serverList.SendPlayerAdd(playerAdd);
+                gameServerService.SendPlayerAdd(snapshot, playerAdd);
             QueueNpcServerAddress(session, snapshot.Account);
             broadcasts = [.. broadcasts, .. BuildControlLoginBroadcasts(session, snapshot)];
             _pendingSessions.Remove(key);
@@ -178,7 +185,7 @@ public sealed class LoginAuthBridge(
 
         var outbound = session is null ? [] : FlushOutboundBytes(session);
 
-        if (result.Status != ServerListAuthResponseStatus.AcceptedPreWorld)
+        if (serverListAuthResponseStatus != ServerListAuthResponseStatus.AcceptedPreWorld)
         {
             _pendingSessions.Remove(key);
             _remoteAddresses.Remove(key);
@@ -187,9 +194,9 @@ public sealed class LoginAuthBridge(
         }
 
         return new(
-            result.Status,
-            response.PlayerId,
-            response.Type,
+            serverListAuthResponseStatus,
+            response.Id,
+            (PlayerSessionType)response.Type,
             outbound,
             broadcasts);
     }
@@ -207,8 +214,8 @@ public sealed class LoginAuthBridge(
         if (_activePlayers.Remove(playerId, out var player))
         {
             var broadcasts = BuildDisconnectBroadcasts(player).ToArray();
-            if (serverList.IsConnected && player.Kind == RuntimePlayerKind.Client)
-                serverList.SendPlayerRemove(ServerListAuthPackets.PlayerRemove(playerId));
+            if (gameServerService.ListServerConnected && player.Kind == RuntimePlayerKind.Client)
+                gameServerService.SendPlayerRemove(playerId);
 
             if (player.Kind == RuntimePlayerKind.Client &&
                 _activeAccounts.Remove(playerId, out var account) &&
@@ -230,18 +237,19 @@ public sealed class LoginAuthBridge(
         return new(null, []);
     }
 
-    public ListServerInfoResult HandleServerInfo(ReadOnlySpan<byte> payloadWithoutPacketId)
+    public ListServerInfoResult HandleServerInfo(ServerInfoPacket payloadWithoutPacketId)
     {
-        var reader = new GraalBinaryReader(payloadWithoutPacketId);
-        var playerId = reader.ReadGShort();
-        var serverPacket = reader.ReadBytes(reader.BytesLeft);
+        var playerId     = payloadWithoutPacketId.Id;
+        var serverPacket = payloadWithoutPacketId.ServerData;
         if (!_activeSessions.TryGetValue(playerId, out var session))
             return new(playerId, [], "serverwarp target session is not active");
 
         if (session.LoginPacket?.VersionId < ClientVersionId.Client21)
             return new(playerId, [], "serverwarp reply ignored for pre-2.1 client");
 
-        session.QueuePacket(BuildServerWarpPacket(serverPacket));
+        var data = serverPacket.Identifier.Detokenize();
+        var packet = BuildServerWarpPacket(data).Serialize();
+        session.QueuePacket(packet.Buffer);
         return new(playerId, FlushOutboundBytes(session));
     }
 
@@ -315,7 +323,7 @@ public sealed class LoginAuthBridge(
                 if (TryQueueLocalServerWarp(context.PlayerId, serverName, session, touched))
                     continue;
 
-                serverList.SendServerInfoForPlayer(ServerListAuthPackets.ServerInfoForPlayer(context.PlayerId, serverName));
+                gameServerService.SendServerInfoForPlayer(context.PlayerId, serverName);
                 continue;
             }
 
@@ -3413,7 +3421,7 @@ public sealed class LoginAuthBridge(
             _activePlayers[npcServerPlayerId] = player;
         }
 
-        serverList.SendPlayerAdd(PostLoginWorldEntryBoundary.BuildServerListAddPlayerPacket(snapshot));
+        gameServerService.SendPlayerAdd(snapshot, PostLoginWorldEntryBoundary.BuildServerListAddPlayerProperties(snapshot));
         if (touched is not null)
         {
             BroadcastToRemoteControls(BuildRcAddPlayer(snapshot), touched);
@@ -3648,13 +3656,10 @@ public sealed class LoginAuthBridge(
         return writer.ToArray();
     }
 
-    private static byte[] BuildServerWarpPacket(ReadOnlySpan<byte> serverPacket)
+    private static ServerWarpPacket BuildServerWarpPacket(IEnumerable<string> serverPacket)
     {
-        var writer = new GraalBinaryWriter();
-        writer.WriteGChar((byte)ServerToPlayerPacketId.ServerWarp);
-        writer.WriteBytes(serverPacket);
-        writer.WriteByte((byte)'\n');
-        return writer.ToArray();
+	    var enumerable = serverPacket as string[] ?? serverPacket.ToArray();
+	    return new(enumerable[0], enumerable[1], enumerable[2], enumerable[3]);
     }
 
     private bool TryQueueLocalServerWarp(ushort playerId, string serverName, ClientSessionSkeleton session, ISet<ushort> touched)
@@ -3668,7 +3673,7 @@ public sealed class LoginAuthBridge(
         if (IsAuto(ip))
             ip = "127.0.0.1";
         var port = settings.GetString("serverport", "0");
-        QueueSelfPacket(playerId, BuildServerWarpPacket(System.Text.Encoding.ASCII.GetBytes($"P {localName} {ip}:{port}")), touched);
+        QueueSelfPacket(playerId, BuildServerWarpPacket(new List<string>{$"P {localName}", "localname", ip, port}).Serialize().Buffer, touched);
         return true;
     }
 

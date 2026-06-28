@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Logging.Console;
 using Preagonal.Common.Scripting;
 using Preagonal.GameServer.Configuration;
+using Preagonal.GameServer.Connections.ListServer;
 using Preagonal.GameServer.Services;
 
 namespace Preagonal.GameServer;
@@ -153,6 +154,7 @@ public class Startup(IConfiguration configuration)
 		services.AddSingleton<IScriptManager, ScriptManager>(ScriptManager.CreateInstance);
 		services.AddSingleton<IServiceProvider, ServiceProvider>();
 
+		services.AddSingleton<IListServerConnection, ListServerConnection>();
 		services.AddSingleton<IGameServerService, GameServerService>();
 		services.AddHostedService<IGameServerService>(p => p.GetRequiredService<IGameServerService>());
 	}

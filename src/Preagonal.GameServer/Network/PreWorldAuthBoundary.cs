@@ -10,7 +10,7 @@ public sealed record PreWorldAuthOptions(
     IReadOnlyList<string> AllowedVersions,
     string AllowedVersionText);
 
-public sealed record PreWorldAuthResult(bool Accepted, byte[] ServerListRequest);
+public sealed record PreWorldAuthResult(bool Accepted, ClientSessionSkeleton? ServerListRequest);
 
 public sealed class PreWorldAuthBoundary(PreWorldAuthOptions options)
 {
@@ -35,19 +35,14 @@ public sealed class PreWorldAuthBoundary(PreWorldAuthOptions options)
             return Reject(session, "The login server is offline.  Try again later.");
 
         session.MarkWaitingForServerListAuth();
-        var request = ServerListAuthPackets.VerifyAccount2Request(
-            session.LoginPacket.AccountName,
-            session.LoginPacket.Password,
-            session.Id,
-            session.Type,
-            session.LoginPacket.Identity);
-        return new(true, request);
+
+        return new(true, session);
     }
 
     private static PreWorldAuthResult Reject(ClientSessionSkeleton session, string message)
     {
         session.QueueDisconnect(message);
-        return new(false, []);
+        return new(false, null);
     }
 
     private static bool IsClient(PlayerSessionType type) =>

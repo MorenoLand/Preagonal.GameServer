@@ -17,7 +17,7 @@ public sealed class TcpClientConnectionRegistry
         _streams.TryRemove(playerId, out _);
     }
 
-    public async ValueTask<bool> SendAsync(
+    public async Task<bool> SendAsync(
         ushort playerId,
         ReadOnlyMemory<byte> bytes,
         CancellationToken cancellationToken)

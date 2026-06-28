@@ -217,7 +217,7 @@ public sealed class WarpWorldEntryBoundaryTests
         packet.WriteBytes("win"u8);
         Assert.True(session.ReceiveLoginPacket(packet.ToArray()));
         Assert.True(session.ReceiveServerListAuthResponse(
-            new("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS")));
+            new("pc:Ruan", 7, (byte)PlayerSessionType.Client3, "SUCCESS")));
         Assert.True(PlayerSendLoginContinuation.Begin(
             session,
             new("pc:Ruan", false, "", false, false, true, ["0.0.0.0"], false),

@@ -130,10 +130,10 @@ public sealed record PlayerTimedEventState(
     public IReadOnlyList<PlayerTimedEventAction> Tick(TimeSpan currentTime)
     {
         if (!SocketConnected)
-            return new[] { PlayerTimedEventAction.DeleteDisconnectedSocket };
+            return [PlayerTimedEventAction.DeleteDisconnectedSocket];
 
         if (!IsClient)
-            return Array.Empty<PlayerTimedEventAction>();
+            return [];
 
         var actions = new List<PlayerTimedEventAction>
         {

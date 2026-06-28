@@ -1,28 +1,53 @@
 using System.Net;
 using System.Text;
+using Preagonal.Common.Core;
+using Preagonal.GameServer.Configuration;
+using Preagonal.GameServer.Connections.ListServer;
 using Preagonal.GameServer.Game;
 using Preagonal.GameServer.Network;
 using Preagonal.GameServer.Network.Protocol;
 using Preagonal.GameServer.Persistence;
+using GS2LSP = Preagonal.Common.Models.Connections.Packets.GameServerToListServer;
 
 namespace Preagonal.GameServer.Services;
 
-public class GameServerService(ICommandLineArguments args) : IGameServerService
+public class GameServerService(ILogger<GameServerService> logger, IListServerConnection listServerConnection, ICommandLineArguments args) : IGameServerService
 {
+	private CancellationTokenSource?    _cts;
+	private Task?                       _maintenanceLoop;
+	private TcpClientConnectionRegistry clientConnections = new();
+
+	private async Task MaintenanceLoop(CancellationToken ct)
+	{
+		while (!ct.IsCancellationRequested)
+		{
+			/*
+			foreach (var serverConnection in _gameServerConnections)
+				serverConnection.Value.DoMaintenance();
+			*/
+			await Task.Delay(500, ct).ConfigureAwait(false);
+		}
+	}
+
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
+		_cts           = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		//await StartListServerSocket().ConfigureAwait(false);
+		//await StartPlayerSocket().ConfigureAwait(false);
+
+		_maintenanceLoop = Task.Run(() => MaintenanceLoop(_cts.Token), _cts.Token);
 		var config = LocalDebugCommandLine.Parse(args);
 		if (!config.Enabled)
 		{
-			Console.WriteLine("Preagonal.GServer C# runtime initialized.");
+			logger.LogInformation("Preagonal GameServer v{BuildVersion} ({BuildDateTime}) runtime initialized", Program.BuildVersion, Program.BuildDateTime);
 			var productionArgs = ServerStartupCommandLine.Parse(args, Environment.GetEnvironmentVariable);
 			if (productionArgs.ShowHelp)
 			{
-				Console.WriteLine(
-					"Confirmed C++ options: -h, --help, -s/--server, -p/--port, --localip, --serverip, --interface, --staff, --name."
+				logger.LogInformation(
+					"Confirmed C++ options: -h, --help, -s/--server, -p/--port, --localip, --serverip, --interface, --staff, --name"
 				);
-				Console.WriteLine(
-					"Local debug shell: --local-debug --dev-root <path> --dev-level <level.nw> [--port <port>]."
+				logger.LogInformation(
+					"Local debug shell: --local-debug --dev-root <path> --dev-level <level.nw> [--port <port>]"
 				);
 				return;
 			}
@@ -30,33 +55,48 @@ public class GameServerService(ICommandLineArguments args) : IGameServerService
 			var snapshot = ServerStartupLoader.Load(Path.GetDirectoryName(AppContext.BaseDirectory) ?? Environment.CurrentDirectory, productionArgs);
 			if (snapshot.Resolution.Success)
 			{
-				Console.WriteLine(
-					$"Server startup resolved server '{snapshot.Resolution.ServerName}' from {snapshot.Resolution.Source}."
+				logger.LogInformation(
+					"Server startup resolved server \'{ResolutionServerName}\' from {ResolutionSource}",
+					snapshot.Resolution.ServerName,
+					snapshot.Resolution.Source
 				);
-				Console.WriteLine($"Server path: {snapshot.Resolution.ServerPath}");
-				Console.WriteLine($"config/serveroptions.txt opened: {snapshot.ServerOptions.IsOpened}");
-				Console.WriteLine($"config/adminconfig.txt opened: {snapshot.AdminConfig.IsOpened}");
+				logger.LogInformation("Server path: {ResolutionServerPath}", snapshot.Resolution.ServerPath);
+				logger.LogInformation("config/serveroptions.txt opened: {ServerOptionsIsOpened}", snapshot.ServerOptions.IsOpened);
+				logger.LogInformation("config/adminconfig.txt opened: {AdminConfigIsOpened}", snapshot.AdminConfig.IsOpened);
 			}
 			else
 			{
-				Console.WriteLine(snapshot.Resolution.Diagnostic);
+				logger.LogError("Error: {Diagnostic}",snapshot.Resolution.Diagnostic);
 				return;
 			}
 
 			var runtimeServer = new RuntimeServer();
 			var runtimeLevelCache = new RuntimeLevelCache();
 			var runtime = new ServerHostRuntime(runtimeServer, snapshot.ServerOptions.GetBool("serverside", false));
-			using var serverListSocket = new ServerListTcpSocket();
 			var serverListOptions = ServerListStartupOptions.FromStartupSnapshot(snapshot, productionArgs);
-			var serverListResult = new ServerListLifecycle(serverListSocket).ConnectServer(serverListOptions);
-			Console.WriteLine(
-				serverListResult.Connected
-					? $"Registered '{serverListOptions.Name}' with list server {serverListOptions.ListIp}:{serverListOptions.ListPort}."
-					: $"Could not connect/register with list server {serverListOptions.ListIp}:{serverListOptions.ListPort}."
-			);
+			listServerConnection.SetOptions(serverListOptions);
+			listServerConnection.SetGameServerService(this);
+			await listServerConnection.ConnectAsync(serverListOptions.ListIp, int.Parse(serverListOptions.ListPort), cancellationToken).ConfigureAwait(false);
+
+			if (listServerConnection.Connected)
+			{
+				await listServerConnection.SendLogin().ConfigureAwait(false);
+				logger.LogInformation(
+					"Registered \'{Name}\' with list server {ListIp}:{ListPort}",
+					serverListOptions.Name,
+					serverListOptions.ListIp,
+					serverListOptions.ListPort
+				);
+			}
+			else
+				logger.LogInformation(
+					"Could not connect/register with list server {ListIp}:{ListPort}",
+					serverListOptions.ListIp,
+					serverListOptions.ListPort
+				);
 			if (!int.TryParse(serverListOptions.ServerPort, out var gamePort))
 			{
-				Console.WriteLine($"Invalid serverport '{serverListOptions.ServerPort}'.");
+				logger.LogError("Invalid serverport \'{ServerPort}\'", serverListOptions.ServerPort);
 				return;
 			}
 
@@ -65,12 +105,12 @@ public class GameServerService(ICommandLineArguments args) : IGameServerService
 			var levelLoader         = new NwLevelFileLoader(resourceFileSystems.Get(ServerFileSystemKind.All));
 			var staffAccounts       = SplitCsv(snapshot.ServerOptions.GetString("staff"));
 			var authBridge = new LoginAuthBridge(
-				serverListSocket,
+				this,
 				new(
 					snapshot.ServerOptions.GetInt("maxplayers", 128),
 					0,
 					false,
-					serverListResult.Connected,
+					listServerConnection.Connected,
 					serverListOptions.AllowedVersions,
 					string.Join(", ", serverListOptions.AllowedVersions)
 				),
@@ -90,30 +130,30 @@ public class GameServerService(ICommandLineArguments args) : IGameServerService
 				),
 				runtimeServer
 			);
-			var clientConnections = new TcpClientConnectionRegistry();
+			listServerConnection.SetAuthBridge(authBridge);
+
 			runtime.LevelTimedEventsHandler = () =>
 			{
 				foreach (var broadcast in authBridge.TickLevelTimedEvents())
 					if (broadcast.OutboundBytes.Length != 0)
-						clientConnections.SendAsync(broadcast.PlayerId, broadcast.OutboundBytes, CancellationToken.None)
-						                 .AsTask()
-						                 .GetAwaiter()
-						                 .GetResult();
+						clientConnections.SendAsync(broadcast.PlayerId, broadcast.OutboundBytes, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
 			};
 			using var clientServer = new ClientTcpServer(
 				IPAddress.Any,
 				gamePort,
 				new LoginSocketFrameHandler(authBridge, clientConnections),
 				clientConnections,
-				session => Console.WriteLine(
-					$"Accepted client session {session.PlayerId} from {session.RemoteAddress}."
+				session => logger.LogInformation(
+					"Accepted client session {SessionPlayerId} from {SessionRemoteAddress}",
+					session.PlayerId,
+					session.RemoteAddress
 				)
 			);
 
 			var nextServerListKeepalive = DateTimeOffset.UtcNow.AddMinutes(1);
 			runtime.ServerListTimedEventsHandler = () =>
 			{
-				if (!serverListSocket.IsConnected || DateTimeOffset.UtcNow < nextServerListKeepalive)
+				if (!listServerConnection.Connected || DateTimeOffset.UtcNow < nextServerListKeepalive)
 					return;
 
 				nextServerListKeepalive = DateTimeOffset.UtcNow.AddMinutes(1);
@@ -121,8 +161,8 @@ public class GameServerService(ICommandLineArguments args) : IGameServerService
 				if (string.IsNullOrEmpty(ip))
 					ip = "AUTO";
 
-				serverListSocket.SendPacket(ServerListAuthPackets.SetIp(ip));
-				Console.WriteLine($"Sent listserver set-ip keepalive: {ip}.");
+				listServerConnection.SendPacket(new GS2LSP.SetIPPacket(ip));
+				logger.LogInformation("Sent listserver set-ip keepalive: {Ip}", ip);
 			};
 
 			runtime.CleanupHandler = () =>
@@ -152,32 +192,38 @@ public class GameServerService(ICommandLineArguments args) : IGameServerService
 								                 broadcast.OutboundBytes,
 								                 productionCts.Token
 							                 )
-							                 .AsTask()
+							                 .ConfigureAwait(false)
 							                 .GetAwaiter()
 							                 .GetResult();
 
 					var saveResult = endResult.SaveResult;
 					if (saveResult is { WriteAttempted: true })
-						Console.WriteLine(
-							$"Saved account for client session {result.PlayerId}: writeSucceeded={saveResult.WriteSucceeded}; path={saveResult.Path}"
+						logger.LogInformation(
+							"Saved account for client session {ResultPlayerId}: writeSucceeded={SaveResultWriteSucceeded}; path={SaveResultPath}",
+							result.PlayerId,
+							saveResult.WriteSucceeded,
+							saveResult.Path
 						);
 
-					Console.WriteLine(
-						string.IsNullOrEmpty(result.Diagnostic)
-							? $"Client session {result.PlayerId} stopped: {result.StopReason}."
-							: $"Client session {result.PlayerId} stopped: {result.StopReason}; {result.Diagnostic}"
-					);
+					if (string.IsNullOrEmpty(result.Diagnostic))
+						logger.LogInformation("Client session {ResultPlayerId} stopped: {ResultStopReason}", result.PlayerId, result.StopReason);
+					else
+						logger.LogInformation(
+							"Client session {ResultPlayerId} stopped: {ResultStopReason}; {ResultDiagnostic}",
+							result.PlayerId,
+							result.StopReason,
+							result.Diagnostic
+						);
 				}
 			);
-			var listServerReceiveTask = serverListResult.Connected
-				? RunServerListReceiveLoop(serverListSocket, authBridge, clientConnections, productionCts.Token)
-				: Task.CompletedTask;
 
-			Console.WriteLine(
-				$"Server startup resolved. Listening for clients on port {gamePort}. Press Ctrl+C to stop."
+
+			logger.LogInformation(
+				"Server startup resolved. Listening for clients on port {GamePort}. Press Ctrl+C to stop",
+				gamePort
 			);
 			hostLoop.Run(TimeSpan.FromMilliseconds(5), productionCts.Token);
-			await Task.WhenAll(acceptTask, listServerReceiveTask).ConfigureAwait(false);
+			await Task.WhenAll(acceptTask).ConfigureAwait(false);
 			return;
 		}
 
@@ -194,126 +240,35 @@ public class GameServerService(ICommandLineArguments args) : IGameServerService
 		var pipeline    = new LocalDebugSessionPipeline(new(true, config.LevelName), new(fileSystem));
 
 		using var server = new LocalDebugTcpServer(IPAddress.Any, config.Port, pipeline);
-		using var cts    = new CancellationTokenSource();
 		Console.CancelKeyPress += (_, e) =>
 		{
 			e.Cancel = true;
-			cts.Cancel();
+			_cts.Cancel();
 		};
 
 		server.Start();
-		Console.WriteLine("Listening. Press Ctrl+C to stop.");
-		while (!cts.IsCancellationRequested)
+		logger.LogInformation("Listening. Press Ctrl+C to stop");
+		while (!_cts.IsCancellationRequested)
 			try
 			{
-				var result = await server.AcceptOneAsync(cts.Token).ConfigureAwait(false);
+				var result = await server.AcceptOneAsync(_cts.Token).ConfigureAwait(false);
 				foreach (var line in result.Log)
-					Console.WriteLine(line);
-				Console.WriteLine(
-					$"Connection stopped at {result.StopPoint}; lifecycle={result.Lifecycle}; accepted={result.Accepted}."
+					logger.LogInformation(line);
+				logger.LogInformation(
+					"Connection stopped at {ResultStopPoint}; lifecycle={ResultLifecycle}; accepted={ResultAccepted}",
+					result.StopPoint,
+					result.Lifecycle,
+					result.Accepted
 				);
 			}
-			catch (OperationCanceledException) when (cts.IsCancellationRequested)
+			catch (OperationCanceledException) when (_cts.IsCancellationRequested)
 			{
 				break;
 			}
 
 		return;
 
-		static async Task RunServerListReceiveLoop(
-			ServerListTcpSocket serverListSocket,
-			LoginAuthBridge authBridge,
-			TcpClientConnectionRegistry clientConnections,
-			CancellationToken cancellationToken
-		)
-		{
-			while (!cancellationToken.IsCancellationRequested && serverListSocket.IsConnected)
-			{
-				IReadOnlyList<byte[]> packets;
-				try
-				{
-					packets = await serverListSocket.ReceivePacketsAsync(cancellationToken).ConfigureAwait(false);
-				}
-				catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-				{
-					break;
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"Listserver receive loop failed: {ex.Message}");
-					break;
-				}
 
-				foreach (var packet in packets)
-				{
-					if (packet.Length == 0)
-						continue;
-
-					var rawPacketId = packet[0];
-					var packetId    = (ListServerToServerPacketId)DecodeGChar(rawPacketId);
-					Console.WriteLine(
-						$"Listserver packet raw={rawPacketId} decoded={(byte)packetId} ({packetId}) received: {packet.Length} bytes."
-					);
-
-					switch (packetId)
-					{
-						case ListServerToServerPacketId.VerifyAccount2:
-						{
-							var result = authBridge.HandleVerifyAccount2(packet.AsSpan(1));
-							Console.WriteLine(
-								$"VerifyAccount2 result: status={result.Status}; player={result.PlayerId}; type={result.Type}; outbound={result.OutboundBytes.Length}; broadcasts={result.Broadcasts.Count}."
-							);
-							if (result.OutboundBytes.Length != 0)
-								await clientConnections.SendAsync(
-									                       result.PlayerId,
-									                       result.OutboundBytes,
-									                       cancellationToken
-								                       )
-								                       .ConfigureAwait(false);
-							foreach (var broadcast in result.Broadcasts)
-								if (broadcast.OutboundBytes.Length != 0)
-								{
-									var sent = await clientConnections.SendAsync(
-										                                  broadcast.PlayerId,
-										                                  broadcast.OutboundBytes,
-										                                  cancellationToken
-									                                  )
-									                                  .ConfigureAwait(false);
-									Console.WriteLine(
-										sent
-											? $"Sent login broadcast to client session {broadcast.PlayerId}: {broadcast.OutboundBytes.Length} bytes."
-											: $"Missed login broadcast to client session {broadcast.PlayerId}: stream not registered."
-									);
-								}
-
-							break;
-						}
-						case ListServerToServerPacketId.Ping:
-							Console.WriteLine("Replying to listserver ping.");
-							serverListSocket.SendPacket(ServerListAuthPackets.Ping());
-							break;
-						case ListServerToServerPacketId.ErrorMessage:
-							Console.WriteLine($"Listserver error: {Encoding.ASCII.GetString(packet.AsSpan(1))}");
-							break;
-						case ListServerToServerPacketId.SendText:
-							Console.WriteLine($"Listserver text: {PreviewAscii(packet.AsSpan(1))}");
-							break;
-						case ListServerToServerPacketId.RequestText:
-							Console.WriteLine($"Listserver request text: {PreviewAscii(packet.AsSpan(1))}");
-							break;
-						case ListServerToServerPacketId.ServerInfo:
-							Console.WriteLine($"Listserver server info: {PreviewAscii(packet.AsSpan(1))}");
-							var warp = authBridge.HandleServerInfo(packet.AsSpan(1));
-							if (warp.OutboundBytes.Length != 0)
-								await clientConnections.SendAsync(warp.PlayerId, warp.OutboundBytes, cancellationToken)
-								                       .ConfigureAwait(false);
-							else if (!string.IsNullOrEmpty(warp.Diagnostic))
-								Console.WriteLine($"Listserver server info ignored: {warp.Diagnostic}");
-							break;
-					}
-				}
-			}
-		}
 
 		static ServerResourceFileSystems LoadResourceFileSystems(string serverRoot, Gs2Settings options)
 		{
@@ -328,16 +283,48 @@ public class GameServerService(ICommandLineArguments args) : IGameServerService
 			value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
 			     .Where(entry => entry.Length > 0 && !entry.StartsWith('('))
 			     .ToArray();
-
-		static byte DecodeGChar(byte value) => unchecked((byte)(value - 32));
-
-		static string PreviewAscii(ReadOnlySpan<byte> bytes)
-		{
-			var text = Encoding.ASCII.GetString(bytes);
-			text = text.Replace("\r", "\\r", StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal);
-			return text.Length <= 180 ? text : text[..180] + "...";
-		}
 	}
 
-	public Task StopAsync(CancellationToken cancellationToken) => throw new NotImplementedException();
+	public async Task StopAsync(CancellationToken cancellationToken)
+	{
+		logger.LogInformation("{ServiceName} has stopped", nameof(GameServerService));
+
+		if (_maintenanceLoop == null)
+			return;
+
+		if (_cts != null)
+			await _cts.CancelAsync().ConfigureAwait(false);
+
+		await Task.WhenAny(_maintenanceLoop, Task.Delay(Timeout.Infinite, cancellationToken)).ConfigureAwait(false);
+	}
+
+	public bool ListServerConnected                             => listServerConnection.Connected;
+	public void SendPlayerAdd(PostLoginPlayerSnapshot snapshot, GByteBuffer properties) =>
+		listServerConnection.SendPacket(
+			new GS2LSP.AddPlayerPacket(
+				snapshot.PlayerId,
+				(byte)snapshot.Type,
+				properties
+			)
+		);
+
+	public void SendPlayerRemove(ushort playerId) =>
+		listServerConnection.SendPacket(
+			new GS2LSP.DeletePlayerPacketV2(playerId)
+		);
+
+	public void SendLoginPacketForPlayer(ClientSessionSkeleton? sessionSkeleton)
+	{
+		if (sessionSkeleton?.LoginPacket == null) return;
+		listServerConnection.SendPacket(
+			new GS2LSP.VerifyAccountV2Packet(sessionSkeleton.LoginPacket.AccountName, sessionSkeleton.LoginPacket.Password, sessionSkeleton.Id, (byte)sessionSkeleton.Type, sessionSkeleton.LoginPacket.Identity)
+		);
+	}
+
+	public void SendServerInfoForPlayer(ushort playerId, string serverName) =>
+		listServerConnection.SendPacket(
+			new GS2LSP.GetServerInfoPacket(playerId, serverName)
+		);
+
+	public Task<bool> SendAsync(ushort resultPlayerId, byte[] resultOutboundBytes) => clientConnections.SendAsync(resultPlayerId, resultOutboundBytes, CancellationToken.None);
 }

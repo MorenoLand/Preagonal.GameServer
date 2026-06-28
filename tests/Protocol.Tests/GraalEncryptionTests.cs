@@ -37,7 +37,7 @@ public sealed class GraalEncryptionTests
         codec.Reset(0);
         codec.LimitFromCompressionType(CompressionType.Uncompressed);
 
-        var encrypted = codec.Encrypt(new byte[] { 1, 2, 3, 4, 5 });
+        var encrypted = codec.Encrypt([1, 2, 3, 4, 5]);
 
         Assert.Equal(new byte[] { 0x19, 0x1A, 0xD2, 0xD2, 0x7D }, encrypted);
     }

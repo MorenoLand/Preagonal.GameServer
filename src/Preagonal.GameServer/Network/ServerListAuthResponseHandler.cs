@@ -1,3 +1,4 @@
+using Preagonal.Common.Models.Connections.Packets.ListServerToGameServer;
 using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
@@ -11,7 +12,7 @@ public enum ServerListAuthResponseStatus
 
 public sealed record ServerListAuthResponseResult(
     ServerListAuthResponseStatus Status,
-    ServerListVerifyAccount2Response Response)
+    VerifyAccountV2Packet Response)
 {
     public bool SessionFound => Status != ServerListAuthResponseStatus.SessionNotFound;
 }
@@ -19,21 +20,20 @@ public sealed record ServerListAuthResponseResult(
 public sealed class ServerListAuthResponseHandler(
     Func<ushort, PlayerSessionType, ClientSessionSkeleton?> findSession)
 {
-    public ServerListAuthResponseResult HandleVerifyAccount2(ReadOnlySpan<byte> payloadWithoutPacketId)
+    public ServerListAuthResponseResult HandleVerifyAccount2(VerifyAccountV2Packet payloadWithoutPacketId)
     {
-        var response = ServerListAuthPackets.ParseVerifyAccount2Response(payloadWithoutPacketId);
-        var session = findSession(response.PlayerId, response.Type);
+	    var session  = findSession(payloadWithoutPacketId.Id, (PlayerSessionType)payloadWithoutPacketId.Type);
 
         if (session is null)
             return new(
                 ServerListAuthResponseStatus.SessionNotFound,
-                response);
+                payloadWithoutPacketId);
 
-        var accepted = session.ReceiveServerListAuthResponse(response);
+        var accepted = session.ReceiveServerListAuthResponse(payloadWithoutPacketId);
         return new(
             accepted
                 ? ServerListAuthResponseStatus.AcceptedPreWorld
                 : ServerListAuthResponseStatus.Rejected,
-            response);
+            payloadWithoutPacketId);
     }
 }

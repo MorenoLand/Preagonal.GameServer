@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace Preagonal.GameServer;
+namespace Preagonal.GameServer.Configuration;
 
 internal class CommandLineArguments(IReadOnlyList<string> args) : ICommandLineArguments
 {

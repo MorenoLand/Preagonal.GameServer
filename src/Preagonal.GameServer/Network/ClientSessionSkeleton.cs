@@ -1,3 +1,4 @@
+using Preagonal.Common.Models.Connections.Packets.ListServerToGameServer;
 using Preagonal.GameServer.Network.Protocol;
 
 namespace Preagonal.GameServer.Network;
@@ -46,15 +47,15 @@ public sealed class ClientSessionSkeleton(ushort id)
         return bytes;
     }
 
-    public bool ReceiveServerListAuthResponse(ServerListVerifyAccount2Response response)
+    public bool ReceiveServerListAuthResponse(VerifyAccountV2Packet response)
     {
         if (LoginPacket is null)
             throw new InvalidOperationException("Login packet must be parsed before server-list auth response.");
 
-        LoginPacket = LoginPacket with { AccountName = response.AccountName };
-        if (!response.IsSuccess)
+        LoginPacket = LoginPacket with { AccountName = response.Account };
+        if (!response.StatusMessage.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
         {
-            QueueDisconnect(response.Message);
+            QueueDisconnect(response.StatusMessage);
             return false;
         }
 

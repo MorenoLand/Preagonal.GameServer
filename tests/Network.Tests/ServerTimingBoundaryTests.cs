@@ -13,14 +13,13 @@ public sealed class ServerTimingBoundaryTests
         var actions = scheduler.Tick(TimeSpan.FromSeconds(1));
 
         Assert.Equal(
-            new[]
-            {
-                ServerTimingAction.SocketManagerUpdate5ms,
+	        [
+		        ServerTimingAction.SocketManagerUpdate5ms,
                 ServerTimingAction.ServerListTimedEvents,
                 ServerTimingAction.PlayerTimedEvents,
                 ServerTimingAction.LevelTimedEvents,
                 ServerTimingAction.GroupLevelTimedEvents,
-            },
+	        ],
             actions);
     }
 
@@ -31,7 +30,7 @@ public sealed class ServerTimingBoundaryTests
 
         var actions = scheduler.Tick(TimeSpan.FromMilliseconds(999));
 
-        Assert.Equal(new[] { ServerTimingAction.SocketManagerUpdate5ms }, actions);
+        Assert.Equal([ServerTimingAction.SocketManagerUpdate5ms], actions);
     }
 
     [Fact]
@@ -42,9 +41,8 @@ public sealed class ServerTimingBoundaryTests
         var actions = scheduler.Tick(TimeSpan.FromMinutes(5));
 
         Assert.Equal(
-            new[]
-            {
-                ServerTimingAction.SocketManagerUpdate5ms,
+	        [
+		        ServerTimingAction.SocketManagerUpdate5ms,
                 ServerTimingAction.ServerListTimedEvents,
                 ServerTimingAction.PlayerTimedEvents,
                 ServerTimingAction.LevelTimedEvents,
@@ -59,7 +57,7 @@ public sealed class ServerTimingBoundaryTests
                 ServerTimingAction.LoadIpBans,
                 ServerTimingAction.SaveWeapons,
                 ServerTimingAction.CleanupEmptyInstancedGroupLevels,
-            },
+	        ],
             actions);
     }
 
@@ -71,7 +69,7 @@ public sealed class ServerTimingBoundaryTests
         _ = scheduler.Tick(TimeSpan.FromMilliseconds(1500));
         var actions = scheduler.Tick(TimeSpan.FromMilliseconds(2400));
 
-        Assert.Equal(new[] { ServerTimingAction.SocketManagerUpdate5ms }, actions);
+        Assert.Equal([ServerTimingAction.SocketManagerUpdate5ms], actions);
     }
 
     [Fact]
@@ -122,7 +120,7 @@ public sealed class ServerTimingBoundaryTests
 
         var actions = state.Tick(TimeSpan.FromSeconds(1));
 
-        Assert.Equal(new[] { PlayerTimedEventAction.DeleteDisconnectedSocket }, actions);
+        Assert.Equal([PlayerTimedEventAction.DeleteDisconnectedSocket], actions);
     }
 
     [Fact]

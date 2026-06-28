@@ -13,7 +13,7 @@
         </PackageReference>
         <ProjectReference Include="..\..\src\Preagonal.GameServer.Persistence\Preagonal.GameServer.Persistence.csproj" />
         <ProjectReference Include="..\..\src\Preagonal.GameServer.Game\Preagonal.GameServer.Game.csproj" />
-        <ProjectReference Include="..\..\src\Preagonal.GameServer.Network\Preagonal.GameServer.Network.csproj" />
         <ProjectReference Include="..\..\src\Preagonal.GameServer.Network.Protocol\Preagonal.GameServer.Network.Protocol.csproj" />
+        <ProjectReference Include="..\..\src\Preagonal.GameServer\Preagonal.GameServer.csproj" />
     </ItemGroup>
 </Project>

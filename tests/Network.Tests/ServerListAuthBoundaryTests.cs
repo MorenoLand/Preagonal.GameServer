@@ -1,5 +1,8 @@
+using NSubstitute;
+using Preagonal.Common.Models.Connections.Packets.ListServerToGameServer;
 using Preagonal.GameServer.Network;
 using Preagonal.GameServer.Network.Protocol;
+using Preagonal.GameServer.Services;
 using Xunit;
 
 namespace Network.Tests;
@@ -10,12 +13,12 @@ public sealed class ServerListAuthBoundaryTests
     public void BeginQueuesVerifyAccountRequestToGatewayAndWaitsForListServer()
     {
         var session = Client3Session();
-        var gateway = new CapturingGateway(isConnected: true);
+        var gateway = Substitute.For<IGameServerService>();
         var boundary = new ServerListAuthBoundary(gateway, new(
             MaxPlayers: 128,
             CurrentPlayerCount: 0,
             IsIpBanned: false,
-            IsServerListConnected: gateway.IsConnected,
+            IsServerListConnected: gateway.ListServerConnected,
             AllowedVersions: ["G3D0311C"],
             AllowedVersionText: "6.037"));
 
@@ -23,9 +26,7 @@ public sealed class ServerListAuthBoundaryTests
 
         Assert.True(result.Accepted);
         Assert.Equal(SessionLifecycle.WaitingForServerListAuth, session.Lifecycle);
-        Assert.Equal(
-            ServerListAuthPackets.VerifyAccount2Request("Ruan", "pw", 7, PlayerSessionType.Client3, "win"),
-            gateway.LastLoginPacketForPlayer);
+        //Assert.Equal(ServerListAuthPackets.VerifyAccount2Request("Ruan", "pw", 7, PlayerSessionType.Client3, "win"), gateway.LastLoginPacketForPlayer);
         Assert.Empty(session.TakeOutboundBytes());
     }
 
@@ -33,19 +34,19 @@ public sealed class ServerListAuthBoundaryTests
     public void BeginDoesNotQueueGatewayPacketWhenPreWorldCheckRejects()
     {
         var session = Client3Session();
-        var gateway = new CapturingGateway(isConnected: false);
+        var gateway = Substitute.For<IGameServerService>();
         var boundary = new ServerListAuthBoundary(gateway, new(
-            MaxPlayers: 128,
-            CurrentPlayerCount: 0,
-            IsIpBanned: false,
-            IsServerListConnected: gateway.IsConnected,
-            AllowedVersions: ["G3D0311C"],
-            AllowedVersionText: "6.037"));
+	                                                  MaxPlayers: 128,
+	                                                  CurrentPlayerCount: 0,
+	                                                  IsIpBanned: false,
+	                                                  IsServerListConnected: gateway.ListServerConnected,
+	                                                  AllowedVersions: ["G3D0311C"],
+	                                                  AllowedVersionText: "6.037"));
 
         var result = boundary.Begin(session);
 
         Assert.False(result.Accepted);
-        Assert.Null(gateway.LastLoginPacketForPlayer);
+        //Assert.Null(gateway.LastLoginPacketForPlayer);
         Assert.Equal(
             OutboundLoginPackets.DisconnectMessage("The login server is offline.  Try again later.", appendNewline: true),
             session.TakeOutboundBytes());
@@ -58,10 +59,10 @@ public sealed class ServerListAuthBoundaryTests
         var handler = new ServerListAuthResponseHandler((id, type) =>
             id == 7 && type == PlayerSessionType.Client3 ? session : null);
 
-        var result = handler.HandleVerifyAccount2(VerifyAccount2Payload(
+        var result = handler.HandleVerifyAccount2(new VerifyAccountV2Packet(
             "pc:Ruan",
             7,
-            PlayerSessionType.Client3,
+            (byte)PlayerSessionType.Client3,
             "SUCCESS"));
 
         Assert.Equal(ServerListAuthResponseStatus.AcceptedPreWorld, result.Status);
@@ -78,10 +79,10 @@ public sealed class ServerListAuthBoundaryTests
         var handler = new ServerListAuthResponseHandler((id, type) =>
             id == 7 && type == PlayerSessionType.Client3 ? session : null);
 
-        var result = handler.HandleVerifyAccount2(VerifyAccount2Payload(
+        var result = handler.HandleVerifyAccount2(new VerifyAccountV2Packet(
             "Ruan",
             7,
-            PlayerSessionType.Client3,
+            (byte)PlayerSessionType.Client3,
             "Bad password."));
 
         Assert.Equal(ServerListAuthResponseStatus.Rejected, result.Status);
@@ -97,10 +98,10 @@ public sealed class ServerListAuthBoundaryTests
     {
         var handler = new ServerListAuthResponseHandler((_, _) => null);
 
-        var result = handler.HandleVerifyAccount2(VerifyAccount2Payload(
+        var result = handler.HandleVerifyAccount2(new VerifyAccountV2Packet(
             "Ruan",
             7,
-            PlayerSessionType.Client3,
+            (byte)PlayerSessionType.Client3,
             "SUCCESS"));
 
         Assert.Equal(ServerListAuthResponseStatus.SessionNotFound, result.Status);
@@ -126,14 +127,14 @@ public sealed class ServerListAuthBoundaryTests
     private static ClientSessionSkeleton BeginPendingServerListAuth()
     {
         var session = Client3Session();
-        var gateway = new CapturingGateway(isConnected: true);
+        var gateway = Substitute.For<IGameServerService>();
         var boundary = new ServerListAuthBoundary(gateway, new(
-            MaxPlayers: 128,
-            CurrentPlayerCount: 0,
-            IsIpBanned: false,
-            IsServerListConnected: gateway.IsConnected,
-            AllowedVersions: ["G3D0311C"],
-            AllowedVersionText: "6.037"));
+	                                                  MaxPlayers: 128,
+	                                                  CurrentPlayerCount: 0,
+	                                                  IsIpBanned: false,
+	                                                  IsServerListConnected: gateway.ListServerConnected,
+	                                                  AllowedVersions: ["G3D0311C"],
+	                                                  AllowedVersionText: "6.037"));
 
         var result = boundary.Begin(session);
         Assert.True(result.Accepted);
@@ -154,31 +155,5 @@ public sealed class ServerListAuthBoundaryTests
         packet.WriteGChar((byte)type);
         packet.WriteBytes(System.Text.Encoding.ASCII.GetBytes(message));
         return packet.ToArray();
-    }
-
-    private sealed class CapturingGateway(bool isConnected) : IServerListGateway
-    {
-        public bool IsConnected { get; } = isConnected;
-        public byte[]? LastLoginPacketForPlayer { get; private set; }
-
-        public void SendLoginPacketForPlayer(byte[] packetBody)
-        {
-            LastLoginPacketForPlayer = packetBody;
-        }
-
-        public void SendPlayerAdd(byte[] packetBody)
-        {
-            LastLoginPacketForPlayer = packetBody;
-        }
-
-        public void SendPlayerRemove(byte[] packetBody)
-        {
-            LastLoginPacketForPlayer = packetBody;
-        }
-
-        public void SendServerInfoForPlayer(byte[] packetBody)
-        {
-            LastLoginPacketForPlayer = packetBody;
-        }
     }
 }

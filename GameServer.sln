@@ -16,8 +16,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Network.Protocol", "src\Preagonal.GameServer.Network.Protocol\Preagonal.GameServer.Network.Protocol.csproj", "{92FC31E7-78E9-4B80-9868-E8049F1E0417}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Network", "src\Preagonal.GameServer.Network\Preagonal.GameServer.Network.csproj", "{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Game", "src\Preagonal.GameServer.Game\Preagonal.GameServer.Game.csproj", "{44FE2A9C-27C7-4A2C-9352-1B01E52B97DC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Scripting", "src\Preagonal.GameServer.Scripting\Preagonal.GameServer.Scripting.csproj", "{8918DA7D-5593-4E85-A7E3-581569E43E61}"
@@ -80,18 +78,6 @@ Global
 		{92FC31E7-78E9-4B80-9868-E8049F1E0417}.Release|x64.Build.0 = Release|Any CPU
 		{92FC31E7-78E9-4B80-9868-E8049F1E0417}.Release|x86.ActiveCfg = Release|Any CPU
 		{92FC31E7-78E9-4B80-9868-E8049F1E0417}.Release|x86.Build.0 = Release|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Debug|x64.Build.0 = Debug|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Debug|x86.Build.0 = Debug|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Release|x64.ActiveCfg = Release|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Release|x64.Build.0 = Release|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Release|x86.ActiveCfg = Release|Any CPU
-		{CFE2C3E3-F891-48D1-B1F3-674C67F48EA8}.Release|x86.Build.0 = Release|Any CPU
 		{44FE2A9C-27C7-4A2C-9352-1B01E52B97DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{44FE2A9C-27C7-4A2C-9352-1B01E52B97DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{44FE2A9C-27C7-4A2C-9352-1B01E52B97DC}.Debug|x64.ActiveCfg = Debug|Any CPU

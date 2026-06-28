@@ -4,8 +4,6 @@ namespace Preagonal.GameServer.Network;
 
 public static class ServerListStartupOptions
 {
-    private const string AppVersion = "3.0.9-beta";
-
     public static ServerListConnectOptions FromStartupSnapshot(
         ServerStartupSnapshot snapshot,
         ServerStartupOverrides overrides)
@@ -34,7 +32,7 @@ public static class ServerListStartupOptions
             Name: serverName,
             Description: options.GetString("description", ""),
             Language: options.GetString("language", "English"),
-            Version: AppVersion,
+            Version: $"PGS v{Program.BuildVersion}",
             Url: options.GetString("url", "http://www.graal.in/"),
             ServerIp: serverIp,
             ServerPort: serverPort,

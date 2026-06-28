@@ -82,7 +82,7 @@ public sealed class PlayerSendLoginContinuationTests
     {
         var session = AuthenticatedClient3Session("guest");
         session.ReceiveServerListAuthResponse(
-            new("guest", session.Id, PlayerSessionType.Client3, "SUCCESS"));
+            new("guest", session.Id, (byte)PlayerSessionType.Client3, "SUCCESS"));
         var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
         filesystem.AddExisting(
             @"C:\GServer\accounts\guest.txt",
@@ -111,7 +111,7 @@ public sealed class PlayerSendLoginContinuationTests
     {
         var session = AuthenticatedClient3Session("guest");
         session.ReceiveServerListAuthResponse(
-            new("guest", session.Id, PlayerSessionType.Client3, "SUCCESS"));
+            new("guest", session.Id, (byte)PlayerSessionType.Client3, "SUCCESS"));
         var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
         filesystem.AddExisting(
             @"C:\GServer\accounts\guest.txt",
@@ -337,7 +337,7 @@ public sealed class PlayerSendLoginContinuationTests
         if (!string.Equals(accountName, "guest", StringComparison.OrdinalIgnoreCase))
         {
             Assert.True(session.ReceiveServerListAuthResponse(
-                new("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS")));
+                new("pc:Ruan", 7, (byte)PlayerSessionType.Client3, "SUCCESS")));
         }
         return session;
     }
@@ -356,7 +356,7 @@ public sealed class PlayerSendLoginContinuationTests
         packet.WriteBytes("win"u8);
         Assert.True(session.ReceiveLoginPacket(packet.ToArray()));
         Assert.True(session.ReceiveServerListAuthResponse(
-            new("pc:Ruan", 8, PlayerSessionType.RemoteControl, "SUCCESS")));
+            new("pc:Ruan", 8, (byte)PlayerSessionType.RemoteControl, "SUCCESS")));
         return session;
     }
 

@@ -134,7 +134,7 @@ public sealed class LocalDebugSessionPipeline(
         session.ReceiveServerListAuthResponse(new(
             accountName,
             session.Id,
-            session.Type,
+            (byte)session.Type,
             "SUCCESS"));
 
         var account = LocalDebugAccount.FromLogin(session, accountName, options);

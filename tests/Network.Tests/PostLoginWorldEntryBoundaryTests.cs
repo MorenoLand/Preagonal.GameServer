@@ -11,7 +11,7 @@ public sealed class PostLoginWorldEntryBoundaryTests
     {
         var snapshot = BaseSnapshot();
 
-        var packet = PostLoginWorldEntryBoundary.BuildServerListAddPlayerPacket(snapshot);
+        var packet = PostLoginWorldEntryBoundary.BuildServerListAddPlayerProperties(snapshot);
 
         Assert.Equal(
                 new byte[]
@@ -65,7 +65,7 @@ public sealed class PostLoginWorldEntryBoundaryTests
             },
             session.TakeOutboundBytes());
         Assert.Equal(
-            PostLoginWorldEntryBoundary.BuildServerListAddPlayerPacket(snapshot),
+            PostLoginWorldEntryBoundary.BuildServerListAddPlayerProperties(snapshot),
             result.ServerListAddPlayerPacket);
     }
 
@@ -374,7 +374,7 @@ public sealed class PostLoginWorldEntryBoundaryTests
         packet.WriteBytes("win"u8);
         Assert.True(session.ReceiveLoginPacket(packet.ToArray()));
         Assert.True(session.ReceiveServerListAuthResponse(
-            new("pc:Ruan", 7, PlayerSessionType.Client3, "SUCCESS")));
+            new("pc:Ruan", 7, (byte)PlayerSessionType.Client3, "SUCCESS")));
         Assert.True(PlayerSendLoginContinuation.Begin(
             session,
             new("pc:Ruan", false, "", false, false, true, ["0.0.0.0"], false),
@@ -397,7 +397,7 @@ public sealed class PostLoginWorldEntryBoundaryTests
         packet.WriteBytes("win"u8);
         Assert.True(session.ReceiveLoginPacket(packet.ToArray()));
         Assert.True(session.ReceiveServerListAuthResponse(
-            new("pc:Ruan", 7, PlayerSessionType.RemoteControl2, "SUCCESS")));
+            new("pc:Ruan", 7, (byte)PlayerSessionType.RemoteControl2, "SUCCESS")));
         Assert.True(PlayerSendLoginContinuation.Begin(
             session,
             new("pc:Ruan", false, "", true, true, true, ["0.0.0.0"], false),

@@ -223,7 +223,7 @@ public static class LiveWorldSessionForwarder
                 WriteGCharString(payload, sender.Nickname);
                 return Deliver(
                     packet: PlayerPropertySerializer.BuildPlayerPropsPacket(payload.ToArray(), appendNewline: true),
-                    recipients: new[] { sender.Id },
+                    recipients: [sender.Id],
                     sinks);
 
             default:

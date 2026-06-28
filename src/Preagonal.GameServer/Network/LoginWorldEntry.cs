@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Preagonal.Common.Core;
 using Preagonal.GameServer.Game;
 using Preagonal.GameServer.Network.Protocol;
 using Preagonal.GameServer.Persistence;
@@ -19,13 +20,13 @@ public static class LoginWorldEntry
     public static bool Complete(
         ClientSessionSkeleton session,
         LoginWorldEntryOptions options,
-        out byte[] serverListAddPlayerPacket,
+        out GByteBuffer serverListAddPlayerPacket,
         out PostLoginPlayerSnapshot snapshot,
         out IReadOnlyList<DuplicateSessionDisconnect> duplicateDisconnects)
     {
-        serverListAddPlayerPacket = [];
-        snapshot = EmptySnapshot(session);
-        duplicateDisconnects = [];
+        serverListAddPlayerPacket = new();
+        snapshot                  = EmptySnapshot(session);
+        duplicateDisconnects      = [];
         var accountLogin = AccountLoginBoundary.Begin(
             session,
             options.AccountFileSystem,
@@ -81,7 +82,7 @@ public static class LoginWorldEntry
                     Z = 0,
                 },
             };
-            serverListAddPlayerPacket = PostLoginWorldEntryBoundary.BuildServerListAddPlayerPacket(snapshot);
+            serverListAddPlayerPacket = PostLoginWorldEntryBoundary.BuildServerListAddPlayerProperties(snapshot);
             return true;
         }
 

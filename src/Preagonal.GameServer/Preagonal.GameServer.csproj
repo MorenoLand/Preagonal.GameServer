@@ -51,7 +51,6 @@
     <ItemGroup>
         <ProjectReference Include="..\Preagonal.GameServer.Core\Preagonal.GameServer.Core.csproj" />
         <ProjectReference Include="..\Preagonal.GameServer.Network.Protocol\Preagonal.GameServer.Network.Protocol.csproj" />
-        <ProjectReference Include="..\Preagonal.GameServer.Network\Preagonal.GameServer.Network.csproj" />
         <ProjectReference Include="..\Preagonal.GameServer.Game\Preagonal.GameServer.Game.csproj" />
         <ProjectReference Include="..\Preagonal.GameServer.Scripting\Preagonal.GameServer.Scripting.csproj" />
         <ProjectReference Include="..\Preagonal.GameServer.Persistence\Preagonal.GameServer.Persistence.csproj" />
