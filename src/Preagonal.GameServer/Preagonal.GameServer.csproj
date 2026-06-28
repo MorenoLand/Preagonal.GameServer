@@ -1,20 +1,82 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Preagonal.GameServer.Core\Preagonal.GameServer.Core.csproj" />
-    <ProjectReference Include="..\Preagonal.GameServer.Network.Protocol\Preagonal.GameServer.Network.Protocol.csproj" />
-    <ProjectReference Include="..\Preagonal.GameServer.Network\Preagonal.GameServer.Network.csproj" />
-    <ProjectReference Include="..\Preagonal.GameServer.Game\Preagonal.GameServer.Game.csproj" />
-    <ProjectReference Include="..\Preagonal.GameServer.Scripting\Preagonal.GameServer.Scripting.csproj" />
-    <ProjectReference Include="..\Preagonal.GameServer.Persistence\Preagonal.GameServer.Persistence.csproj" />
-    <ProjectReference Include="..\Preagonal.GameServer.Admin\Preagonal.GameServer.Admin.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\..\startupserver.txt">
-      <Link>startupserver.txt</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>default</LangVersion>
+        <PackageId>Preagonal.GameServer</PackageId>
+        <Title>GameServer</Title>
+        <Authors>Preagonal Team</Authors>
+        <Copyright>Preagonal 2009-2026</Copyright>
+        <Company>Preagonal</Company>
+        <NeutralLanguage>en-US</NeutralLanguage>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <BuildTime>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ss"))</BuildTime>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>BuildTime</_Parameter1>
+            <_Parameter2>$(BuildTime)</_Parameter2>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>BuildVersion</_Parameter1>
+            <_Parameter2>$(Version)</_Parameter2>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <DocumentationFile/>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <DocumentationFile/>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BouncyCastle.NetCore" Version="2.2.1"/>
+        <PackageReference Include="Preagonal.Common" Version="1.4.40" />
+        <PackageReference Include="Preagonal.Scripting.GS2Compiler" Version="1.8.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Preagonal.GameServer.Core\Preagonal.GameServer.Core.csproj" />
+        <ProjectReference Include="..\Preagonal.GameServer.Network.Protocol\Preagonal.GameServer.Network.Protocol.csproj" />
+        <ProjectReference Include="..\Preagonal.GameServer.Network\Preagonal.GameServer.Network.csproj" />
+        <ProjectReference Include="..\Preagonal.GameServer.Game\Preagonal.GameServer.Game.csproj" />
+        <ProjectReference Include="..\Preagonal.GameServer.Scripting\Preagonal.GameServer.Scripting.csproj" />
+        <ProjectReference Include="..\Preagonal.GameServer.Persistence\Preagonal.GameServer.Persistence.csproj" />
+        <ProjectReference Include="..\Preagonal.GameServer.Admin\Preagonal.GameServer.Admin.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ContentSourceFiles Include="../../Content/**/*.*" />
+    </ItemGroup>
+
+    <Target Name="CopyCustomContent" AfterTargets="AfterBuild">
+        <Copy
+            SourceFiles="@(ContentSourceFiles)"
+            DestinationFiles="@(ContentSourceFiles->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    </Target>
+
+    <Target Name="CopyCustomContentOnPublish" AfterTargets="Publish">
+        <Copy
+            SourceFiles="@(ContentSourceFiles)"
+            DestinationFiles="@(ContentSourceFiles->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    </Target>
+    
+    <ItemGroup>
+        <Content Update="appsettings.Debug.json">
+          <DependentUpon>appsettings.json</DependentUpon>
+        </Content>
+    </ItemGroup>
 </Project>
