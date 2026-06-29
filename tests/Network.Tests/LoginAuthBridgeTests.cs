@@ -2792,7 +2792,7 @@ public sealed class LoginAuthBridgeTests
     {
         var source = FindRepoRoot();
         var destination = Path.Combine(Path.GetTempPath(), "preagonal-gserver-test-" + Guid.NewGuid().ToString("N"));
-        CopyDirectory(Path.Combine(source, "servers", "default"), destination);
+        CopyDirectory(Path.Combine(source, "Content", "servers", "default"), destination);
         return new(destination);
     }
 
