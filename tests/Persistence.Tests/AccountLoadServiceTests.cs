@@ -26,8 +26,8 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadFallsBackToDefaultAccountAndAppliesConfiguredStartOverrides()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
-        filesystem.AddReadable(@"C:\GServer\accounts\defaultaccount.txt", "GRACC001\nLEVEL ignored.nw\nX 1\nY 2\nLOADONLY 0");
+        var filesystem = new MemoryAccountFileSystem($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}");
+        filesystem.AddReadable($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}defaultaccount.txt", "GRACC001\nLEVEL ignored.nw\nX 1\nY 2\nLOADONLY 0");
         var settings = new AccountLoadSettings(new Dictionary<string, string>
         {
             ["startlevel"] = "onlinestartlocal.nw",
@@ -39,7 +39,7 @@ public sealed class AccountLoadServiceTests
 
         Assert.True(result.Success);
         Assert.True(result.LoadedFromDefault);
-        Assert.Equal(@"C:\GServer\accounts\defaultaccount.txt", result.SourcePath);
+        Assert.Equal($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}defaultaccount.txt", result.SourcePath);
         Assert.Equal("onlinestartlocal.nw", result.Account!.LevelName);
         Assert.Equal(480, result.Account.PixelX);
         Assert.Equal(488, result.Account.PixelY);
@@ -50,8 +50,8 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadDoesNotRequestDefaultAccountSaveWhenLoadedAccountIsLoadOnly()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
-        filesystem.AddReadable(@"C:\GServer\accounts\defaultaccount.txt", "GRACC001\nLOADONLY 1");
+        var filesystem = new MemoryAccountFileSystem($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}");
+        filesystem.AddReadable($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}defaultaccount.txt", "GRACC001\nLOADONLY 1");
 
         var result = AccountLoadService.Load("ReadOnlyAccount", filesystem, AccountLoadSettings.Empty);
 
@@ -65,9 +65,9 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadRepairsCorruptedDefaultWeaponStatus()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        var filesystem = new MemoryAccountFileSystem($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}");
         filesystem.AddExisting(
-            @"C:\GServer\accounts\pc-ruan.txt",
+            $@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}pc-ruan.txt",
             "pc-ruan.txt",
             "GRACC001\nSTATUS 0\nSWORDP 1\nWEAPON bomb\nWEAPON bow");
 
@@ -80,9 +80,9 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadClearsPausedStatus()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
+        var filesystem = new MemoryAccountFileSystem($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}");
         filesystem.AddExisting(
-            @"C:\GServer\accounts\pc-ruan.txt",
+            $@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}pc-ruan.txt",
             "pc-ruan.txt",
             "GRACC001\nSTATUS 21");
 
@@ -95,8 +95,8 @@ public sealed class AccountLoadServiceTests
     [Fact]
     public void LoadRejectsMissingOrMalformedResolvedFileWithoutSideEffects()
     {
-        var filesystem = new MemoryAccountFileSystem(@"C:\GServer\");
-        filesystem.AddReadable(@"C:\GServer\accounts\defaultaccount.txt", "GRACC000\n");
+        var filesystem = new MemoryAccountFileSystem($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}");
+        filesystem.AddReadable($@"C:{Path.DirectorySeparatorChar}GServer{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}defaultaccount.txt", "GRACC000\n");
 
         var result = AccountLoadService.Load("MissingAccount", filesystem, AccountLoadSettings.Empty);
 
