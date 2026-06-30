@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Options;
+using Preagonal.GameServer.Configuration;
+
 namespace Preagonal.GameServer.Persistence;
 
 public sealed record ServerStartupOverrides(
@@ -8,9 +11,10 @@ public sealed record ServerStartupOverrides(
     string? ServerInterface,
     string? StaffAccount,
     string? ServerName,
-    bool ShowHelp)
+    bool ShowHelp,
+    bool HasOverrides)
 {
-    public static ServerStartupOverrides Empty { get; } = new(null, null, null, null, null, null, null, false);
+    public static ServerStartupOverrides Empty        { get; } = new(null, null, null, null, null, null, null, false, false);
 }
 
 public enum ServerStartupSource
@@ -65,14 +69,14 @@ public static class ServerStartupCommandLine
                             return result.ToImmutable(showHelp: true);
                         case 's':
                             if (++i == args.Count)
-                                return result.ToImmutable(showHelp: true);
+                                return result.ToImmutable(showHelp: true, hasOverrides: true);
                             result.Server = args[i];
                             break;
                         case 'p':
                             if (string.IsNullOrEmpty(result.Server))
                                 break;
                             if (++i == args.Count)
-                                return result.ToImmutable(showHelp: true);
+                                return result.ToImmutable(showHelp: true, hasOverrides: true);
                             result.Port = args[i];
                             break;
                     }
@@ -96,7 +100,7 @@ public static class ServerStartupCommandLine
         result.ServerInterface = getEnvironmentVariable("INTERFACE");
         result.StaffAccount = getEnvironmentVariable("STAFFACCOUNT");
         result.ServerName = getEnvironmentVariable("SERVERNAME");
-        return result.ToImmutable(showHelp: false);
+        return result.ToImmutable(showHelp: false, hasOverrides: true);
     }
 
     private static void ApplyLongOption(ref MutableOverrides result, string key, string value)
@@ -139,8 +143,8 @@ public static class ServerStartupCommandLine
 
         public static MutableOverrides Empty => new();
 
-        public readonly ServerStartupOverrides ToImmutable(bool showHelp) =>
-            new(Server, Port, LocalIp, ServerIp, ServerInterface, StaffAccount, ServerName, showHelp);
+        public readonly ServerStartupOverrides ToImmutable(bool showHelp, bool hasOverrides = false) =>
+            new(Server, Port, LocalIp, ServerIp, ServerInterface, StaffAccount, ServerName, showHelp, hasOverrides);
     }
 }
 
@@ -186,8 +190,6 @@ public static class ServerStartupResolver
 
 public sealed record ServerStartupSnapshot(
     ServerStartupResolution Resolution,
-    Gs2Settings ServerOptions,
-    Gs2Settings AdminConfig,
     IReadOnlyList<string>? AllowedVersions = null)
 {
     public IReadOnlyList<string> EffectiveAllowedVersions => AllowedVersions ?? [];
@@ -199,17 +201,47 @@ public sealed record ServerStartupSnapshot(
 
 public static class ServerStartupLoader
 {
-    public static ServerStartupSnapshot Load(string homePath, ServerStartupOverrides overrides)
+    public static ServerStartupSnapshot Load(string homePath, ServerStartupOverrides overrides, IOptions<ServerOptions> serverOptions, IOptions<AdminConfig> adminConfig)
     {
         var resolution = ServerStartupResolver.Resolve(homePath, overrides);
         if (!resolution.Success || resolution.ServerPath is null)
-            return new(resolution, Gs2Settings.Parse(""), Gs2Settings.Parse(""));
+            return new(resolution);
 
         var configPath = Path.Combine(resolution.ServerPath, "config");
-        var serverOptions = Gs2Settings.LoadFile(Path.Combine(configPath, "serveroptions.txt"));
-        var adminConfig = Gs2Settings.LoadFile(Path.Combine(configPath, "adminconfig.txt"));
+        serverOptions.Value.SetSettings(Gs2Settings.LoadFile(Path.Combine(configPath, "serveroptions.txt")));;
+
+        if (overrides.HasOverrides)
+        {
+	        if (!string.IsNullOrEmpty(overrides.ServerName))
+		        serverOptions.Value.Name = overrides.ServerName;
+
+	        if (!string.IsNullOrEmpty(overrides.ServerIp))
+		        serverOptions.Value.ServerIp = overrides.ServerIp;
+
+	        if (!string.IsNullOrEmpty(overrides.LocalIp))
+		        serverOptions.Value.LocalIp = overrides.LocalIp;
+
+	        if (!string.IsNullOrEmpty(overrides.ServerInterface))
+		        serverOptions.Value.ServerInterface = overrides.ServerInterface;
+
+	        if (!string.IsNullOrEmpty(overrides.StaffAccount))
+	        {
+		        var staff = serverOptions.Value.Staff.ToList();
+		        if (staff.Any(a => a.Equals(overrides.StaffAccount, StringComparison.OrdinalIgnoreCase)))
+		        {
+			        staff.Add(overrides.StaffAccount);
+			        serverOptions.Value.Staff = staff.Distinct().ToArray();
+		        }
+	        }
+
+	        if (!string.IsNullOrEmpty(overrides.Port) && int.TryParse(overrides.Port, out var port) && port > 0)
+		        serverOptions.Value.ServerPort = port;
+        }
+
+        adminConfig.Value.SetSettings(Gs2Settings.LoadFile(Path.Combine(configPath, "adminconfig.txt")));
+
         var allowedVersions = LoadAllowedVersions(Path.Combine(configPath, "allowedversions.txt"));
-        return new(resolution, serverOptions, adminConfig, allowedVersions);
+        return new(resolution, allowedVersions);
     }
 
     private static IReadOnlyList<string> LoadAllowedVersions(string path)

@@ -71,7 +71,7 @@ public sealed class Gs2SettingsTests
 
         var settings = Gs2Settings.LoadFile(path);
 
-        Assert.False(settings.IsOpened);
+        Assert.False(settings.IsLoaded);
         Assert.False(settings.Exists("name"));
     }
 
@@ -85,7 +85,7 @@ public sealed class Gs2SettingsTests
 
         var settings = Gs2Settings.LoadFile(path);
 
-        Assert.True(settings.IsOpened);
+        Assert.True(settings.IsLoaded);
         Assert.Equal("Test Server", settings.GetString("name"));
     }
 }

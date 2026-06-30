@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-    <ItemGroup>
-        <ProjectReference Include="..\Preagonal.GameServer.Core\Preagonal.GameServer.Core.csproj" />
-    </ItemGroup>
-
-</Project>

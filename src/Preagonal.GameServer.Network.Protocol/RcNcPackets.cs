@@ -15,11 +15,11 @@ public static class RcNcPackets
     public static byte[] RcChat(string message) =>
         PacketWithAsciiPayload(ServerToPlayerPacketId.RcChat, message);
 
-    public static byte[] StaffGuilds(string guilds)
+    public static byte[] StaffGuilds(string[] guilds)
     {
         var writer = NewServerPacket(ServerToPlayerPacketId.StaffGuilds);
         var wroteGuild = false;
-        foreach (var guild in guilds.Split(',', StringSplitOptions.None))
+        foreach (var guild in guilds)
         {
             var trimmed = guild.Trim();
             if (trimmed.Length == 0)

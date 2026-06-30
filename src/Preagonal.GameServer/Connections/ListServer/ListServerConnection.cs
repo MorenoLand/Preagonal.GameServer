@@ -8,6 +8,7 @@ using Preagonal.Common.Models.Servers.Enums;
 using Preagonal.Common.PacketHandling;
 using Preagonal.Common.Registries;
 using Preagonal.Common.Serializers;
+using Preagonal.GameServer.Configuration;
 using Preagonal.GameServer.Network;
 using Preagonal.GameServer.Network.Protocol;
 using Preagonal.GameServer.Persistence;
@@ -18,45 +19,42 @@ using LS2GSP = Preagonal.Common.Models.Connections.Packets.ListServerToGameServe
 namespace Preagonal.GameServer.Connections.ListServer;
 
 [GeneratePacketHandlerInterface(typeof(LS2GS), nameof(IHandleListServerMessages))]
-public class ListServerConnection(ILogger<ListServerConnection> logger, IOptions<Gs2Settings> gs2Settings) :
+public class ListServerConnection(ILogger<ListServerConnection> logger, IOptions<ServerOptions> serverOptions, IOptions<AdminConfig> adminConfig) :
 	AsyncSocket,
 	IListServerConnection,
 	IHandleListServerMessages
 {
-	private ServerListConnectOptions? _serverListOptions;
-	private bool                      _newServerProtocol = false;
-	private DateTime                  _lastData;
-	private bool                      _stopParsingData = false;
-	private LoginAuthBridge?          _authBridge;
-	private IGameServerService?       _gameServerService;
+	private ServerOptions       _serverListOptions = serverOptions.Value;
+	private AdminConfig          _adminConfig        = adminConfig.Value;
+	private bool                _newServerProtocol = false;
+	private DateTime            _lastData          = DateTime.UtcNow;
+	private bool                _stopParsingData   = false;
+	private LoginAuthBridge?    _authBridge;
+	private IGameServerService? _gameServerService;
 
 	public async Task SendLogin()
 	{
-		if (_serverListOptions == null)
-			return;
-
-		var test    = gs2Settings.Value;
 		var localIp = ResolveLocalIp(_serverListOptions.LocalIp, GetIp().ToString());
 
 		Codec.Reset(Encrypt.Generation.GEN1, 0);
-		SendPacket(new RegisterV3Packet(_serverListOptions.Version), sendNow: true);
+		SendPacket(new RegisterV3Packet(Program.BuildVersion!), sendNow: true);
 		Codec.Reset(Encrypt.Generation.GEN2, key: 0);
 		_newServerProtocol = true;
-		SendPacket(new ServerPasswordPacket(_serverListOptions.HqPassword));
+		SendPacket(new ServerPasswordPacket(_adminConfig.HQPassword));
 		SendPacket(
 			new NewServerPacket(
 				_serverListOptions.Name,
 				_serverListOptions.Description,
 				_serverListOptions.Language,
-				_serverListOptions.Version,
+				Program.BuildVersion!,
 				_serverListOptions.Url,
 				_serverListOptions.ServerIp,
-				_serverListOptions.ServerPort,
+				_serverListOptions.ServerPort.ToString(),
 				localIp
 			)
 		);
-		SendPacket(new SetServerLevelPacket(_serverListOptions.OnlyStaff?ServerLevel.Hidden:(ServerLevel)_serverListOptions.HqLevel), sendNow: true);
-		SendPacket(AllowedVersionsText(_serverListOptions.AllowedVersions), sendNow: true);
+		SendPacket(new SetServerLevelPacket(_serverListOptions.OnlyStaff?ServerLevel.Hidden:(ServerLevel)_adminConfig.HQLevel), sendNow: true);
+		SendPacket(AllowedVersionsText([""]/*TODO:FIX*/), sendNow: true);
 		SendPacket(new ResetPlayersPacket(), sendNow: true);
 		SendCompress();
 		StartLoops();
@@ -67,7 +65,6 @@ public class ListServerConnection(ILogger<ListServerConnection> logger, IOptions
 	private static SendTextPacket AllowedVersionsText(IReadOnlyList<string> allowedVersions) => new($"Listserver,settings,allowedversions,{allowedVersions.Tokenize()}");
 
 
-	public void SetOptions(ServerListConnectOptions serverListOptions)     => _serverListOptions = serverListOptions;
 	public void SetAuthBridge(LoginAuthBridge authBridge)                  => _authBridge = authBridge;
 	public void SetGameServerService(IGameServerService gameServerService) => _gameServerService = gameServerService;
 

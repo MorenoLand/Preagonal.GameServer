@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Preagonal.Common.Core;
+using Preagonal.GameServer.Configuration;
 using Preagonal.GameServer.Game;
 using Preagonal.GameServer.Network.Protocol;
 using Preagonal.GameServer.Persistence;
@@ -10,7 +11,7 @@ namespace Preagonal.GameServer.Network;
 
 public sealed record LoginWorldEntryOptions(
     IAccountPersistenceFileSystem AccountFileSystem,
-    IAccountLoadSettings AccountSettings,
+    IAccountLoadSettings ServerOptions,
     NwLevelFileLoader LevelLoader,
     ILevelLookup LevelLookup,
     AccountLoginOptions AccountLoginOptions);
@@ -30,7 +31,7 @@ public static class LoginWorldEntry
         var accountLogin = AccountLoginBoundary.Begin(
             session,
             options.AccountFileSystem,
-            options.AccountSettings,
+            options.ServerOptions,
             options.AccountLoginOptions);
         if (!accountLogin.Accepted || accountLogin.Account is null)
             return false;
@@ -46,7 +47,7 @@ public static class LoginWorldEntry
                 LoginPropertySource = snapshot.LoginPropertySource with
                 {
                     CurrentLevel = " ",
-                    HeadImage = options.AccountSettings.GetString("staffhead", "head25.png"),
+                    HeadImage = options.ServerOptions.StaffHead,
                     X = 0,
                     Y = 0,
                     Z = 0,
@@ -59,10 +60,10 @@ public static class LoginWorldEntry
                 new(
                     options.AccountFileSystem.ServerPath,
                     options.AccountLoginOptions.ServerName,
-                    options.AccountSettings.GetString("staffguilds", ""),
-                    options.AccountSettings.GetString(
+                    options.ServerOptions.StaffGuilds,
+                    options.ServerOptions.GetString(
                         "playerlisticons",
-                        options.AccountSettings.GetString("statuslist", "")),
+                        options.ServerOptions.GetString("statuslist", ""))!,
                     MaxUploadBytes: 20 * 1024 * 1024));
             serverListAddPlayerPacket = rcPostLogin.ServerListAddPlayerPacket;
             return true;
@@ -76,7 +77,7 @@ public static class LoginWorldEntry
                 LoginPropertySource = snapshot.LoginPropertySource with
                 {
                     CurrentLevel = " ",
-                    HeadImage = options.AccountSettings.GetString("staffhead", "head25.png"),
+                    HeadImage = options.ServerOptions.GetString("staffhead", "head25.png")!,
                     X = 0,
                     Y = 0,
                     Z = 0,
@@ -92,7 +93,7 @@ public static class LoginWorldEntry
             new(
                 ResourceFileSystem: null,
                 Maps: [],
-                PlayerWeapons: BuildLoginWeaponPackets(account, options.AccountSettings, options.AccountFileSystem.ServerPath)));
+                PlayerWeapons: BuildLoginWeaponPackets(account, options.ServerOptions, options.AccountFileSystem.ServerPath)));
         serverListAddPlayerPacket = postLogin.ServerListAddPlayerPacket;
 
         var levelName = string.IsNullOrWhiteSpace(account.LevelName)
@@ -252,10 +253,10 @@ public static class LoginWorldEntry
 
     private static IReadOnlyList<LoginWeaponPacket> BuildLoginWeaponPackets(
         AccountFileData account,
-        IAccountLoadSettings settings,
+        IAccountLoadSettings serverOptions,
         string serverPath)
     {
-        if (!GetBool(settings, "defaultweapons", defaultValue: true))
+        if (!serverOptions.DefaultWeapons)
             return [];
 
         var packets = new List<LoginWeaponPacket>();
@@ -354,7 +355,7 @@ public static class LoginWorldEntry
     private static bool GetBool(IAccountLoadSettings settings, string key, bool defaultValue)
     {
         var value = settings.GetString(key, defaultValue ? "true" : "false");
-        return value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
+        return value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? value == "1";
     }
 
     private static bool IsRemoteControl(PlayerSessionType type) =>

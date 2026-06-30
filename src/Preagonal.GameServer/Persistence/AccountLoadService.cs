@@ -11,27 +11,25 @@ public interface IAccountFileSystem
 
 public interface IAccountLoadSettings
 {
-    bool Exists(string key);
-    string GetString(string key, string defaultValue);
-    float GetFloat(string key, float defaultValue);
+	string   StaffHead      { get; set; }
+	string[] StaffGuilds    { get; set; }
+	bool     DefaultWeapons { get; set; }
+	bool     Exists(string key);
+    string?  GetString(string key, string? defaultValue);
+    float?   GetFloat(string key, float? defaultValue);
 }
 
-public sealed class AccountLoadSettings(IReadOnlyDictionary<string, string> values) : IAccountLoadSettings
+public interface ISettings
 {
-    public static AccountLoadSettings Empty { get; } = new(new Dictionary<string, string>());
+    bool    Exists(string key);
+    string? GetString(string key, string? defaultValue);
+    float?   GetFloat(string key, float? defaultValue);
 
-    public bool Exists(string key) =>
-        values.ContainsKey(key);
+    bool GetBool(string key, bool defaultValue = true);
 
-    public string GetString(string key, string defaultValue) =>
-        values.TryGetValue(key, out var value) ? value : defaultValue;
-
-    public float GetFloat(string key, float defaultValue) =>
-        values.TryGetValue(key, out var value) &&
-        float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : defaultValue;
+    int GetInt(string key, int defaultValue = 1);
 }
+
 
 public sealed record AccountLoadResult(
     bool Success,
@@ -102,11 +100,11 @@ public static class AccountLoadService
         IAccountLoadSettings settings)
     {
         if (settings.Exists("startlevel"))
-            account.LevelName = settings.GetString("startlevel", "onlinestartlocal.nw");
+            account.LevelName = settings.GetString("startlevel", "onlinestartlocal.nw")!;
         if (settings.Exists("startx"))
-            account.PixelX = ToPixel(settings.GetFloat("startx", 30.0f));
+            account.PixelX = ToPixel(settings.GetFloat("startx", 30.0f)!.Value);
         if (settings.Exists("starty"))
-            account.PixelY = ToPixel(settings.GetFloat("starty", 30.5f));
+            account.PixelY = ToPixel(settings.GetFloat("starty", 30.5f)!.Value);
 
         account.AccountName = accountName;
         if (!IsGuest(accountName))
@@ -152,6 +150,6 @@ public static class AccountLoadService
     private static bool GetBool(IAccountLoadSettings settings, string key, bool defaultValue)
     {
         var value = settings.GetString(key, defaultValue ? "true" : "false");
-        return value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
+        return value?.Equals("true", StringComparison.OrdinalIgnoreCase)??value == "1";
     }
 }

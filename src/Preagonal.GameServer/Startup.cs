@@ -24,7 +24,8 @@ public class Startup(IConfiguration configuration)
 
 		services.AddOptions();
 		services.AddOptions<GameServerSettings>().Bind(_configuration.GetSection(nameof(GameServerSettings)));
-		services.AddOptions<Gs2Settings>().Bind(_configuration.GetSection(nameof(Gs2Settings)));
+		services.AddOptions<ServerOptions>().Bind(_configuration.GetSection(nameof(ServerOptions)));
+		services.AddOptions<AdminConfig>().Bind(_configuration.GetSection(nameof(AdminConfig)));
 
 		var hubSettings = _configuration
 		                  .GetSection(nameof(GameServerSettings))

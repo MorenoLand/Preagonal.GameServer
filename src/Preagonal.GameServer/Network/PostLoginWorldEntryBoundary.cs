@@ -28,7 +28,7 @@ public sealed record PostLoginClientOptions(
 public sealed record PostLoginRemoteControlOptions(
     string ServerPath,
     string ServerName,
-    string StaffGuilds,
+    string[] StaffGuilds,
     string StatusList,
     uint MaxUploadBytes);
 
@@ -120,8 +120,7 @@ public static class PostLoginWorldEntryBoundary
 
         session.QueuePacket(RcNcPackets.Unknown190());
 
-        if (!string.IsNullOrWhiteSpace(options.StaffGuilds))
-            session.QueuePacket(RcNcPackets.StaffGuilds(options.StaffGuilds));
+        session.QueuePacket(RcNcPackets.StaffGuilds(options.StaffGuilds));
 
         session.QueuePacket(RcNcPackets.StatusList(
             string.IsNullOrWhiteSpace(options.StatusList) ? DefaultStatusList : options.StatusList));

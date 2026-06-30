@@ -1,3 +1,4 @@
+using Preagonal.GameServer.Configuration;
 using Preagonal.GameServer.Persistence;
 
 namespace Preagonal.GameServer.Network;
@@ -26,7 +27,7 @@ public static class AccountLoginBoundary
     public static AccountLoginResult Begin(
         ClientSessionSkeleton session,
         IAccountPersistenceFileSystem fileSystem,
-        IAccountLoadSettings settings,
+        IAccountLoadSettings serverOptions,
         AccountLoginOptions options,
         AccountParserOptions? parserOptions = null)
     {
@@ -37,7 +38,7 @@ public static class AccountLoginBoundary
             throw new InvalidOperationException("Server-list authentication must succeed before account loading.");
 
         var accountName = NormalizeAccountName(session.LoginPacket.AccountName);
-        var load = AccountLoadService.Load(accountName, fileSystem, settings, ignoreNickname: false, parserOptions);
+        var load = AccountLoadService.Load(accountName, fileSystem, serverOptions, ignoreNickname: false, parserOptions);
         if (!load.Success)
         {
             session.QueueDisconnect("Unable to load account.");

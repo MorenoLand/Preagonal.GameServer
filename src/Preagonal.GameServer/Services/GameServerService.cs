@@ -11,7 +11,7 @@ using GS2LSP = Preagonal.Common.Models.Connections.Packets.GameServerToListServe
 
 namespace Preagonal.GameServer.Services;
 
-public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Settings> gs2Settings, IScriptManager scriptManager, IListServerConnection listServerConnection, ICommandLineArguments args) : IGameServerService
+public class GameServerService(ILogger<GameServerService> logger, IOptions<ServerOptions> serverOptions, IOptions<AdminConfig> adminConfig, IScriptManager scriptManager, IListServerConnection listServerConnection, ICommandLineArguments args) : IGameServerService
 {
 	private CancellationTokenSource?    _cts;
 	private Task?                       _maintenanceLoop;
@@ -22,8 +22,8 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 		while (!ct.IsCancellationRequested)
 		{
 			/*
-			foreach (var serverConnection in _gameServerConnections)
-				serverConnection.Value.DoMaintenance();
+			foreach (var clientConnection in clientConnections)
+				clientConnection.Value.DoMaintenance();
 			*/
 			await Task.Delay(500, ct).ConfigureAwait(false);
 		}
@@ -32,6 +32,8 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
 		_cts              = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		listServerConnection.SetGameServerService(this);
+
 		//await StartListServerSocket().ConfigureAwait(false);
 		//await StartPlayerSocket().ConfigureAwait(false);
 
@@ -52,8 +54,7 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 				return;
 			}
 
-			var snapshot = ServerStartupLoader.Load(Path.GetDirectoryName(AppContext.BaseDirectory) ?? Environment.CurrentDirectory, productionArgs);
-			gs2Settings.Value.Merge(snapshot.ServerOptions);
+			var snapshot = ServerStartupLoader.Load(Path.GetDirectoryName(AppContext.BaseDirectory) ?? Environment.CurrentDirectory, productionArgs, serverOptions, adminConfig);
 
 			if (snapshot.Resolution.Success)
 			{
@@ -63,8 +64,8 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 					snapshot.Resolution.Source
 				);
 				logger.LogInformation("Server path: {ResolutionServerPath}", snapshot.Resolution.ServerPath);
-				logger.LogInformation("config/serveroptions.txt opened: {ServerOptionsIsOpened}", snapshot.ServerOptions.IsOpened);
-				logger.LogInformation("config/adminconfig.txt opened: {AdminConfigIsOpened}", snapshot.AdminConfig.IsOpened);
+				logger.LogInformation("config/serveroptions.txt loaded: {ServerOptionsIsOpened}", serverOptions.Value.IsLoaded);
+				logger.LogInformation("config/adminconfig.txt loaded: {AdminConfigIsOpened}", serverOptions.Value.IsLoaded);
 			}
 			else
 			{
@@ -74,57 +75,49 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 
 			var runtimeServer = new RuntimeServer();
 			var runtimeLevelCache = new RuntimeLevelCache();
-			var runtime = new ServerHostRuntime(runtimeServer, snapshot.ServerOptions.GetBool("serverside", false));
-			var serverListOptions = ServerListStartupOptions.FromStartupSnapshot(snapshot, productionArgs);
-			listServerConnection.SetOptions(serverListOptions);
-			listServerConnection.SetGameServerService(this);
-			await listServerConnection.ConnectAsync(serverListOptions.ListIp, int.Parse(serverListOptions.ListPort), cancellationToken).ConfigureAwait(false);
+			var runtime = new ServerHostRuntime(runtimeServer, serverOptions.Value.ServerSide);
+			await listServerConnection.ConnectAsync(serverOptions.Value.ListIp, serverOptions.Value.ListPort, cancellationToken).ConfigureAwait(false);
 
 			if (listServerConnection.Connected)
 			{
 				await listServerConnection.SendLogin().ConfigureAwait(false);
 				logger.LogInformation(
 					"Registered \'{Name}\' with list server {ListIp}:{ListPort}",
-					serverListOptions.Name,
-					serverListOptions.ListIp,
-					serverListOptions.ListPort
+					serverOptions.Value.Name,
+					serverOptions.Value.ListIp,
+					serverOptions.Value.ListPort
 				);
 			}
 			else
 				logger.LogInformation(
 					"Could not connect/register with list server {ListIp}:{ListPort}",
-					serverListOptions.ListIp,
-					serverListOptions.ListPort
+					serverOptions.Value.ListIp,
+					serverOptions.Value.ListPort
 				);
-			if (!int.TryParse(serverListOptions.ServerPort, out var gamePort))
-			{
-				logger.LogError("Invalid serverport \'{ServerPort}\'", serverListOptions.ServerPort);
-				return;
-			}
 
 			var serverRoot          = snapshot.Resolution.ServerPath!;
-			var resourceFileSystems = LoadResourceFileSystems(serverRoot, snapshot.ServerOptions);
+			var resourceFileSystems = LoadResourceFileSystems(serverRoot, serverOptions.Value);
 			var levelLoader         = new NwLevelFileLoader(resourceFileSystems.Get(ServerFileSystemKind.All));
-			var staffAccounts       = SplitCsv(snapshot.ServerOptions.GetString("staff"));
+			var staffAccounts       = serverOptions.Value.Staff;
 			var authBridge = new LoginAuthBridge(
 				this,
 				scriptManager,
 				new(
-					snapshot.ServerOptions.GetInt("maxplayers", 128),
+					serverOptions.Value.MaxPlayers,
 					0,
 					false,
 					listServerConnection.Connected,
-					serverListOptions.AllowedVersions,
-					string.Join(", ", serverListOptions.AllowedVersions)
+					[],//serverListOptions.AllowedVersions,
+					string.Join(", ", [""]/*serverListOptions.AllowedVersions*/)
 				),
 				new(
 					new DiskAccountFileSystem(serverRoot),
-					snapshot.ServerOptions,
+					serverOptions.Value,
 					levelLoader,
 					new FileLevelLookup(levelLoader),
 					new(
-						snapshot.ServerOptions.GetBool("onlystaff", false),
-						serverListOptions.Name,
+						serverOptions.Value.OnlyStaff,
+						serverOptions.Value.Name,
 						[],
 						staffAccounts,
 						"",
@@ -143,7 +136,7 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 			};
 			using var clientServer = new ClientTcpServer(
 				IPAddress.Any,
-				gamePort,
+				serverOptions.Value.ServerPort,
 				new LoginSocketFrameHandler(authBridge, clientConnections),
 				clientConnections,
 				session => logger.LogInformation(
@@ -160,7 +153,7 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 					return;
 
 				nextServerListKeepalive = DateTimeOffset.UtcNow.AddMinutes(1);
-				var ip = snapshot.ServerOptions.GetString("serverip", "AUTO");
+				var ip = serverOptions.Value.ServerIp;
 				if (string.IsNullOrEmpty(ip))
 					ip = "AUTO";
 
@@ -222,8 +215,8 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 
 
 			logger.LogInformation(
-				"Server startup resolved. Listening for clients on port {GamePort}. Press Ctrl+C to stop",
-				gamePort
+				"Server startup resolved. Listening for clients on port {ServerPort}. Press Ctrl+C to stop",
+				serverOptions.Value.ServerPort
 			);
 			hostLoop.Run(TimeSpan.FromMilliseconds(5), productionCts.Token);
 			await Task.WhenAll(acceptTask).ConfigureAwait(false);
@@ -273,19 +266,14 @@ public class GameServerService(ILogger<GameServerService> logger, IOptions<Gs2Se
 
 
 
-		static ServerResourceFileSystems LoadResourceFileSystems(string serverRoot, Gs2Settings options)
+		static ServerResourceFileSystems LoadResourceFileSystems(string serverRoot, ServerOptions options)
 		{
 			var foldersConfig = Path.Combine(serverRoot, "config", "foldersconfig.txt");
 			if (!options.GetBool("nofoldersconfig", false) && File.Exists(foldersConfig))
 				return ServerResourceFileSystems.LoadFolderConfig(serverRoot, File.ReadAllText(foldersConfig));
 
-			return ServerResourceFileSystems.LoadAllFolders(serverRoot, options.GetString("sharefolder"));
+			return ServerResourceFileSystems.LoadAllFolders(serverRoot, options.GetString("sharefolder", "")!);
 		}
-
-		static IReadOnlyList<string> SplitCsv(string value) =>
-			value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-			     .Where(entry => entry.Length > 0 && !entry.StartsWith('('))
-			     .ToArray();
 	}
 
 	public async Task StopAsync(CancellationToken cancellationToken)

@@ -44,7 +44,7 @@ public sealed class LoginAuthBridge(
     IGameServerService gameServerService,
     IScriptManager scriptManager,
     PreWorldAuthOptions options,
-    LoginWorldEntryOptions? worldEntryOptions = null,
+    LoginWorldEntryOptions worldEntryOptions,
     RuntimeServer? runtimeServer = null)
 {
     private sealed record NpcServerEndpoint(ushort Id, string Host, int Port);
@@ -151,7 +151,7 @@ public sealed class LoginAuthBridge(
             EnsureServerScriptsLoaded(new HashSet<ushort>()) &&
             LoginWorldEntry.Complete(session, worldEntryOptions with
             {
-                AccountSettings = EffectiveAccountSettings(),
+                ServerOptions = EffectiveAccountSettings(),
                 AccountLoginOptions = worldEntryOptions.AccountLoginOptions with
                 {
                     ActiveSessions = BuildActiveSessions(),
@@ -665,7 +665,7 @@ public sealed class LoginAuthBridge(
             if (IsJailedLevel(player.CurrentLevelName))
                 return false;
 
-            var level = EffectiveAccountSettings().GetString("unstickmelevel", "onlinestartlocal.nw");
+            var level = EffectiveAccountSettings().GetString("unstickmelevel", "onlinestartlocal.nw")!;
             WarpClient(player, level, GetFloatOption("unstickmex", 30.0f), GetFloatOption("unstickmey", 30.5f), touched);
             QueueSelfPacket(player.Id, PlayerPropertySerializer.BuildPlayerPropsPacket(ChatProp("Warped!"), appendNewline: true), touched);
             return true;
@@ -731,7 +731,7 @@ public sealed class LoginAuthBridge(
 
     private bool IsJailedLevel(string levelName)
     {
-        var jailLevels = EffectiveAccountSettings().GetString("jaillevels", "");
+        var jailLevels = EffectiveAccountSettings().GetString("jaillevels", "")!;
         return jailLevels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Any(level => level.Equals(levelName, StringComparison.OrdinalIgnoreCase));
     }
@@ -2799,9 +2799,7 @@ public sealed class LoginAuthBridge(
     }
 
     private IAccountLoadSettings EffectiveAccountSettings() =>
-        _serverOptionsOverride is null
-            ? worldEntryOptions?.AccountSettings ?? AccountLoadSettings.Empty
-            : new OverlayAccountLoadSettings(_serverOptionsOverride, worldEntryOptions?.AccountSettings);
+	    worldEntryOptions.ServerOptions;
 
     private Gs2Settings? LoadServerOptions()
     {
@@ -2832,7 +2830,7 @@ public sealed class LoginAuthBridge(
             return null;
 
         var config = Gs2Settings.LoadFile(Path.Combine(root, "config", "npcserver.txt"));
-        var enabled = config.IsOpened
+        var enabled = config.IsLoaded
             ? config.GetBool("enabled", GetBool(settings, "serverside", false))
             : GetBool(settings, "serverside", false);
         if (!enabled)
@@ -2842,21 +2840,21 @@ public sealed class LoginAuthBridge(
         var id = configuredId <= 0
             ? NpcServerPlayerId
             : (ushort)Math.Clamp(configuredId, ushort.MinValue, ushort.MaxValue);
-        var host = config.GetString("host", "AUTO");
+        var host = config.GetString("host", "AUTO")!;
         if (IsAuto(host))
-            host = config.GetString("ns_ip", settings.GetString("ns_ip", "AUTO"));
+            host = config.GetString("ns_ip", settings.GetString("ns_ip", "AUTO"))!;
         if (IsAuto(host))
-            host = settings.GetString("localip", "AUTO");
+            host = settings.GetString("localip", "AUTO")!;
         if (IsAuto(host))
-            host = settings.GetString("serverip", "AUTO");
+            host = settings.GetString("serverip", "AUTO")!;
         if (IsAuto(host))
             host = "127.0.0.1";
 
-        var portText = config.GetString("port", "AUTO");
+        var portText = config.GetString("port", "AUTO")!;
         if (IsAuto(portText))
-            portText = settings.GetString("ncport", "AUTO");
+            portText = settings.GetString("ncport", "AUTO")!;
         if (IsAuto(portText))
-            portText = settings.GetString("serverport", "0");
+            portText = settings.GetString("serverport", "0")!;
         return int.TryParse(portText, out var port) && port > 0
             ? new NpcServerEndpoint(id, host, port)
             : null;
@@ -2868,7 +2866,7 @@ public sealed class LoginAuthBridge(
             return defaultValue;
 
         var value = settings.GetString(key, defaultValue ? "true" : "false");
-        return value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
+        return value?.Equals("true", StringComparison.OrdinalIgnoreCase)?? value == "1";
     }
 
     private static bool IsAuto(string value) =>
@@ -3294,7 +3292,7 @@ public sealed class LoginAuthBridge(
         if (worldEntryOptions is null)
             return defaultValue;
 
-        var value = EffectiveAccountSettings().GetString(key, defaultValue ? "true" : "false");
+        var value = EffectiveAccountSettings().GetString(key, defaultValue ? "true" : "false")!;
         return value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
                value.Equals("yes", StringComparison.OrdinalIgnoreCase);
@@ -3365,7 +3363,7 @@ public sealed class LoginAuthBridge(
             ShieldPower: 0,
             ShieldImage: "",
             Gani: "idle",
-            HeadImage: settings.GetString("staffhead", "head25.png"),
+            HeadImage: settings.GetString("staffhead", "head25.png")!,
             ChatMessage: "",
             Colors: [0, 0, 0, 0, 0],
             PlayerId: npcServerPlayerId,
@@ -3444,7 +3442,7 @@ public sealed class LoginAuthBridge(
         var source = snapshot.LoginPropertySource with
         {
             Nickname = BuildNpcServerNickname(settings),
-            HeadImage = settings.GetString("staffhead", "head25.png"),
+            HeadImage = settings.GetString("staffhead", "head25.png")!,
         };
         var updated = snapshot with
         {
@@ -3665,14 +3663,14 @@ public sealed class LoginAuthBridge(
     private bool TryQueueLocalServerWarp(ushort playerId, string serverName, ClientSessionSkeleton session, ISet<ushort> touched)
     {
         var settings = EffectiveAccountSettings();
-        var localName = settings.GetString("name", "");
+        var localName = settings.GetString("name", "")!;
         if (serverName.Length == 0 || !serverName.Equals(localName, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var ip = settings.GetString("serverip", "127.0.0.1");
+        var ip = settings.GetString("serverip", "127.0.0.1")!;
         if (IsAuto(ip))
             ip = "127.0.0.1";
-        var port = settings.GetString("serverport", "0");
+        var port = settings.GetString("serverport", "0")!;
         QueueSelfPacket(playerId, BuildServerWarpPacket(new List<string>{$"P {localName}", "localname", ip, port}).Serialize().Buffer, touched);
         return true;
     }
@@ -3876,7 +3874,7 @@ public sealed class LoginAuthBridge(
             snapshot.LoginPropertySource.CommunityName);
 
     private string FormatScriptOutput(string scriptName, string line) =>
-        EffectiveAccountSettings().GetString("scriptcall", "echo").Trim().Equals("debug", StringComparison.OrdinalIgnoreCase)
+        EffectiveAccountSettings().GetString("scriptcall", "echo")!.Trim().Equals("debug", StringComparison.OrdinalIgnoreCase)
             ? $"GS2 {scriptName}: {line}"
             : line;
 
@@ -3940,23 +3938,6 @@ public sealed class LoginAuthBridge(
         }
     }
 
-    private sealed class OverlayAccountLoadSettings(
-        IAccountLoadSettings current,
-        IAccountLoadSettings? fallback) : IAccountLoadSettings
-    {
-        public bool Exists(string key) =>
-            current.Exists(key) || fallback?.Exists(key) == true;
-
-        public string GetString(string key, string defaultValue) =>
-            current.Exists(key)
-                ? current.GetString(key, defaultValue)
-                : fallback?.GetString(key, defaultValue) ?? defaultValue;
-
-        public float GetFloat(string key, float defaultValue) =>
-            current.Exists(key)
-                ? current.GetFloat(key, defaultValue)
-                : fallback?.GetFloat(key, defaultValue) ?? defaultValue;
-    }
 
     private ClientLoginAuthResult Finish(ClientSessionSkeleton session, bool accepted)
     {

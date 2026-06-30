@@ -11,6 +11,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <ProjectReference Include="..\..\src\Preagonal.GameServer.Persistence\Preagonal.GameServer.Persistence.csproj" />
+  </ItemGroup>
+    
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Preagonal.GameServer\Preagonal.GameServer.csproj" />
   </ItemGroup>
 </Project>

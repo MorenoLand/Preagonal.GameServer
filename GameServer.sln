@@ -20,8 +20,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Game",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Scripting", "src\Preagonal.GameServer.Scripting\Preagonal.GameServer.Scripting.csproj", "{8918DA7D-5593-4E85-A7E3-581569E43E61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Persistence", "src\Preagonal.GameServer.Persistence\Preagonal.GameServer.Persistence.csproj", "{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer.Admin", "src\Preagonal.GameServer.Admin\Preagonal.GameServer.Admin.csproj", "{1C401276-B557-43BA-81D5-1F2D98D0BA5C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preagonal.GameServer", "src\Preagonal.GameServer\Preagonal.GameServer.csproj", "{936F78B9-932F-4864-842D-5BFA39E03A4A}"
@@ -100,18 +98,6 @@ Global
 		{8918DA7D-5593-4E85-A7E3-581569E43E61}.Release|x64.Build.0 = Release|Any CPU
 		{8918DA7D-5593-4E85-A7E3-581569E43E61}.Release|x86.ActiveCfg = Release|Any CPU
 		{8918DA7D-5593-4E85-A7E3-581569E43E61}.Release|x86.Build.0 = Release|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Debug|x64.Build.0 = Debug|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Debug|x86.Build.0 = Debug|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Release|x64.ActiveCfg = Release|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Release|x64.Build.0 = Release|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Release|x86.ActiveCfg = Release|Any CPU
-		{FD7CD5FB-D5E0-40DA-98EA-31B5A5DB22AD}.Release|x86.Build.0 = Release|Any CPU
 		{1C401276-B557-43BA-81D5-1F2D98D0BA5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1C401276-B557-43BA-81D5-1F2D98D0BA5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C401276-B557-43BA-81D5-1F2D98D0BA5C}.Debug|x64.ActiveCfg = Debug|Any CPU

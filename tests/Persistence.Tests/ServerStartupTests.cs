@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using Preagonal.GameServer.Configuration;
 using Preagonal.GameServer.Persistence;
 using Xunit;
 
@@ -80,10 +83,11 @@ public sealed class ServerStartupTests
     [Fact]
     public void DefaultAllowedVersionsMatchCpp()
     {
+
         var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var snapshot = ServerStartupLoader.Load(
             repoRoot,
-            ServerStartupOverrides.Empty with { Server = "default" });
+            ServerStartupOverrides.Empty with { Server = "default" }, Substitute.For<IOptions<ServerOptions>>(), Substitute.For<IOptions<AdminConfig>>());
 
         Assert.Empty(snapshot.EffectiveAllowedVersions);
         /*
