@@ -2,7 +2,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Preagonal.GameServer.Core\Preagonal.GameServer.Core.csproj" />
     <ProjectReference Include="..\Preagonal.GameServer.Game\Preagonal.GameServer.Game.csproj" />
-    <PackageReference Include="Preagonal.Common" Version="1.4.42" />
-    <PackageReference Include="Preagonal.Scripting.GS2Compiler" Version="2.0.2" />
+    <PackageReference Include="Preagonal.Common" Version="1.4.43" />
+    <PackageReference Include="Preagonal.Scripting.GS2Compiler" Version="2.2.1" />
   </ItemGroup>
 </Project>
